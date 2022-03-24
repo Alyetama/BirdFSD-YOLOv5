@@ -1,3 +1,13 @@
 ray>=1.11.0
 requests>=2.27.1
 tqdm>=4.62.3
+requests>=2.27.1
+loguru>=0.6.0
+tqdm>=4.62.3
+python-dotenv>=0.19.2
+pillow>=9.0.1
+rich>=9.13.0
+pymongo[srv]>=4.0.2
+pandas
+numpy
+ray

@@ -162,7 +162,7 @@ def main():
     shutil.rmtree(labels_dir, ignore_errors=True)
 
     d = {
-        'path': output_dir,
+        'path': f'../{output_dir}',
         'train': 'images/train',
         'val': 'images/val',
         'test': '',
