@@ -104,7 +104,8 @@ def get_data():
     data = resp.json()
 
     excluded_labels = [
-        'cannot identify', 'no animal', 'distorted image', 'severe occultation'
+        'cannot identify', 'no animal', 'distorted image',
+        'severe occultation', 'animal other than bird or squirrel'
     ]
     labels = [[label['rectanglelabels'][0] for label in entry['label']][0]
               for entry in data]
@@ -130,6 +131,9 @@ def opts():
                         help='Label-studio project ID',
                         type=int,
                         default=1)
+    parser.add_argument('--remove',
+                        help='Remove the output folder and only keep the .tar file',
+                        action="store_true")
     return parser.parse_args()
 
 
@@ -162,7 +166,7 @@ def main():
     shutil.rmtree(labels_dir, ignore_errors=True)
 
     d = {
-        'path': f'../{output_dir}',
+        'path': f'{output_dir}',
         'train': 'images/train',
         'val': 'images/val',
         'test': '',
@@ -177,6 +181,9 @@ def main():
     folder_name = Path(output_dir).name
     with tarfile.open(f'{folder_name}.tar', 'w') as tar:
         tar.add(output_dir, folder_name)
+
+    if args.remove:
+        shutil.rmtree(output_dir, ignore_errors=True)
 
 
 if __name__ == '__main__':
