@@ -163,3 +163,4 @@ project-*.json
 *.pt
 .ignore/
 saved_models/
+weights/
