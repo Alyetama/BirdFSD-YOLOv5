@@ -5,18 +5,20 @@ import os
 import random
 import shutil
 import tarfile
+import time
 from glob import glob
 from pathlib import Path
 
 import ray
 import requests
 from dotenv import load_dotenv
+from loguru import logger
 from tqdm import tqdm
 
 
 def to_srv(url):
-    return url.replace(f'https://ls.aibird.me/data/local-files/?d=',
-                       f'https://srv.aibird.me/')
+    return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
+                       f'{os.environ["SRV_HOST"]}/')
 
 
 def bbox_ls_to_yolo(x, y, width, height):
@@ -35,7 +37,17 @@ def convert_to_yolo(task):
     with open(f'{imgs_dir}/{cur_img_name}', 'wb') as f:
         f.write(r.content)
 
-    if not imghdr.what(f'{imgs_dir}/{cur_img_name}'):
+    try:
+        valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
+    except FileNotFoundError:
+        print('Could not validate the image! Sleeping for a second then trying again...')
+        time.sleep(1)
+        try:
+            valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
+        except FileNotFoundError:
+            print(f'Failed again! Ignoring task: {task}')
+
+    if not valid_image:
         Path(f'{imgs_dir}/{cur_img_name}').unlink()
         return
 
@@ -107,8 +119,13 @@ def get_data():
         'cannot identify', 'no animal', 'distorted image',
         'severe occultation', 'animal other than bird or squirrel'
     ]
-    labels = [[label['rectanglelabels'][0] for label in entry['label']][0]
-              for entry in data]
+
+    labels = []
+    for entry in data:
+        try:
+            labels.append([label['rectanglelabels'][0] for label in entry['label']][0])
+        except KeyError as e:
+            logger.warning(f'Current entry raised KeyError {e}! Ignoring entry: {entry}')
     labels = list(set(labels))
     classes = [label for label in labels if label not in excluded_labels]
 
@@ -131,9 +148,10 @@ def opts():
                         help='Label-studio project ID',
                         type=int,
                         default=1)
-    parser.add_argument('--remove',
-                        help='Remove the output folder and only keep the .tar file',
-                        action="store_true")
+    parser.add_argument(
+        '--remove',
+        help='Remove the output folder and only keep the .tar file',
+        action="store_true")
     return parser.parse_args()
 
 

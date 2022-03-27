@@ -14,6 +14,7 @@ def update_view():
 
     with open(args.classes_path) as f:
         _classes = [x.rstrip() for x in f.readlines() if x != 'squirrels\n']
+    logger.debug(_classes)
 
     filter_items = [{
         'filter': 'filter:tasks:total_annotations',
@@ -36,7 +37,8 @@ def update_view():
         })
 
     view['data']['filters']['items'] = filter_items
-
+    
+    logger.debug(f'URL: {url} ; DATA: {view}')
     resp = requests.put(url, data=json.dumps(view), headers=headers)
     logger.debug(resp.json())
 
@@ -57,6 +59,8 @@ def opts():
 
 
 if __name__ == '__main__':
+    os.chdir('../')
+    logger.add('logs.log')
     load_dotenv()
     args = opts()
 
@@ -65,6 +69,7 @@ if __name__ == '__main__':
     headers['Content-type'] = 'application/json'
 
     update_view()
+    print('-' * 40)
     logger.info(
         f'Delete all tasks under: https://ls.aibird.me/projects/1/data?tab={args.view_id}'
     )

@@ -22,7 +22,9 @@ def update_today_view(DATE):
 
     view['data']['filters']['items'] = FILTER
     view['data']['ordering'] = ['tasks:id']
+    logger.debug(f'URL: {url} ; DATA: {view}')
     resp = requests.put(url, data=json.dumps(view), headers=headers)
+
     logger.debug(resp.json())
 
 
@@ -37,6 +39,8 @@ def opts():
 
 
 if __name__ == '__main__':
+    os.chdir('../')
+    logger.add('logs.log')
     load_dotenv()
     args = opts()
 
@@ -46,3 +50,7 @@ if __name__ == '__main__':
 
     DATE = date.today()
     update_today_view(DATE)
+    print('-' * 40)
+    logger.info(
+        f'Visit this link to get the IDs: https://ls.aibird.me/projects/1/data?tab={args.view_id}'
+    )

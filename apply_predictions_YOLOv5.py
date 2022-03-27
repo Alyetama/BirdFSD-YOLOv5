@@ -12,8 +12,16 @@ from loguru import logger
 
 def opts():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--first', help='First task ID', type=int, required=True)
-    parser.add_argument('-l', '--last', help='Last task ID', type=int, required=True)
+    parser.add_argument('-f',
+                        '--first',
+                        help='First task ID',
+                        type=int,
+                        required=True)
+    parser.add_argument('-l',
+                        '--last',
+                        help='Last task ID',
+                        type=int,
+                        required=True)
     parser.add_argument(
         '-o',
         '--data',
