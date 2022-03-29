@@ -4,6 +4,8 @@
 import argparse
 import json
 import os
+import signal
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +14,11 @@ import torch
 from dotenv import load_dotenv
 from loguru import logger
 from tqdm import tqdm
+
+
+def keyboard_interrupt_handler(sig, frame):
+    logger.info(f'KeyboardInterrupt (ID: {sig}) has been caught...')
+    sys.exit(1)
 
 
 def make_headers():
@@ -158,6 +165,8 @@ if __name__ == '__main__':
     load_dotenv()
     logger.add('logs.log')
     args = opts()
+
+    signal.signal(signal.SIGINT, keyboard_interrupt_handler)
     headers = make_headers()
 
     if not args.model_version:
