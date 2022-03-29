@@ -63,6 +63,7 @@ def yolo_to_ls(x, y, width, height, score, n):
 
 
 def get_all_tasks():
+    logger.debug('Fetching all tasks. This might take few minutes...')
     q = 'exportType=JSON&download_all_tasks=true'
     url = f'{os.environ["LS_HOST"]}/api/projects/1/export?{q}'
     resp = requests.get(url, headers=headers)
@@ -146,16 +147,23 @@ def opts():
                         '--model-version',
                         help='Name of the model version',
                         type=str)
+    parser.add_argument('-a',
+                        '--predict-all',
+                        help='Predict all tasks even if predictions exist',
+                        action='store_true')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     load_dotenv()
+    logger.add('logs.log')
     args = opts()
     headers = make_headers()
 
     if not args.model_version:
         MODEL_VERSION = 'BirdFSD-YOLOv5-v1.0.0-unknown'
+        logger.warning(
+            f'Model version was not specified! Defaulting to {MODEL_VERSION}')
     else:
         MODEL_VERSION = args.model_version
 
@@ -163,10 +171,16 @@ if __name__ == '__main__':
     names = model.names
 
     tasks = get_all_tasks()
+
+    if not args.predict_all and not args.tasks_range:
+        tasks = [t for t in tasks if not t['predictions']]
+
     if args.tasks_range:
         logger.debug(f'Selected range of tasks: {args.tasks_range}')
         tasks_range = [int(n) for n in args.tasks_range.split(',')]
         tasks = selected_tasks(tasks, *tasks_range)
+
+    logger.debug(f'Tasks to predict: {len(tasks)}')
 
     for task in tqdm(tasks):
         logger.debug(task)
