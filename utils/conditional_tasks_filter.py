@@ -37,7 +37,7 @@ def update_view():
         })
 
     view['data']['filters']['items'] = filter_items
-    
+
     logger.debug(f'URL: {url} ; DATA: {view}')
     resp = requests.put(url, data=json.dumps(view), headers=headers)
     logger.debug(resp.json())
@@ -59,7 +59,6 @@ def opts():
 
 
 if __name__ == '__main__':
-    os.chdir('../')
     logger.add('logs.log')
     load_dotenv()
     args = opts()

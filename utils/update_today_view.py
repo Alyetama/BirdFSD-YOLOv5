@@ -39,7 +39,6 @@ def opts():
 
 
 if __name__ == '__main__':
-    os.chdir('../')
     logger.add('logs.log')
     load_dotenv()
     args = opts()
