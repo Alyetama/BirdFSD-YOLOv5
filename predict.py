@@ -147,10 +147,10 @@ class Predict(LoadModel, _Headers):
         pred_xywhn = model_preds.xywhn[0]
         if pred_xywhn.shape[0] == 0:
             logger.debug('No predictions...')
-            url = F'{os.environ["LS_HOST"]}/api/tasks/20318'
+            url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
             resp = requests.delete(url, headers=self.headers)
             logger.debug({'response': resp.text})
-            logger.debug('Deleted image.')
+            logger.debug(f'Deleted task {task_id}.')
             return
 
         results = []
@@ -164,7 +164,7 @@ class Predict(LoadModel, _Headers):
 
         if not dry_run:
             _post = self.pred_post(results, scores, task_id)
-
+            logger.debug({'request': _post})
             url = F'{os.environ["LS_HOST"]}/api/predictions/'
             resp = requests.post(url,
                                  headers=self.headers,
@@ -181,14 +181,13 @@ class Predict(LoadModel, _Headers):
             tasks = [t for t in tasks if not t['predictions']]
 
         if self.tasks_range:
-            logger.debug(f'Selected range of tasks: {self.tasks_range}')
+            logger.info(f'Selected range of tasks: {self.tasks_range}')
             tasks_range = [int(n) for n in self.tasks_range.split(',')]
             tasks = self.selected_tasks(tasks, *tasks_range)
 
-        logger.debug(f'Tasks to predict: {len(tasks)}')
+        logger.info(f'Tasks to predict: {len(tasks)}')
 
         for task in tqdm(tasks):
-            logger.debug(task)
             self.post_prediction(task)
 
 
@@ -203,7 +202,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('-r',
                         '--tasks-range',
-                        help='Selected range of tasks (e.g., "10,18")',
+                        help='Comma-separated range of tasks by task ID number (e.g., "10,18").',
                         type=str)
     parser.add_argument('-a',
                         '--predict-all',
@@ -215,7 +214,7 @@ if __name__ == '__main__':
                         type=str)
     parser.add_argument('-d',
                         '--debug',
-                        help='Run in debug mode',
+                        help='Run in debug mode (will run on one task for debugging)',
                         action='store_true')
     args = parser.parse_args()
 
