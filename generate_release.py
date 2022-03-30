@@ -121,7 +121,7 @@ def get_assets(best_run, output_name, move_to='releases'):
 
     if move_to:
         if Path(move_to).exists():
-            shutil.rmtree(move_to, ignore_errors=True)
+            # shutil.rmtree(move_to, ignore_errors=True)
             shutil.move(output_name, move_to)
             shutil.move(f'{output_name}.tar.gz', move_to)
 
@@ -170,7 +170,7 @@ def opts():
     return parser.parse_args()
 
 
-def release_notes(run, f1_score, output_name, cfg):
+def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
     run_timestamp = datetime.fromtimestamp(run.summary['_timestamp'])
     run_start_time = run_timestamp.strftime('%d-%m-%Y %H:%M:%S')
     run_local_tag = run_timestamp.strftime('%d%m%Y')
@@ -186,8 +186,9 @@ def release_notes(run, f1_score, output_name, cfg):
         f'{"/".join(run.path[:-1])}/{get_artifacts(run)[0].name}'
     }
 
-    ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
-    RUN.update(ml_framework_versions)
+    if cfg.get('base_ml_framework'):
+        ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
+        RUN.update(ml_framework_versions)
 
 
     with open(f'{move_to}/{output_name}/{output_name}-notes.md', 'w') as f:
@@ -248,10 +249,7 @@ def release_notes(run, f1_score, output_name, cfg):
     return content
 
 
-if __name__ == '__main__':
-
-    load_dotenv()
-    args = opts()
+def main():
     api = wandb.Api({'entity': args.entity, 'project': args.project_name})
     output_name = f'{args.release_name}-{args.release_version}'
 
@@ -283,7 +281,6 @@ if __name__ == '__main__':
         best_run = [x for x  in runs if run_name in x.id][0]
         logger.debug(best_run)
 
-
     if args.pick:
         del best_run
         best_run = copy.deepcopy(picked_run)
@@ -296,6 +293,13 @@ if __name__ == '__main__':
     move_to = 'releases'
     weights, config, classes, cfg = get_assets(best_run, output_name, move_to)
 
-    release_notes(best_run, f1_score=best_score, output_name=output_name, cfg=cfg)
+    release_notes(best_run, f1_score=best_score, output_name=output_name, cfg=cfg, move_to=move_to)
 
     logger.info(f'gh release create {args.release_version} -d -F "{move_to}/{output_name}/{output_name}-notes.md" --title "{args.release_version}" --repo {args.repo} {move_to}/{output_name}/*')
+
+
+if __name__ == '__main__':
+    load_dotenv()
+    args = opts()
+    main()
+    

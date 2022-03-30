@@ -74,11 +74,18 @@ class Predict(LoadModel, _Headers):
                            f'{os.environ["SRV_HOST"]}/')
 
     def get_task(self, _task_id):
+        logger.debug(f'Processing task: {_task_id}')
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
         data = resp.json()
-        data['data']['image'] = self.to_srv(data['data']['image'])
-        return data
+        try:
+            data['data']['image'] = self.to_srv(data['data']['image'])
+            return data
+        except KeyError as e:
+            logger.error(e)
+            logger.error(
+                f'Could not find image file for task {_task_id}! Skipping...')
+            return
 
     @staticmethod
     def download_image(img_url):
@@ -142,7 +149,10 @@ class Predict(LoadModel, _Headers):
 
     def post_prediction(self, task, dry_run=False):
         task_id = task['id']
-        img = self.download_image(self.get_task(task_id)['data']['image'])
+        task_ = self.get_task(task_id)
+        if not task_:
+            return
+        img = self.download_image(task_['data']['image'])
         model_preds = self.model(img)
         pred_xywhn = model_preds.xywhn[0]
         if pred_xywhn.shape[0] == 0:
@@ -200,24 +210,31 @@ if __name__ == '__main__':
                         help='Path to the model weights',
                         type=str,
                         required=True)
-    parser.add_argument('-r',
-                        '--tasks-range',
-                        help='Comma-separated range of tasks by task ID number (e.g., "10,18").',
-                        type=str)
+    parser.add_argument(
+        '-r',
+        '--tasks-range',
+        help=
+        'Comma-separated range of tasks by task ID number (e.g., "10,18").',
+        type=str)
     parser.add_argument('-a',
                         '--predict-all',
                         help='Predict all tasks even if predictions exist',
                         action='store_true')
+    parser.add_argument('-t',
+                        '--one-task',
+                        help='Predict a single task.',
+                        type=int)
     parser.add_argument('-v',
                         '--model-version',
                         help='Name of the model version',
                         type=str)
-    parser.add_argument('-d',
-                        '--debug',
-                        help='Run in debug mode (will run on one task for debugging)',
-                        action='store_true')
+    parser.add_argument(
+        '-d',
+        '--debug',
+        help='Run in debug mode (will run on one task for debugging)',
+        action='store_true')
     args = parser.parse_args()
 
     predict = Predict(args.weights, args.tasks_range, args.predict_all,
-                      args.model_version, args.debug)
+                      args.one_task, args.model_version, args.debug)
     predict.apply_predictions()
