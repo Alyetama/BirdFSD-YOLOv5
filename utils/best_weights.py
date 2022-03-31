@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 import wandb
+from dotenv import load_dotenv
 from loguru import logger
 
 
@@ -50,5 +51,6 @@ def get_best_weights(entity, project, dest='.'):
 
 
 if __name__ == '__main__':
+    load_dotenv('../.env')
     args = opts()
     get_best_weights(args.entity, args.project_name, args.destination)

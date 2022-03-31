@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import concurrent.futures
 import json
 import os
 import signal
@@ -13,6 +14,7 @@ import requests
 import torch
 from dotenv import load_dotenv
 from loguru import logger
+from PIL import UnidentifiedImageError
 from tqdm import tqdm
 
 
@@ -22,6 +24,7 @@ class _Headers:
         pass
 
     def make_headers(self):
+        load_dotenv()
         headers = requests.structures.CaseInsensitiveDict()
         headers['Content-type'] = 'application/json'
         headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
@@ -34,27 +37,33 @@ class LoadModel:
         self.weights = weights
 
     def model(self):
-        return torch.hub.load('ultralytics/yolov5', 'custom', self.weights)
-
+        return torch.hub.load('ultralytics/yolov5', 'custom', path=self.weights)
 
 class Predict(LoadModel, _Headers):
 
     def __init__(self,
                  weights,
+                 project_id,
                  tasks_range='',
                  predict_all=False,
+                 one_task=None,
                  model_version=None,
+                 multithreading=True,
                  debug=False):
         super().__init__(weights)
         self.headers = super().make_headers()
         self.model = super().model()
+        self.project_id = project_id
         self.tasks_range = tasks_range
         self.predict_all = predict_all
+        self.one_task = one_task
         self.model_version = model_version
+        self.multithreading = multithreading
         self.debug = debug
+        self.counter = 0
+        self.total_tasks = None
 
-    @staticmethod
-    def keyboard_interrupt_handler(sig, frame):
+    def keyboard_interrupt_handler(self, sig, frame):
         logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
         sys.exit(1)
 
@@ -74,21 +83,13 @@ class Predict(LoadModel, _Headers):
                            f'{os.environ["SRV_HOST"]}/')
 
     def get_task(self, _task_id):
-        logger.debug(f'Processing task: {_task_id}')
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
         data = resp.json()
-        try:
-            data['data']['image'] = self.to_srv(data['data']['image'])
-            return data
-        except KeyError as e:
-            logger.error(e)
-            logger.error(
-                f'Could not find image file for task {_task_id}! Skipping...')
-            return
+        data['data']['image'] = self.to_srv(data['data']['image'])
+        return data
 
-    @staticmethod
-    def download_image(img_url):
+    def download_image(self, img_url):
         cur_img_name = Path(img_url).name
         r = requests.get(img_url)
         with open(f'/tmp/{cur_img_name}', 'wb') as f:
@@ -108,9 +109,9 @@ class Predict(LoadModel, _Headers):
     def get_all_tasks(self):
         logger.debug('Fetching all tasks. This might take few minutes...')
         q = 'exportType=JSON&download_all_tasks=true'
-        url = f'{os.environ["LS_HOST"]}/api/projects/1/export?{q}'
+        url = f'{os.environ["LS_HOST"]}/api/projects/{self.project_id}/export?{q}'
         if self.debug:
-            url = f'{os.environ["LS_HOST"]}/api/tasks/7409'
+            url = f'{os.environ["LS_HOST"]}/api/tasks/7409'  # hardcoded task ID
         resp = requests.get(url, headers=self.headers)
         if self.debug:
             return [resp.json()]
@@ -119,6 +120,11 @@ class Predict(LoadModel, _Headers):
     @staticmethod
     def selected_tasks(tasks, start, end):
         return [t for t in tasks if t['id'] in range(start, end + 1)]
+
+    def single_task(self, task_id):
+        url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
+        resp = requests.get(url, headers=self.headers)
+        return [resp.json()]
 
     @staticmethod
     def pred_result(x, y, w, h, score, label):
@@ -147,62 +153,93 @@ class Predict(LoadModel, _Headers):
             'task': task_id
         }
 
-    def post_prediction(self, task, dry_run=False):
-        task_id = task['id']
-        task_ = self.get_task(task_id)
-        if not task_:
-            return
-        img = self.download_image(task_['data']['image'])
-        model_preds = self.model(img)
-        pred_xywhn = model_preds.xywhn[0]
-        if pred_xywhn.shape[0] == 0:
-            logger.debug('No predictions...')
-            url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
-            resp = requests.delete(url, headers=self.headers)
-            logger.debug({'response': resp.text})
-            logger.debug(f'Deleted task {task_id}.')
-            return
+    def post_prediction(self, task):
+        try:
+            task_id = task['id']
+            img = self.download_image(self.get_task(task_id)['data']['image'])
+            model_preds = self.model(img)
+            pred_xywhn = model_preds.xywhn[0]
+            if pred_xywhn.shape[0] == 0:
+                logger.debug('No predictions...')
+                url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
+                resp = requests.delete(url, headers=self.headers)
+                logger.debug({'response': resp.text})
+                logger.debug(f'Deleted task {task_id}.')
+                return
 
-        results = []
-        scores = []
+            results = []
+            scores = []
 
-        for pred in pred_xywhn:
-            result = self.yolo_to_ls(*pred)
-            scores.append(result[-2])
-            results.append(self.pred_result(*result))
-            logger.debug(result)
+            for pred in pred_xywhn:
+                result = self.yolo_to_ls(*pred)
+                scores.append(result[-2])
+                results.append(self.pred_result(*result))
+                logger.debug(result)
 
-        if not dry_run:
             _post = self.pred_post(results, scores, task_id)
             logger.debug({'request': _post})
             url = F'{os.environ["LS_HOST"]}/api/predictions/'
             resp = requests.post(url,
-                                 headers=self.headers,
-                                 data=json.dumps(_post))
+                                    headers=self.headers,
+                                    data=json.dumps(_post))
             logger.debug({'response': resp.json()})
 
+        except UnidentifiedImageError as e:
+            logger.error(e)
+            logger.error(f'Skipped {task}')
+        except Exception as e:
+            logger.error('>>>>>>>>>>>>>>>>>>>>>>>>>> UNEXPECTED EXCEPTION!')
+            logger.exception(e)
+            logger.error('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+                        
+        if self.multithreading:
+            self.counter += 1
+            logger.info(f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
+
     def apply_predictions(self):
-        logger.add('logs.log')
         signal.signal(signal.SIGINT, self.keyboard_interrupt_handler)
 
-        tasks = self.get_all_tasks()
+        if self.one_task:
+            tasks = self.single_task(self.one_task)
+        else:
+            if not Path('tasks.json').exists():
+                tasks = self.get_all_tasks()
+            else:
+                logger.debug('Loading tasks from a local file...')
+                with open('tasks.json') as j:
+                    tasks = json.load(j)
 
-        if not self.predict_all and not self.tasks_range and not self.debug:
-            tasks = [t for t in tasks if not t['predictions']]
+            if not self.predict_all and not self.tasks_range and not self.debug:
+                tasks = [t for t in tasks if not t['predictions']]
 
         if self.tasks_range:
             logger.info(f'Selected range of tasks: {self.tasks_range}')
             tasks_range = [int(n) for n in self.tasks_range.split(',')]
             tasks = self.selected_tasks(tasks, *tasks_range)
 
-        logger.info(f'Tasks to predict: {len(tasks)}')
+        if not Path('tasks.json').exists():
+            logger.debug('Writing tasks to a file...')
+            with open('tasks.json', 'w') as j:
+                json.dump(tasks, j)
 
-        for task in tqdm(tasks):
-            self.post_prediction(task)
+        logger.info(f'Tasks to predict: {len(tasks)}')
+        self.total_tasks = len(tasks)
+
+        if self.multithreading:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = []
+                results = [executor.submit(self.post_prediction, x) for x in tasks]
+                for future in concurrent.futures.as_completed(results):
+                    futures.append(future.result())
+
+        else:
+            for task in tqdm(tasks):
+                self.post_prediction(task)
 
 
 if __name__ == '__main__':
     load_dotenv()
+    logger.add('logs.log')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-w',
@@ -210,11 +247,16 @@ if __name__ == '__main__':
                         help='Path to the model weights',
                         type=str,
                         required=True)
+    parser.add_argument('-p',
+                        '--project_id',
+                        help='Label-studio project ID',
+                        type=int,
+                        default=1)
     parser.add_argument(
         '-r',
         '--tasks-range',
         help=
-        'Comma-separated range of tasks by task ID number (e.g., "10,18").',
+        'Comma-separated range of tasks by task ID number (e.g., "10,18")',
         type=str)
     parser.add_argument('-a',
                         '--predict-all',
@@ -222,11 +264,15 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('-t',
                         '--one-task',
-                        help='Predict a single task.',
+                        help='Predict a single task',
                         type=int)
     parser.add_argument('-v',
                         '--model-version',
                         help='Name of the model version',
+                        type=str)
+    parser.add_argument('-m',
+                        '--multithreading',
+                        help='Enable multithreading',
                         type=str)
     parser.add_argument(
         '-d',
@@ -235,6 +281,6 @@ if __name__ == '__main__':
         action='store_true')
     args = parser.parse_args()
 
-    predict = Predict(args.weights, args.tasks_range, args.predict_all,
-                      args.one_task, args.model_version, args.debug)
+    predict = Predict(args.weights, args.project_id, args.tasks_range, args.predict_all,
+                      args.one_task, args.model_version, args.multithreading, args.debug)
     predict.apply_predictions()
