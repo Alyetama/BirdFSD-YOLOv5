@@ -191,10 +191,11 @@ class Predict(LoadModel, _Headers):
             logger.error('>>>>>>>>>>>>>>>>>>>>>>>>>> UNEXPECTED EXCEPTION!')
             logger.exception(e)
             logger.error('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
-                        
-        if self.multithreading:
-            self.counter += 1
-            logger.info(f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
+        finally:
+            if self.multithreading:
+                self.counter += 1
+                logger.info(f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
+
 
     def apply_predictions(self):
         signal.signal(signal.SIGINT, self.keyboard_interrupt_handler)
