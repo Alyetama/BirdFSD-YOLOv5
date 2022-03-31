@@ -13,9 +13,13 @@ import numpy as np
 import requests
 import torch
 from dotenv import load_dotenv
-from loguru import logger
 from PIL import UnidentifiedImageError
 from tqdm import tqdm
+
+if 'google.colab' in sys.modules:
+    from utils.colab_logger import logger
+else:
+    from loguru import logger
 
 
 class _Headers:
