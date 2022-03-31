@@ -17,7 +17,8 @@ from PIL import UnidentifiedImageError
 from tqdm import tqdm
 
 if 'google.colab' in sys.modules:
-    from utils.colab_logger import logger
+    sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
+    from colab_logger import logger
 else:
     from loguru import logger
 
