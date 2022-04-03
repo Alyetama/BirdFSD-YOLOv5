@@ -155,6 +155,8 @@ def opts():
 
 def main():
     global classes
+    random.seed(8)
+
     data, classes = get_data()
 
     Path(imgs_dir).mkdir(parents=True, exist_ok=True)
