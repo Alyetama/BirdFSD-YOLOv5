@@ -22,8 +22,6 @@ from dotenv import load_dotenv
 from PIL import UnidentifiedImageError
 from tqdm import tqdm
 
-import mongodb_helper
-
 if 'google.colab' in sys.modules:
     sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
     from colab_logger import logger
@@ -71,6 +69,8 @@ class Predict(LoadModel, _Headers):
                  one_task: Union[None, int] = None,
                  model_version: Union[None, str] = None,
                  multithreading: bool = True,
+                 delete_if_no_predictions: bool = True,
+                 if_empty_apply_label: str = None,
                  debug: bool = False):
         super().__init__(weights)
         self.headers = super().make_headers()
@@ -81,6 +81,8 @@ class Predict(LoadModel, _Headers):
         self.one_task = one_task
         self.model_version = model_version
         self.multithreading = multithreading
+        self.delete_if_no_predictions = delete_if_no_predictions
+        self.if_empty_apply_label = if_empty_apply_label
         self.debug = debug
         self.counter = 0
         self.total_tasks = None
@@ -122,12 +124,17 @@ class Predict(LoadModel, _Headers):
         w = width * 100
         h = height * 100
         x, y, w, h, score = [float(i) for i in [x, y, w, h, score]]
-        return x, y, w, h, round(score, 2), self.model.names[int(n)]
+        try:
+            label = self.model.names[int(n)]
+        except ValueError:
+            label = n
+        return x, y, w, h, round(score, 2), label
 
     def get_all_tasks(self):
         logger.debug('Fetching all tasks. This might take few minutes...')
         q = 'exportType=JSON&download_all_tasks=true'
-        url = f'{os.environ["LS_HOST"]}/api/projects/{self.project_id}/export?{q}'
+        ls_host = os.environ["LS_HOST"]
+        url = f'{ls_host}/api/projects/{self.project_id}/export?{q}'
         if self.debug:
             url = f'{os.environ["LS_HOST"]}/api/tasks/7409'  # hardcoded task ID
         resp = requests.get(url, headers=self.headers)
@@ -178,18 +185,23 @@ class Predict(LoadModel, _Headers):
                 img = self.download_image(
                     self.get_task(task_id)['data']['image'])
             except KeyError:
-                logger.error(
-                    f'Task {task_id} had no data in the response (could be deleted task). Skipping...'
-                )
+                logger.error(f'Task {task_id} had no data in the response '
+                             '(could be a deleted task). Skipping...')
             model_preds = self.model(img)
             pred_xywhn = model_preds.xywhn[0]
             if pred_xywhn.shape[0] == 0:
                 logger.debug('No predictions...')
                 url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
-                resp = requests.delete(url, headers=self.headers)
-                logger.debug({'response': resp.text})
-                logger.debug(f'Deleted task {task_id}.')
-                return
+
+                if self.delete_if_no_predictions and not self.if_empty_apply_label:
+                    resp = requests.delete(url, headers=self.headers)
+                    logger.debug({'response': resp.text})
+                    logger.debug(f'Deleted task {task_id}.')
+                    return
+                elif self.if_empty_apply_label:
+                    pred_xywhn = [[
+                        0.5, 0.5, 0.05, 0.05, 0, self.if_empty_apply_label
+                    ]]  # hardcoded arbiturary x, y, w, h values
 
             results = []
             scores = []
@@ -222,6 +234,10 @@ class Predict(LoadModel, _Headers):
                     f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
 
     def apply_predictions(self):
+        if self.delete_if_no_predictions and self.if_empty_apply_label:
+            logger.error('Can\'t have both --delete-if-no-predictions and '
+                         '--if-empty-apply-label!')
+            sys.exit(1)
         if self.one_task:
             tasks = self.single_task(self.one_task)
         else:
@@ -305,6 +321,18 @@ if __name__ == '__main__':
                         '--mongodb',
                         help='Get tasks from MongoDB',
                         action='store_true')
+    parser.add_argument(
+        '-D',
+        '--delete-if-no-predictions',
+        help='Delete tasks where the model could not predict anything',
+        action='store_true')
+    parser.add_argument(
+        '-L',
+        '--if-empty-apply-label',
+        help=
+        'Label to apply for tasks where the model could not predict anything',
+        type=Union[None, str],
+        default=None)
     parser.add_argument('-d',
                         '--debug',
                         help='Run in debug mode (runs on one task)',
@@ -319,5 +347,6 @@ if __name__ == '__main__':
 
     predict = Predict(args.weights, args.project_id, args.tasks_range,
                       args.predict_all, args.one_task, args.model_version,
-                      args.multithreading, args.debug)
+                      args.multithreading, args.delete_if_no_predictions,
+                      args.if_empty_apply_label, args.debug)
     predict.apply_predictions()
