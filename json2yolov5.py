@@ -37,15 +37,13 @@ def convert_to_yolo(task):
     with open(f'{imgs_dir}/{cur_img_name}', 'wb') as f:
         f.write(r.content)
 
+    valid_image = None
     try:
         valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
     except FileNotFoundError:
-        print('Could not validate the image! Sleeping for a second then trying again...')
-        time.sleep(1)
-        try:
-            valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
-        except FileNotFoundError:
-            print(f'Failed again! Ignoring task: {task}')
+        logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! Skipping...')
+        Path(f'{imgs_dir}/{cur_img_name}').unlink()
+        return
 
     if not valid_image:
         Path(f'{imgs_dir}/{cur_img_name}').unlink()

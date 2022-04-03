@@ -161,7 +161,10 @@ class Predict(LoadModel, _Headers):
     def post_prediction(self, task):
         try:
             task_id = task['id']
-            img = self.download_image(self.get_task(task_id)['data']['image'])
+            try:
+                img = self.download_image(self.get_task(task_id)['data']['image'])
+            except KeyError:
+                logger.error(f'Task {task_id} had no data in the response (could be deleted task). Skipping...')
             model_preds = self.model(img)
             pred_xywhn = model_preds.xywhn[0]
             if pred_xywhn.shape[0] == 0:

@@ -5,7 +5,7 @@ class logger:
     def add(x):
         _logger.add(x)
     def debug(x):
-        _logger.debug(f'\33[33m{x}\x1b[0m')
+        _logger.debug(f'\33[34m{x}\x1b[0m')
     def info(x):
         _logger.info(f'\33[32m{x}\x1b[0m')
     def warning(x):
