@@ -22,6 +22,8 @@ from dotenv import load_dotenv
 from PIL import UnidentifiedImageError
 from tqdm import tqdm
 
+from mongodb_helper import get_tasks_from_mongodb
+
 if 'google.colab' in sys.modules:
     sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
     from colab_logger import logger
@@ -343,7 +345,7 @@ if __name__ == '__main__':
 
     if args.mongodb:
         logger.info('Getting tasks from MongoDB...')
-        mongodb_helper.get_tasks_from_mongodb(args.project_id)
+        get_tasks_from_mongodb(args.project_id)
 
     predict = Predict(args.weights, args.project_id, args.tasks_range,
                       args.predict_all, args.one_task, args.model_version,
