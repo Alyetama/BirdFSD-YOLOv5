@@ -8,13 +8,21 @@ import os
 import signal
 import sys
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 import requests
-import torch
+
+try:
+    import torch
+except RuntimeError as e:
+    sys.exit(1)
+
 from dotenv import load_dotenv
 from PIL import UnidentifiedImageError
 from tqdm import tqdm
+
+import mongodb_helper
 
 if 'google.colab' in sys.modules:
     sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
@@ -23,9 +31,15 @@ else:
     from loguru import logger
 
 
+def keyboard_interrupt_handler(sig, frame):
+    logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
+    logger.info('Terminating the session gracefully...')
+    sys.exit(1)
+
+
 class _Headers:
 
-    def __init__(self, token):
+    def __init__(self, token: str):
         pass
 
     def make_headers(self):
@@ -38,23 +52,26 @@ class _Headers:
 
 class LoadModel:
 
-    def __init__(self, weights):
+    def __init__(self, weights: str):
         self.weights = weights
 
     def model(self):
-        return torch.hub.load('ultralytics/yolov5', 'custom', path=self.weights)
+        return torch.hub.load('ultralytics/yolov5',
+                              'custom',
+                              path=self.weights)
+
 
 class Predict(LoadModel, _Headers):
 
     def __init__(self,
-                 weights,
-                 project_id,
-                 tasks_range='',
-                 predict_all=False,
-                 one_task=None,
-                 model_version=None,
-                 multithreading=True,
-                 debug=False):
+                 weights: str,
+                 project_id: int,
+                 tasks_range: str = '',
+                 predict_all: bool = False,
+                 one_task: Union[None, int] = None,
+                 model_version: Union[None, str] = None,
+                 multithreading: bool = True,
+                 debug: bool = False):
         super().__init__(weights)
         self.headers = super().make_headers()
         self.model = super().model()
@@ -67,10 +84,6 @@ class Predict(LoadModel, _Headers):
         self.debug = debug
         self.counter = 0
         self.total_tasks = None
-
-    def keyboard_interrupt_handler(self, sig, frame):
-        logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
-        sys.exit(1)
 
     def get_model_version(self):
         if not self.model_version:
@@ -162,9 +175,12 @@ class Predict(LoadModel, _Headers):
         try:
             task_id = task['id']
             try:
-                img = self.download_image(self.get_task(task_id)['data']['image'])
+                img = self.download_image(
+                    self.get_task(task_id)['data']['image'])
             except KeyError:
-                logger.error(f'Task {task_id} had no data in the response (could be deleted task). Skipping...')
+                logger.error(
+                    f'Task {task_id} had no data in the response (could be deleted task). Skipping...'
+                )
             model_preds = self.model(img)
             pred_xywhn = model_preds.xywhn[0]
             if pred_xywhn.shape[0] == 0:
@@ -188,8 +204,8 @@ class Predict(LoadModel, _Headers):
             logger.debug({'request': _post})
             url = F'{os.environ["LS_HOST"]}/api/predictions/'
             resp = requests.post(url,
-                                    headers=self.headers,
-                                    data=json.dumps(_post))
+                                 headers=self.headers,
+                                 data=json.dumps(_post))
             logger.debug({'response': resp.json()})
 
         except UnidentifiedImageError as e:
@@ -202,12 +218,10 @@ class Predict(LoadModel, _Headers):
         finally:
             if self.multithreading:
                 self.counter += 1
-                logger.info(f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
-
+                logger.info(
+                    f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
 
     def apply_predictions(self):
-        signal.signal(signal.SIGINT, self.keyboard_interrupt_handler)
-
         if self.one_task:
             tasks = self.single_task(self.one_task)
         else:
@@ -237,7 +251,9 @@ class Predict(LoadModel, _Headers):
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = []
-                results = [executor.submit(self.post_prediction, x) for x in tasks]
+                results = [
+                    executor.submit(self.post_prediction, x) for x in tasks
+                ]
                 for future in concurrent.futures.as_completed(results):
                     futures.append(future.result())
 
@@ -260,13 +276,13 @@ if __name__ == '__main__':
                         '--project_id',
                         help='Label-studio project ID',
                         type=int,
-                        default=1)
+                        required=True)
     parser.add_argument(
         '-r',
         '--tasks-range',
-        help=
-        'Comma-separated range of tasks by task ID number (e.g., "10,18")',
-        type=str)
+        help='Comma-separated range of task IDs (e.g., "10,18")',
+        type=str,
+        default='')
     parser.add_argument('-a',
                         '--predict-all',
                         help='Predict all tasks even if predictions exist',
@@ -274,22 +290,34 @@ if __name__ == '__main__':
     parser.add_argument('-t',
                         '--one-task',
                         help='Predict a single task',
-                        type=int)
+                        type=Union[None, int],
+                        default=None)
     parser.add_argument('-v',
                         '--model-version',
                         help='Name of the model version',
-                        type=str)
+                        type=Union[None, str],
+                        default=None)
     parser.add_argument('-m',
                         '--multithreading',
                         help='Enable multithreading',
-                        type=str)
-    parser.add_argument(
-        '-d',
-        '--debug',
-        help='Run in debug mode (will run on one task for debugging)',
-        action='store_true')
+                        action='store_true')
+    parser.add_argument('-M',
+                        '--mongodb',
+                        help='Get tasks from MongoDB',
+                        action='store_true')
+    parser.add_argument('-d',
+                        '--debug',
+                        help='Run in debug mode (runs on one task)',
+                        action='store_true')
     args = parser.parse_args()
 
-    predict = Predict(args.weights, args.project_id, args.tasks_range, args.predict_all,
-                      args.one_task, args.model_version, args.multithreading, args.debug)
+    signal.signal(signal.SIGINT, keyboard_interrupt_handler)
+
+    if args.mongodb:
+        logger.info('Getting tasks from MongoDB...')
+        mongodb_helper.get_tasks_from_mongodb(args.project_id)
+
+    predict = Predict(args.weights, args.project_id, args.tasks_range,
+                      args.predict_all, args.one_task, args.model_version,
+                      args.multithreading, args.debug)
     predict.apply_predictions()

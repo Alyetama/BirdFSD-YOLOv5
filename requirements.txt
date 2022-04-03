@@ -4,4 +4,5 @@ loguru>=0.5.3
 ray>=1.11.0
 tqdm>=4.62.3
 numpy>=1.21.5
-# Pillow>=9.0.0  # commented out to avoid conflicts on Google Colab
+pymongo[srv]>=4.0.2
+Pillow
