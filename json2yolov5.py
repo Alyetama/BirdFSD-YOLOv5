@@ -54,7 +54,7 @@ def convert_to_yolo(task):
             labels = task['label']
         except KeyError:
             tasks_not_exported.append(task['id'])
-            print('>>>>>>>>>> CORRUPTED TASK:', task['id'])
+            logger.warning('>>>>>>>>>> CORRUPTED TASK:', task['id'])
             f.close()
             Path(f'{labels_dir}/{Path(cur_img_name).stem}.txt').unlink()
             Path(f'{imgs_dir}/{cur_img_name}').unlink()

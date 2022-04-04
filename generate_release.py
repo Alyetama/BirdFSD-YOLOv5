@@ -145,12 +145,12 @@ def opts():
                         required=True)
     parser.add_argument('-n',
                         '--release-name',
-                        help='Release base name',
+                        help='Release base name (e.g., BirdFSD-YOLOv5)',
                         type=str,
                         required=True)
     parser.add_argument('-v',
                         '--release-version',
-                        help='Release version (vx.y.z)',
+                        help='Release version (e.g., v1.0.0-alpha.1.3)',
                         type=str,
                         required=True)
     parser.add_argument('-f',
@@ -250,7 +250,6 @@ def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
 
 
 def main():
-    api = wandb.Api({'entity': args.entity, 'project': args.project_name})
     output_name = f'{args.release_name}-{args.release_version}'
 
     runs = list(api.runs())
@@ -301,5 +300,6 @@ def main():
 if __name__ == '__main__':
     load_dotenv()
     args = opts()
+    api = wandb.Api({'entity': args.entity, 'project': args.project_name})
     main()
     
