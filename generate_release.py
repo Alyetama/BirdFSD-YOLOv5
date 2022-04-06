@@ -1,6 +1,8 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import argparse
 import base64
-import copy
 import json
 import os
 import shutil
@@ -82,13 +84,13 @@ def get_assets(best_run, output_name, move_to='releases'):
     try:
         shutil.move(f'{artifact_local}/best.pt', weights_fname)
     except FileNotFoundError:
-        assert 'best' in artifact.aliases
+        assert 'best' in get_artifacts(best_run).aliases
         shutil.move(f'{artifact_local}/last.pt', weights_fname)
     shutil.rmtree('artifacts', ignore_errors=True)
 
     config_fname = f'{output_name}/{output_name}-config.json'
     cfg = best_run.config
-    
+
     for k in [('val', -3), ('train', -3), ('path', -2), ('weights', -2)]:
         if k[0] == 'weights':
             relative_path = '/'.join(Path(cfg[k[0]]).parts[k[1]:])
@@ -112,7 +114,6 @@ def get_assets(best_run, output_name, move_to='releases'):
     with open(classes_fname, 'w') as f:
         f.writelines([f'{x}\n' for x in class_labels.values()])
 
-
     if move_to:
         Path(move_to).mkdir(exist_ok=True)
 
@@ -128,11 +129,14 @@ def get_assets(best_run, output_name, move_to='releases'):
     files_to_move = [x for x in glob('releases/*') if not Path(x).is_dir()]
     Path(f'{move_to}/{output_name}').mkdir(exist_ok=True)
     _ = [shutil.move(x, f'{move_to}/{output_name}') for x in files_to_move]
-    return (weights_fname, config_fname, classes_fname, cfg)
+    return weights_fname, config_fname, classes_fname, cfg
 
 
 def opts():
-    parser = argparse.ArgumentParser(epilog=f'Basic usage: python {Path(__file__).name} -e "entity" -p "project" -n "release_base_name" -v "v1.0.0-alpha"')
+    parser = argparse.ArgumentParser(
+        epilog=f'Basic usage: python {Path(__file__).name} -e "entity" -p'
+               f' "project" -n "release_base_name" -v "v1.0.0-alpha"'
+    )
     parser.add_argument('-e',
                         '--entity',
                         help='Name of W&B\'s entity',
@@ -172,10 +176,8 @@ def opts():
 
 def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
     run_timestamp = datetime.fromtimestamp(run.summary['_timestamp'])
-    run_start_time = run_timestamp.strftime('%d-%m-%Y %H:%M:%S')
-    run_local_tag = run_timestamp.strftime('%d%m%Y')
 
-    RUN = {
+    _run = {
         'Start time': run.created_at,
         'Local tag': run_timestamp.strftime('%d%m%Y'),
         'W&B run URL': run.url,
@@ -183,27 +185,25 @@ def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
         'W&B run name': run.name,
         'W&B run path': '/'.join(run.path),
         'W&B artifact path':
-        f'{"/".join(run.path[:-1])}/{get_artifacts(run)[0].name}'
+            f'{"/".join(run.path[:-1])}/{get_artifacts(run)[0].name}'
     }
 
     if cfg.get('base_ml_framework'):
         ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
-        RUN.update(ml_framework_versions)
-
+        _run.update(ml_framework_versions)
 
     with open(f'{move_to}/{output_name}/{output_name}-notes.md', 'w') as f:
 
-        for k, v in RUN.items():
+        for k, v in _run.items():
             if k == 'W&B run URL' or v == '':
                 f.write(f'**{k}**: {v}\n')
             else:
                 f.write(f'**{k}**: `{v}`\n')
 
-
         f.write(
-            '\n<details>\n<summary>Classes</summary>\n\n```YAML' + \
-         '\n- ' + '\n- '.join(run.config['data_dict']['names']) + \
-         '\n```\n</details>\n'
+            '\n<details>\n<summary>Classes</summary>\n\n```YAML'
+            '\n- ' + '\n- '.join(run.config['data_dict']['names']) +
+            '\n```\n</details>\n'
         )
 
         try:
@@ -211,8 +211,8 @@ def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
 
             f.write('\n<details>\n<summary>Validation predictions</summary>\n'
                     '\n' + f'<img src="{val_imgs_example_url}" alt="val"'
-                    ' width="1280" height="720">'
-                    '\n</details>\n')
+                           ' width="1280" height="720">'
+                           '\n</details>\n')
 
             cm_idx = run.summary['Results']['captions'].index(
                 'confusion_matrix.png')
@@ -221,8 +221,8 @@ def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
 
             f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
                     '\n' + f'<img src="{cm_url}" alt="cm"'
-                    ' width="1280" height="720">'
-                    '\n</details>\n')
+                           ' width="1280" height="720">'
+                           '\n</details>\n')
 
             shutil.rmtree(Path(cm_file.name).parents[1], ignore_errors=True)
         except TypeError:
@@ -277,12 +277,10 @@ def main():
     if args.supply:
         run_name = args.supply.split('/')[-1].split(':')[0].split('_')[1]
         logger.debug(run_name)
-        best_run = [x for x  in runs if run_name in x.id][0]
+        best_run = [x for x in runs if run_name in x.id][0]
         logger.debug(best_run)
 
     if args.pick:
-        del best_run
-        best_run = copy.deepcopy(picked_run)
         _input = input('Run name: ')
         best_run = [x for x in runs if x.name == _input][0]
         p = best_run.summary['best/precision']
@@ -292,9 +290,14 @@ def main():
     move_to = 'releases'
     weights, config, classes, cfg = get_assets(best_run, output_name, move_to)
 
-    release_notes(best_run, f1_score=best_score, output_name=output_name, cfg=cfg, move_to=move_to)
+    release_notes(best_run, f1_score=best_score, output_name=output_name,
+                  cfg=cfg, move_to=move_to)
 
-    logger.info(f'gh release create {args.release_version} -d -F "{move_to}/{output_name}/{output_name}-notes.md" --title "{args.release_version}" --repo {args.repo} {move_to}/{output_name}/*')
+    logger.info(
+        f'gh release create {args.release_version} -d -F '
+        f'"{move_to}/{output_name}/{output_name}-notes.md" --title '
+        f'"{args.release_version}" --repo '
+        f'{args.repo} {move_to}/{output_name}/*')
 
 
 if __name__ == '__main__':
@@ -302,4 +305,3 @@ if __name__ == '__main__':
     args = opts()
     api = wandb.Api({'entity': args.entity, 'project': args.project_name})
     main()
-    

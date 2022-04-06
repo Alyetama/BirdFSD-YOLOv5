@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import json
 import os
 import sys
@@ -8,7 +11,7 @@ from dotenv import load_dotenv
 
 
 def api_request(url):
-    headers = requests.structures.CaseInsensitiveDict()
+    headers = requests.structures.CaseInsensitiveDict()  # noqa
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
     resp = requests.get(url, headers=headers)
     return resp.json()

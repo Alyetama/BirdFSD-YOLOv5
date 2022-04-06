@@ -26,12 +26,12 @@ from mongodb_helper import get_tasks_from_mongodb
 
 if 'google.colab' in sys.modules:
     sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
-    from colab_logger import logger
+    from colab_logger import logger  # noqa
 else:
     from loguru import logger
 
 
-def keyboard_interrupt_handler(sig, frame):
+def keyboard_interrupt_handler(sig, _):
     logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
     logger.info('Terminating the session gracefully...')
     sys.exit(1)
@@ -39,12 +39,13 @@ def keyboard_interrupt_handler(sig, frame):
 
 class _Headers:
 
-    def __init__(self, token: str):
+    def __init__(self):
         pass
 
-    def make_headers(self):
+    @staticmethod
+    def make_headers():
         load_dotenv()
-        headers = requests.structures.CaseInsensitiveDict()
+        headers = requests.structures.CaseInsensitiveDict()  # noqa
         headers['Content-type'] = 'application/json'
         headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
         return headers
@@ -91,13 +92,14 @@ class Predict(LoadModel, _Headers):
 
     def get_model_version(self):
         if not self.model_version:
-            MODEL_VERSION = 'BirdFSD-YOLOv5-v1.0.0-unknown'
+            model_version = 'BirdFSD-YOLOv5-v1.0.0-unknown'
             logger.warning(
-                f'Model version was not specified! Defaulting to {MODEL_VERSION}'
+                f'Model version was not specified! Defaulting to '
+                f'{model_version}'
             )
         else:
-            MODEL_VERSION = self.model_version
-        return MODEL_VERSION
+            model_version = self.model_version
+        return model_version
 
     @staticmethod
     def to_srv(url):
@@ -111,7 +113,8 @@ class Predict(LoadModel, _Headers):
         data['data']['image'] = self.to_srv(data['data']['image'])
         return data
 
-    def download_image(self, img_url):
+    @staticmethod
+    def download_image(img_url):
         cur_img_name = Path(img_url).name
         r = requests.get(img_url)
         with open(f'/tmp/{cur_img_name}', 'wb') as f:
@@ -189,13 +192,15 @@ class Predict(LoadModel, _Headers):
             except KeyError:
                 logger.error(f'Task {task_id} had no data in the response '
                              '(could be a deleted task). Skipping...')
+                return
             model_preds = self.model(img)
             pred_xywhn = model_preds.xywhn[0]
             if pred_xywhn.shape[0] == 0:
                 logger.debug('No predictions...')
                 url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
 
-                if self.delete_if_no_predictions and not self.if_empty_apply_label:
+                if self.delete_if_no_predictions \
+                        and not self.if_empty_apply_label:
                     resp = requests.delete(url, headers=self.headers)
                     logger.debug({'response': resp.text})
                     logger.debug(f'Deleted task {task_id}.')
@@ -222,12 +227,12 @@ class Predict(LoadModel, _Headers):
                                  data=json.dumps(_post))
             logger.debug({'response': resp.json()})
 
-        except UnidentifiedImageError as e:
-            logger.error(e)
+        except UnidentifiedImageError as _e:
+            logger.error(_e)
             logger.error(f'Skipped {task}')
-        except Exception as e:
+        except Exception as _e:
             logger.error('>>>>>>>>>>>>>>>>>>>>>>>>>> UNEXPECTED EXCEPTION!')
-            logger.exception(e)
+            logger.exception(_e)
             logger.error('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
         finally:
             if self.multithreading:
@@ -331,8 +336,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '-L',
         '--if-empty-apply-label',
-        help=
-        'Label to apply for tasks where the model could not predict anything',
+        help='Label to apply for tasks where the model could not predict '
+             'anything',
         type=Union[None, str],
         default=None)
     parser.add_argument('-d',

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import argparse
 import imghdr
 import json
@@ -5,7 +8,6 @@ import os
 import random
 import shutil
 import tarfile
-import time
 from glob import glob
 from pathlib import Path
 
@@ -37,11 +39,11 @@ def convert_to_yolo(task):
     with open(f'{imgs_dir}/{cur_img_name}', 'wb') as f:
         f.write(r.content)
 
-    valid_image = None
     try:
         valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
     except FileNotFoundError:
-        logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! Skipping...')
+        logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! '
+                     f'Skipping...')
         Path(f'{imgs_dir}/{cur_img_name}').unlink()
         return
 
@@ -72,7 +74,7 @@ def convert_to_yolo(task):
             ]
             x, y, width, height = bbox_ls_to_yolo(x, y, width, height)
 
-            categories = list(enumerate(classes))
+            categories = list(enumerate(classes))  # noqa
             label_idx = [
                 k[0] for k in categories if k[1] == label['rectanglelabels'][0]
             ][0]
@@ -81,12 +83,12 @@ def convert_to_yolo(task):
             f.write('\n')
 
 
-def split_data(output_dir):
+def split_data(_output_dir):
     for subdir in ['images/train', 'labels/train', 'images/val', 'labels/val']:
-        Path(f'{output_dir}/{subdir}').mkdir(parents=True, exist_ok=True)
+        Path(f'{_output_dir}/{subdir}').mkdir(parents=True, exist_ok=True)
 
-    images = sorted(glob(f'{Path(__file__).parent}/{output_dir}/ls_images/*'))
-    labels = sorted(glob(f'{Path(__file__).parent}/{output_dir}/ls_labels/*'))
+    images = sorted(glob(f'{Path(__file__).parent}/{_output_dir}/ls_images/*'))
+    labels = sorted(glob(f'{Path(__file__).parent}/{_output_dir}/ls_labels/*'))
     pairs = [(x, y) for x, y in zip(images, labels)]
 
     len_ = len(images)
@@ -100,15 +102,16 @@ def split_data(output_dir):
             _ = [
                 shutil.copy2(
                     x[n],
-                    f'{output_dir}/{dtype}/{split_str}/{Path(x[n]).name}')
+                    f'{_output_dir}/{dtype}/{split_str}/{Path(x[n]).name}')
                 for x in split
             ]
 
 
 def get_data():
     global classes
-    url = f'{os.environ["LS_HOST"]}/api/projects/{args.project_id}/export?exportType=JSON_MIN'
-    headers = requests.structures.CaseInsensitiveDict()
+    url = f'{os.environ["LS_HOST"]}/api/projects/{args.project_id}/' \
+          f'export?exportType=JSON_MIN'
+    headers = requests.structures.CaseInsensitiveDict()  # noqa
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
     resp = requests.get(url, headers=headers)
     data = resp.json()
@@ -121,9 +124,11 @@ def get_data():
     labels = []
     for entry in data:
         try:
-            labels.append([label['rectanglelabels'][0] for label in entry['label']][0])
+            labels.append([label['rectanglelabels'][0]
+                           for label in entry['label']][0])
         except KeyError as e:
-            logger.warning(f'Current entry raised KeyError {e}! Ignoring entry: {entry}')
+            logger.warning(f'Current entry raised KeyError {e}! '
+                           f'Ignoring entry: {entry}')
     labels = list(set(labels))
     classes = [label for label in labels if label not in excluded_labels]
 
