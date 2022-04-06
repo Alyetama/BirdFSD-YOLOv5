@@ -21,15 +21,15 @@ def opts():
     parser.add_argument(
         '-d',
         '--destination',
-        help=
-        'Output file destination (directory path). Default: current working directory.',
+        help='Output file destination (directory path). Default: current '
+             'working directory.',
         type=str,
         default='.')
     return parser.parse_args()
 
 
 def get_best_weights(entity, project, dest='.'):
-    api = wandb.Api({'entity': 'biodiv', 'project': 'train'})
+    api = wandb.Api({'entity': entity, 'project': project})
     runs = list(api.runs())
 
     scores = []

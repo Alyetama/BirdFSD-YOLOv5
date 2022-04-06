@@ -45,6 +45,11 @@ def update_view():
 
 def opts():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-p',
+                        '--project-id',
+                        help='Label-studio project ID',
+                        type=int,
+                        required=True)
     parser.add_argument('-v',
                         '--view-id',
                         help='View to filter',
@@ -63,12 +68,13 @@ if __name__ == '__main__':
     load_dotenv()
     args = opts()
 
-    headers = requests.structures.CaseInsensitiveDict()
+    headers = requests.structures.CaseInsensitiveDict()  # noqa
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
     headers['Content-type'] = 'application/json'
 
     update_view()
     print('-' * 40)
     logger.info(
-        f'Delete all tasks under: https://ls.aibird.me/projects/1/data?tab={args.view_id}'
+        'Delete all tasks under: https://ls.aibird.me/projects/'
+        f'{args.project_id}/data?tab={args.view_id}'
     )

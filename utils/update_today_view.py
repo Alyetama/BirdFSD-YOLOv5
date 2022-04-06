@@ -8,19 +8,19 @@ from dotenv import load_dotenv
 from loguru import logger
 
 
-def update_today_view(DATE):
+def update_today_view(_date):
     url = f'{os.environ["LS_HOST"]}/api/dm/views/{args.view_id}/'
     resp = requests.get(url, headers=headers)
     view = resp.json()
 
-    FILTER = [{
+    _filter = [{
         'filter': 'filter:tasks:created_at',
         'operator': 'greater',
         'type': 'Datetime',
-        'value': f'{DATE}T04:00:00.000Z'
+        'value': f'{_date}T04:00:00.000Z'
     }]
 
-    view['data']['filters']['items'] = FILTER
+    view['data']['filters']['items'] = _filter
     view['data']['ordering'] = ['tasks:id']
     logger.debug(f'URL: {url} ; DATA: {view}')
     resp = requests.put(url, data=json.dumps(view), headers=headers)
@@ -30,6 +30,11 @@ def update_today_view(DATE):
 
 def opts():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-p',
+                        '--project-id',
+                        help='Label-studio project ID',
+                        type=int,
+                        required=True)
     parser.add_argument('-v',
                         '--view-id',
                         help='View to filter',
@@ -43,7 +48,7 @@ if __name__ == '__main__':
     load_dotenv()
     args = opts()
 
-    headers = requests.structures.CaseInsensitiveDict()
+    headers = requests.structures.CaseInsensitiveDict()  # noqa
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
     headers['Content-type'] = 'application/json'
 
@@ -51,5 +56,7 @@ if __name__ == '__main__':
     update_today_view(DATE)
     print('-' * 40)
     logger.info(
-        f'Visit this link to get the IDs: https://ls.aibird.me/projects/1/data?tab={args.view_id}'
+        'Visit this link to get the IDs: '
+        f'https://ls.aibird.me/projects/{args.project_id}/'
+        f'data?tab={args.view_id}'
     )

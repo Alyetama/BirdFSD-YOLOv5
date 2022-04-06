@@ -141,16 +141,16 @@ def get_data():
 
 def opts():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-p',
+                        '--project-id',
+                        help='Label-studio project ID',
+                        type=int,
+                        required=True)
     parser.add_argument('-o',
                         '--output-dir',
                         help='Path to the output directory',
                         type=str,
                         default='dataset-YOLO')
-    parser.add_argument('-p',
-                        '--project-id',
-                        help='Label-studio project ID',
-                        type=int,
-                        default=1)
     parser.add_argument(
         '--remove',
         help='Remove the output folder and only keep the .tar file',
