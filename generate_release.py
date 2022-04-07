@@ -19,6 +19,17 @@ from loguru import logger
 
 
 def flush_artifacts(runs):
+    """Flushes all artifacts from a given run.
+
+    Parameters
+    ----------
+    runs : list
+        A list of wandb.wandb_run.Run objects.
+
+    Returns
+    -------
+    None
+    """
     for cur_run in runs:
         artifacts = list(cur_run.logged_artifacts())
         _tagged_artifacts = [(x, x.aliases) for x in artifacts]
@@ -32,6 +43,20 @@ def flush_artifacts(runs):
 
 
 def get_artifacts(run, download=False):
+    """Get the best artifact from a wandb run.
+
+    Parameters
+    ----------
+    run: wandb.wandb_run.Run
+        A wandb run object.
+    download: bool
+        Whether to download the artifact.
+
+    Returns
+    -------
+    wandb.wandb_artifact.Artifact
+        The best artifact from the run.
+    """
     artifacts = list(run.logged_artifacts())
     _tagged_artifacts = [(x, x.aliases) for x in artifacts]
     for artif in _tagged_artifacts:
@@ -51,6 +76,20 @@ def get_artifacts(run, download=False):
 
 
 def upload_image(image_path, imgbb_token):
+    """Uploads an image to imgbb.com and returns the URL.
+
+    Parameters
+    ----------
+    image_path : str
+        Path to the image to be uploaded.
+    imgbb_token : str
+        API token for imgbb.com.
+
+    Returns
+    -------
+    str
+        URL of the uploaded image.
+    """
     with open(image_path, 'rb') as f:
         url = 'https://api.imgbb.com/1/upload'
         payload = {
@@ -62,6 +101,20 @@ def upload_image(image_path, imgbb_token):
 
 
 def find_file(run, fname):
+    """Finds a file in a run and uploads it to imgbb.
+
+    Parameters
+    ----------
+    run: wandb.wandb_run.Run
+        A Run object.
+    fname: str
+        A string, the name of the file to be found.
+
+    Returns
+    -------
+    tuple
+        A tuple of the file object and the url of the uploaded image.
+    """
     try:
         file = [x for x in list(run.files()) if fname in x.name][0]
     except IndexError:
@@ -72,6 +125,23 @@ def find_file(run, fname):
 
 
 def get_assets(best_run, output_name, move_to='releases'):
+    """Downloads the best model from the run with the given ID, extracts the model
+    weights, configuration, & classes and saves them to a file.
+
+    Parameters
+    ----------
+    best_run: wandb.wandb_run.Run
+        The best run from which to extract the model weights.
+    output_name: str
+        The name of the output file.
+    move_to: str
+        The directory to which to move the output files.
+
+    Returns
+    -------
+    tuple
+        The paths to the weights file, the config file, and the classes file.
+    """
     logger.debug(best_run)
     weights_fname = f'{output_name}/{output_name}-best.pt'
 
@@ -132,11 +202,127 @@ def get_assets(best_run, output_name, move_to='releases'):
     return weights_fname, config_fname, classes_fname, cfg
 
 
+def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
+    """Creates a release notes file.
+
+    Parameters
+    ----------
+    run: wandb.wandb_run.Run
+        The best run from which to extract the model weights.
+    f1_score: str
+        The F1 score of the best run.
+    output_name: str
+        The name of the output file.
+    cfg: dict
+        The run's configuration.
+    move_to: str
+        The directory to which to move the output files.
+
+    Returns
+    -------
+    str
+        The content of the generated release notes file.
+    """
+    run_timestamp = datetime.fromtimestamp(run.summary['_timestamp'])
+
+    _run = {
+        'Start time':
+        run.created_at,
+        'Local tag':
+        run_timestamp.strftime('%d%m%Y'),
+        'W&B run URL':
+        run.url,
+        'W&B run ID':
+        run.id,
+        'W&B run name':
+        run.name,
+        'W&B run path':
+        '/'.join(run.path),
+        'W&B artifact path':
+        f'{"/".join(run.path[:-1])}/{get_artifacts(run)[0].name}'
+    }
+
+    if cfg.get('base_ml_framework'):
+        ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
+        _run.update(ml_framework_versions)
+
+    with open(f'{move_to}/{output_name}/{output_name}-notes.md', 'w') as f:
+
+        for k, v in _run.items():
+            if k == 'W&B run URL' or v == '':
+                f.write(f'**{k}**: {v}\n')
+            else:
+                f.write(f'**{k}**: `{v}`\n')
+
+        f.write('\n<details>\n<summary>Classes</summary>\n\n```YAML'
+                '\n- ' + '\n- '.join(run.config['data_dict']['names']) +
+                '\n```\n</details>\n')
+
+        try:
+            _, val_imgs_example_url = find_file(run, 'Validation')
+
+            f.write('\n<details>\n<summary>Validation predictions</summary>\n'
+                    '\n' + f'<img src="{val_imgs_example_url}" alt="val"'
+                    ' width="1280" height="720">'
+                    '\n</details>\n')
+
+            cm_idx = run.summary['Results']['captions'].index(
+                'confusion_matrix.png')
+            cm_fname = run.summary['Results']['filenames'][cm_idx]
+            cm_file, cm_url = find_file(run, cm_fname)
+
+            f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
+                    '\n' + f'<img src="{cm_url}" alt="cm"'
+                    ' width="1280" height="720">'
+                    '\n</details>\n')
+
+            shutil.rmtree(Path(cm_file.name).parents[1], ignore_errors=True)
+        except TypeError:
+            logger.error('Failed to get files from the run...')
+
+        f.write('\n**Validation results**:\n')
+        val_results = {
+            k: v
+            for k, v in run.summary.items()
+            if any(x in k for x in ['val/', 'best/precision', 'best/recall'])
+        }
+        val_results = dict(sorted(val_results.items()))
+        val_results.update({'F1-score': f1_score})
+        f.write('<table>\n<tr>\n')
+        f.write('\n'.join([f'   <td>{x}'
+                           for x in val_results.keys()]) + '<tr>\n')
+        f.write(
+            '\n'.join([f'   <td>{round(x, 4)}'
+                       for x in val_results.values()]) + '</table>\n')
+
+    with open(f'{move_to}/{output_name}/{output_name}-notes.md') as f:
+        content = f.read()
+
+    return content
+
+
 def opts():
+    """This is a function to parse command line arguments.
+
+    Parameters
+    ----------
+    -e (--entity): Name of W&B's entity
+    -p (--project-name): Name of W&B's project
+    -n (--release-name): Release base name (e.g., BirdFSD-YOLOv5)
+    -v (--release-version): Release version (e.g., v1.0.0-alpha.1.3)
+    -f (--flush): Flush and exit
+    --pick: Pick the best model manually
+    --supply: Supply the model path manually
+    --repo: Link to the repository
+
+    Returns
+    -------
+    args:
+        A namespace containing the parsed command line arguments
+    """
     parser = argparse.ArgumentParser(
         epilog=f'Basic usage: python {Path(__file__).name} -e "entity" -p'
-               f' "project" -n "release_base_name" -v "v1.0.0-alpha"'
-    )
+        f' "project" -n "release_base_name" -v "v1.0.0-alpha"')
     parser.add_argument('-e',
                         '--entity',
                         help='Name of W&B\'s entity',
@@ -167,89 +353,26 @@ def opts():
     parser.add_argument('--supply',
                         help='Supply the model path manually',
                         type=str)
-    parser.add_argument('--repo',
-                        help='Link to the repository',
-                        type=str)
+    parser.add_argument('--repo', help='Link to the repository', type=str)
 
     return parser.parse_args()
 
 
-def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
-    run_timestamp = datetime.fromtimestamp(run.summary['_timestamp'])
-
-    _run = {
-        'Start time': run.created_at,
-        'Local tag': run_timestamp.strftime('%d%m%Y'),
-        'W&B run URL': run.url,
-        'W&B run ID': run.id,
-        'W&B run name': run.name,
-        'W&B run path': '/'.join(run.path),
-        'W&B artifact path':
-            f'{"/".join(run.path[:-1])}/{get_artifacts(run)[0].name}'
-    }
-
-    if cfg.get('base_ml_framework'):
-        ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
-        _run.update(ml_framework_versions)
-
-    with open(f'{move_to}/{output_name}/{output_name}-notes.md', 'w') as f:
-
-        for k, v in _run.items():
-            if k == 'W&B run URL' or v == '':
-                f.write(f'**{k}**: {v}\n')
-            else:
-                f.write(f'**{k}**: `{v}`\n')
-
-        f.write(
-            '\n<details>\n<summary>Classes</summary>\n\n```YAML'
-            '\n- ' + '\n- '.join(run.config['data_dict']['names']) +
-            '\n```\n</details>\n'
-        )
-
-        try:
-            _, val_imgs_example_url = find_file(run, 'Validation')
-
-            f.write('\n<details>\n<summary>Validation predictions</summary>\n'
-                    '\n' + f'<img src="{val_imgs_example_url}" alt="val"'
-                           ' width="1280" height="720">'
-                           '\n</details>\n')
-
-            cm_idx = run.summary['Results']['captions'].index(
-                'confusion_matrix.png')
-            cm_fname = run.summary['Results']['filenames'][cm_idx]
-            cm_file, cm_url = find_file(run, cm_fname)
-
-            f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
-                    '\n' + f'<img src="{cm_url}" alt="cm"'
-                           ' width="1280" height="720">'
-                           '\n</details>\n')
-
-            shutil.rmtree(Path(cm_file.name).parents[1], ignore_errors=True)
-        except TypeError:
-            logger.error('Failed to get files from the run...')
-
-        f.write('\n**Validation results**:\n')
-        val_results = {
-            k: v
-            for k, v in run.summary.items()
-            if any(x in k for x in ['val/', 'best/precision', 'best/recall'])
-        }
-        val_results = dict(sorted(val_results.items()))
-        val_results.update({'F1-score': f1_score})
-        f.write('<table>\n<tr>\n')
-        f.write('\n'.join([f'   <td>{x}'
-                           for x in val_results.keys()]) + '<tr>\n')
-        f.write(
-            '\n'.join([f'   <td>{round(x, 4)}'
-                       for x in val_results.values()]) + '</table>\n')
-
-    with open(f'{move_to}/{output_name}/{output_name}-notes.md') as f:
-        content = f.read()
-
-    return content
-
-
 def main():
+    """This function is the main function of the program.
+    It does the following:
+        1. Creates a directory for the release
+        2. Flushes the artifacts from the runs if `flush` is set to `True`
+        3. Gets the scores for each run
+        4. Gets the best run
+        5. Gets the assets from the best run
+        6. Creates the release notes
+        7. Creates the release
+
+    Returns
+    -------
+    None
+    """
     output_name = f'{args.release_name}-{args.release_version}'
 
     runs = list(api.runs())
@@ -290,14 +413,16 @@ def main():
     move_to = 'releases'
     weights, config, classes, cfg = get_assets(best_run, output_name, move_to)
 
-    release_notes(best_run, f1_score=best_score, output_name=output_name,
-                  cfg=cfg, move_to=move_to)
+    release_notes(best_run,
+                  f1_score=best_score,
+                  output_name=output_name,
+                  cfg=cfg,
+                  move_to=move_to)
 
-    logger.info(
-        f'gh release create {args.release_version} -d -F '
-        f'"{move_to}/{output_name}/{output_name}-notes.md" --title '
-        f'"{args.release_version}" --repo '
-        f'{args.repo} {move_to}/{output_name}/*')
+    logger.info(f'gh release create {args.release_version} -d -F '
+                f'"{move_to}/{output_name}/{output_name}-notes.md" --title '
+                f'"{args.release_version}" --repo '
+                f'{args.repo} {move_to}/{output_name}/*')
 
 
 if __name__ == '__main__':

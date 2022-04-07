@@ -32,18 +32,40 @@ else:
 
 
 def keyboard_interrupt_handler(sig, _):
+    """This function handles the KeyboardInterrupt (CTRL+C) signal.
+    It's a handler for the signal, which means it's called when the OS sends the signal.
+    The signal is sent when the user presses CTRL+C.
+
+    Parameters
+    ----------
+    The function takes two arguments:
+    sig:
+        The ID of the signal that was sent.
+    frame:
+        The current stack frame.
+    """
     logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
     logger.info('Terminating the session gracefully...')
     sys.exit(1)
 
 
 class _Headers:
+    """This class is used to make headers for the requests.
+    It is a static class.
+    It has only one method: make_headers()
+    It returns a dictionary with the headers.
+    """
 
     def __init__(self):
         pass
 
     @staticmethod
     def make_headers():
+        """Make headers for the request.
+
+        Returns:
+            headers (dict): A dictionary of headers.
+        """
         load_dotenv()
         headers = requests.structures.CaseInsensitiveDict()  # noqa
         headers['Content-type'] = 'application/json'
@@ -52,17 +74,121 @@ class _Headers:
 
 
 class LoadModel:
+    """This class is used to load a model from a given path.
+    The model is a YOLOv5 model.
+    The model is loaded using the torch.hub.load function.
+    The model is loaded with the following parameters:
+        - ultralytics/yolov5
+        - custom
+        - path=self.weights
+    The model is returned by the model method.
+    """
 
     def __init__(self, weights: str):
         self.weights = weights
 
     def model(self):
+        """Loads a pretrained YOLOv5 model for a given dataset.
+
+        Returns:
+            (nn.Module): a YOLOv5 model.
+        """
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
                               path=self.weights)
 
 
 class Predict(LoadModel, _Headers):
+    """This class is used to predict bounding boxes for images in a given project.
+    It uses the YOLOv5 model to predict bounding boxes and then posts the
+    predictions to the Label Studio server.
+
+    Parameters
+    ----------
+    weights : str
+        Path to the weights file.
+    project_id : int
+        ID of the project to predict.
+    tasks_range : str, optional
+        Range of tasks to predict.
+        Example: '1,10' will predict tasks 1 to 10.
+        Default: ''
+    predict_all : bool, optional
+        Predict all tasks in the project.
+        Default: False
+    one_task : Union[None, int], optional
+        Predict a single task.
+        Default: None
+    model_version : Union[None, str], optional
+        Model version to use.
+        Default: None
+    multithreading : bool, optional
+        Use multithreading.
+        Default: True
+    delete_if_no_predictions : bool, optional
+        Delete tasks that have no predictions.
+        Default: True
+    if_empty_apply_label : str, optional
+        Apply a label to tasks that have no predictions.
+        Default: None
+    debug : bool, optional
+        Debug mode.
+        Default: False
+
+    Attributes
+    ----------
+    headers : dict
+        Headers for the requests.
+    model : YOLOv5
+        YOLOv5 model.
+    project_id : int
+        ID of the project to predict.
+    tasks_range : str
+        Range of tasks to predict.
+    predict_all : bool
+        Predict all tasks in the project.
+    one_task : Union[None, int]
+        Predict a single task.
+    model_version : Union[None, str]
+        Model version to use.
+    multithreading : bool
+        Use multithreading.
+    delete_if_no_predictions : bool
+        Delete tasks that have no predictions.
+    if_empty_apply_label : str
+        Apply a label to tasks that have no predictions.
+    debug : bool
+        Debug mode.
+    counter : int
+        Counter for the progress bar.
+    total_tasks : Union[None, int]
+        Total number of tasks that have been predicted.
+
+    Methods
+    -------
+    get_model_version()
+        Get the model version.
+    get_task(task_id)
+        Get a task from the Label Studio server.
+    download_image(img_url)
+        Download an image from the Label Studio server.
+    yolo_to_ls(x, y, width, height, score, n)
+        Convert YOLOv5 predictions to Label Studio format.
+    get_all_tasks()
+        Get all tasks from the Label Studio server.
+    selected_tasks(tasks, start, end)
+        Select a range of tasks.
+    single_task(task_id)
+        Get a single task from the Label Studio server.
+    pred_result(x, y, w, h, score, label)
+        Create a prediction result.
+    pred_post(results, scores, task_id)
+        Create a prediction post.
+    post_prediction(task)
+        Post a prediction to the Label Studio server.
+    apply_predictions()
+        Apply predictions to the Label Studio server.
+    """
 
     def __init__(self,
                  weights: str,
@@ -91,22 +217,63 @@ class Predict(LoadModel, _Headers):
         self.total_tasks = None
 
     def get_model_version(self):
+        """Get the model version.
+    
+        If the model version is not specified, a default value is used.
+        
+        Parameters
+        ----------
+        self : object
+            The object instance.
+        
+        Returns
+        -------
+        model_version : str
+            The model version.
+        """
         if not self.model_version:
             model_version = 'BirdFSD-YOLOv5-v1.0.0-unknown'
-            logger.warning(
-                f'Model version was not specified! Defaulting to '
-                f'{model_version}'
-            )
+            logger.warning(f'Model version was not specified! Defaulting to '
+                           f'{model_version}')
         else:
             model_version = self.model_version
         return model_version
 
     @staticmethod
     def to_srv(url):
+        """Converts a private file URL to a public server URL.
+    
+        Parameters
+        ----------
+        url : str
+            The label-studio URL to convert.
+        
+        Returns
+        -------
+        str
+            The server URL.
+        """
         return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
                            f'{os.environ["SRV_HOST"]}/')
 
-    def get_task(self, _task_id):
+    def get_task(self, _task_id: int) -> dict:
+        """This function returns a task from the local server.
+        
+        Parameters
+        ----------
+        _task_id : int
+            The id of the task to be returned.
+        
+        Returns
+        -------
+        dict
+            A dictionary containing the task data.
+        
+        Examples
+        --------
+        >>> get_task(1)
+        {'id': 1, 'data': {'image': 'http://localhost:8000/data/local-files/1.jpg'}}
+        """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
         data = resp.json()
@@ -115,6 +282,18 @@ class Predict(LoadModel, _Headers):
 
     @staticmethod
     def download_image(img_url):
+        """Download an image from a URL and save it to a local file.
+        
+        Parameters
+        ----------
+        img_url : str
+            The URL of the image to download.
+        
+        Returns
+        -------
+        img_local_path : str
+            The path to the local file containing the downloaded image.
+        """
         cur_img_name = Path(img_url).name
         r = requests.get(img_url)
         with open(f'/tmp/{cur_img_name}', 'wb') as f:
@@ -124,6 +303,30 @@ class Predict(LoadModel, _Headers):
         return img_local_path
 
     def yolo_to_ls(self, x, y, width, height, score, n):
+        """Converts YOLOv5 output to a tuple of the form:
+        [x, y, width, height, score, label]
+
+        Parameters
+        ----------
+        x : float
+            The x coordinate of the center of the bounding box.
+        y : float
+            The y coordinate of the center of the bounding box.
+        width : float
+            The width of the bounding box.
+        height : float
+            The height of the bounding box.
+        score : float
+            The confidence score of the bounding box.
+        n : int
+            The index of the class label.
+
+        Returns
+        -------
+        list
+            A tuple of the form:
+            [x, y, width, height, score, label]
+        """
         x = (x - width / 2) * 100
         y = (y - height / 2) * 100
         w = width * 100
@@ -136,6 +339,20 @@ class Predict(LoadModel, _Headers):
         return x, y, w, h, round(score, 2), label
 
     def get_all_tasks(self):
+        """Fetch all tasks from the project.
+
+        This function fetches all tasks from the project.
+
+        Parameters
+        ----------
+        self : object
+            The object instance.
+
+        Returns
+        -------
+        list
+            A list of tasks.
+        """
         logger.debug('Fetching all tasks. This might take few minutes...')
         q = 'exportType=JSON&download_all_tasks=true'
         ls_host = os.environ["LS_HOST"]
@@ -149,15 +366,61 @@ class Predict(LoadModel, _Headers):
 
     @staticmethod
     def selected_tasks(tasks, start, end):
+        """Returns a list of tasks from the given list of tasks,
+        whose id is in the range [start, end].
+
+        Parameters
+        ----------
+        tasks : list
+            A list of tasks.
+        start : int
+            The start of the range.
+        end : int
+            The end of the range.
+
+        Returns
+        -------
+        list
+            A list of tasks.
+        """
         return [t for t in tasks if t['id'] in range(start, end + 1)]
 
     def single_task(self, task_id):
+        """Get a single task by id.
+
+        :param task_id: The id of the task to get.
+        :type task_id: int
+        :return: A list containing the task.
+        :rtype: list
+        """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
         resp = requests.get(url, headers=self.headers)
         return [resp.json()]
 
     @staticmethod
     def pred_result(x, y, w, h, score, label):
+        """This function takes in the x, y, width, height, score, and label of a prediction and returns a dictionary with the prediction's information.
+
+        Parameters
+        ----------
+        x : int
+            The x coordinate of the prediction.
+        y : int
+            The y coordinate of the prediction.
+        w : int
+            The width of the prediction.
+        h : int
+            The height of the prediction.
+        score : float
+            The confidence score of the prediction.
+        label : str
+            The label of the prediction.
+
+        Returns
+        -------
+        dict
+            A dictionary with the prediction's information.
+        """
         return {
             "type": "rectanglelabels",
             "score": score,
@@ -173,6 +436,22 @@ class Predict(LoadModel, _Headers):
         }
 
     def pred_post(self, results, scores, task_id):
+        """This function is used to create an API POST request of a single prediction results.
+
+        Parameters
+        ----------
+        results: list
+            the results of the model for all predictions in a single image.
+        scores: list
+            the scores of all detections predicted by the model.
+        task_id: int
+            the task id.
+
+        Returns
+        -------
+        dict
+            The prediction results.
+        """
         return {
             'model_version': self.model_version,
             'result': results,
@@ -184,6 +463,29 @@ class Predict(LoadModel, _Headers):
         }
 
     def post_prediction(self, task):
+        """This function is called by the `predict` method. It takes a task as an argument and performs the following steps:
+
+        1. It downloads the image from the task's `data` field.
+        2. It runs the image through the model and gets the predictions.
+        3. It converts the predictions to the format required by Label Studio.
+        4. It posts the predictions to Label Studio.
+
+        If the task has no data, it skips the task.
+
+        If the task has no predictions, it deletes the task if `delete_if_no_predictions` is set to `True`.
+
+        If `if_empty_apply_label` is set to a label, it applies a the string of `if_empty_apply_label` if not set to `None`.
+
+        Parameters
+        ----------
+        task: dict
+            The labe-studio API response of a single task.
+
+        Returns
+        -------
+        dict
+            A dictionary with the prediction's information.
+        """
         try:
             task_id = task['id']
             try:
@@ -241,6 +543,13 @@ class Predict(LoadModel, _Headers):
                     f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
 
     def apply_predictions(self):
+        """This function applies predictions to tasks.
+
+        Returns
+        -------
+        list
+            A list of tasks with predictions applied.
+        """
         if self.delete_if_no_predictions and self.if_empty_apply_label:
             logger.error('Can\'t have both --delete-if-no-predictions and '
                          '--if-empty-apply-label!')
@@ -337,7 +646,7 @@ if __name__ == '__main__':
         '-L',
         '--if-empty-apply-label',
         help='Label to apply for tasks where the model could not predict '
-             'anything',
+        'anything',
         type=Union[None, str],
         default=None)
     parser.add_argument('-d',

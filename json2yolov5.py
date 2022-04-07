@@ -1,6 +1,26 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+"""This script converts the output of a Label-studio project to a YOLO dataset.
+
+The script will create a folder with the following structure:
+
+dataset-YOLO
+├── classes.txt
+├── dataset_config.yml
+├── images
+│   ├── train
+│   └── val
+└── labels
+    ├── train
+    └── val
+
+The script will also create a .tar file with the same name as the output folder.
+
+The script will also create a tasks_not_exported.json file with the IDs of the
+tasks that failed to export
+"""
+    
 import argparse
 import imghdr
 import json
