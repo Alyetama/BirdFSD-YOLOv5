@@ -8,7 +8,7 @@ git clone https://github.com/bird-feeder/BirdFSD-YOLOv5.git
 cd BirdFSD-YOLOv5
 
 pip install -r requirements.txt
-git clone -q https://github.com/ultralytics/yolov5.git
+git clone https://github.com/ultralytics/yolov5.git
 ```
 
 ## Dataset preparation
@@ -19,16 +19,19 @@ mv dataset-YOLO/dataset_config.yml .
 python utils/relative_to_abs.py
 ```
 
-## Training
+## Training[^1]
 
 ```shell
-WEIGHTS="<weights_download_link>"
+WEIGHTS=
 wget $WEIGHTS -qO best.pt
 
 EPOCHS=30
 BATCH_SIZE=16
-PRETRAINED_WEIGHTS='best.pt'
+PRETRAINED_WEIGHTS="<weights_download_link>"  # or one of the pretrained models if \
+                                              # running for the first time (see footer)
 
 python yolov5/train.py --img-size 768 --batch $BATCH_SIZE --epochs $EPOCHS \
     --data "dataset_config.yml" --weights $PRETRAINED_WEIGHTS
 ```
+
+[^1]: [yolov5/wiki/Train-Custom-Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
