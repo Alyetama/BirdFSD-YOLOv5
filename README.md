@@ -9,6 +9,9 @@ cd BirdFSD-YOLOv5
 
 pip install -r requirements.txt
 git clone https://github.com/ultralytics/yolov5.git
+
+mv .env.example .env
+nano .env  # update the variables with your favorite editor
 ```
 
 ## Dataset preparation
