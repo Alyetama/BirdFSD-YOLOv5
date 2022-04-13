@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=02:00:00
+#SBATCH --time=08:00:00
 #SBATCH --job-name='BirdFSD-YOLOv5-train'
 #SBATCH --partition='gpu'
 #SBATCH --gres=gpu
@@ -19,15 +19,16 @@ module load cuda/10.2
 #-------------------------------------
 nvidia-smi
 #-------------------------------------
-rm -rf "dataset-YOLO" "dataset-YOLO.tar"
+rm -rf "dataset-YOLO" "dataset-YOLO.tar" "dataset_config.yml"
 python json2yolov5.py
+mv dataset-YOLO/dataset_config.yml .
 python utils/relative_to_abs.py
 #-------------------------------------
 rm "best.pt"
-wget "https://d.aibird.me/best.pt"
+wget -q "https://d.aibird.me/best.pt"
 #-------------------------------------
 BATCH_SIZE=16
-EPOCHS=30
+EPOCHS=100
 PRETRAINED_WEIGHTS="best.pt"
 #-------------------------------------
 python yolov5/train.py --img-size 768 --batch $BATCH_SIZE --epochs $EPOCHS \

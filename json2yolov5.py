@@ -132,15 +132,6 @@ def split_data(_output_dir):
 def get_data():
     global classes
     data = []
-    # for project_id in tqdm([13]):
-    #     url = f'{os.environ["LS_HOST"]}/api/projects/{project_id}/' \
-    #           f'export?exportType=JSON_MIN'
-    #     headers = requests.structures.CaseInsensitiveDict()  # noqa
-    #     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
-    #     resp = requests.get(url, headers=headers)
-    #     print(resp.json())
-    #     raise SystemExit
-    #     data.append(resp.json())
     for project_id in tqdm(args.projects.split(','), desc='Projects'):
         data.append(
             get_tasks_from_mongodb(project_id, dump=False, json_min=True))
