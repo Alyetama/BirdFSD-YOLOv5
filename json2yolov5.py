@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import argparse
+import imghdr
+import json
+import os
+import random
+import shutil
+import tarfile
+from glob import glob
+from pathlib import Path
+
+import ray
+import requests
+from dotenv import load_dotenv
+from loguru import logger
+from tqdm import tqdm
+
+from mongodb_helper import get_tasks_from_mongodb
 """This script converts the output of a Label-studio project to a YOLO dataset.
 
 The script will create a folder with the following structure:
@@ -20,24 +37,6 @@ The script will also create a .tar file with the same name as the output folder.
 The script will also create a tasks_not_exported.json file with the IDs of the
 tasks that failed to export
 """
-    
-import argparse
-import imghdr
-import json
-import os
-import random
-import shutil
-import tarfile
-from glob import glob
-from pathlib import Path
-
-import ray
-import requests
-from dotenv import load_dotenv
-from loguru import logger
-from tqdm import tqdm
-
-from mongodb_helper import get_tasks_from_mongodb
 
 
 def to_srv(url):
@@ -64,19 +63,15 @@ def convert_to_yolo(task):
     try:
         valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
     except FileNotFoundError:
-        logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! '
-                     f'Skipping...')
+        logger.error(f'Could not validate {imgs_dir}/{cur_img_name}'
+                     f'from {task["id"]}! Skipping...')
         try:
             Path(f'{imgs_dir}/{cur_img_name}').unlink()
             return
         except FileNotFoundError:
-            logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! '
-                     f'Skipping...')
+            logger.error(f'Could not validate {imgs_dir}/{cur_img_name}'
+                         f'from {task["id"]}! Skipping...')
             return
-
-    if not valid_image:
-        Path(f'{imgs_dir}/{cur_img_name}').unlink()
-        return
 
     with open(f'{labels_dir}/{Path(cur_img_name).stem}.txt', 'w') as f:
         try:
@@ -147,7 +142,8 @@ def get_data():
     #     raise SystemExit
     #     data.append(resp.json())
     for project_id in tqdm(args.projects.split(','), desc='Projects'):
-        data.append(get_tasks_from_mongodb(project_id, dump=False, json_min=True))
+        data.append(
+            get_tasks_from_mongodb(project_id, dump=False, json_min=True))
     data = sum(data, [])
 
     excluded_labels = [
@@ -158,13 +154,13 @@ def get_data():
     labels = []
     for entry in data:
         try:
-            labels.append([label['rectanglelabels'][0]
-                           for label in entry['label']][0])
+            labels.append(
+                [label['rectanglelabels'][0] for label in entry['label']][0])
         except KeyError as e:
             logger.warning(f'Current entry raised KeyError {e}! '
                            f'Ignoring entry: {entry}')
     labels = list(set(labels))
-    print(labels)
+    logger.info(labels)
     classes = [label for label in labels if label not in excluded_labels]
 
     Path('dataset-YOLO').mkdir(exist_ok=True)
