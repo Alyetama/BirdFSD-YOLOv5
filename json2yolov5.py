@@ -37,6 +37,8 @@ from dotenv import load_dotenv
 from loguru import logger
 from tqdm import tqdm
 
+from mongodb_helper import get_tasks_from_mongodb
+
 
 def to_srv(url):
     return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
@@ -129,12 +131,19 @@ def split_data(_output_dir):
 
 def get_data():
     global classes
-    url = f'{os.environ["LS_HOST"]}/api/projects/{args.project_id}/' \
-          f'export?exportType=JSON_MIN'
-    headers = requests.structures.CaseInsensitiveDict()  # noqa
-    headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
-    resp = requests.get(url, headers=headers)
-    data = resp.json()
+    data = []
+    # for project_id in tqdm([13]):
+    #     url = f'{os.environ["LS_HOST"]}/api/projects/{project_id}/' \
+    #           f'export?exportType=JSON_MIN'
+    #     headers = requests.structures.CaseInsensitiveDict()  # noqa
+    #     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
+    #     resp = requests.get(url, headers=headers)
+    #     print(resp.json())
+    #     raise SystemExit
+    #     data.append(resp.json())
+    for project_id in tqdm(args.projects.split(','), desc='Projects'):
+        data.append(get_tasks_from_mongodb(project_id, dump=False, json_min=True))
+    data = sum(data, [])
 
     excluded_labels = [
         'cannot identify', 'no animal', 'distorted image',
@@ -162,9 +171,9 @@ def get_data():
 def opts():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p',
-                        '--project-id',
-                        help='Label-studio project ID',
-                        type=int,
+                        '--projects',
+                        help='Comma-seperated projects ID',
+                        type=str,
                         required=True)
     parser.add_argument('-o',
                         '--output-dir',

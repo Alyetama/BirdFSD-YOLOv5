@@ -42,7 +42,7 @@ def mongodb_db():
     return db
 
 
-def get_tasks_from_mongodb(project_id):
+def get_tasks_from_mongodb(project_id, dump=True, json_min=False):
     """Get tasks from MongoDB.
 
     Parameters
@@ -56,11 +56,15 @@ def get_tasks_from_mongodb(project_id):
         A list of tasks.
     """
     db = mongodb_db()
-    col = db[f'project_{project_id}']
+    if json_min:
+        col = db[f'project_{project_id}_min']
+    else:
+        col = db[f'project_{project_id}']
     tasks = list(col.find({}, {}))
 
-    with open('tasks.json', 'w') as j:
-        json.dump(tasks, j, indent=4)
+    if dump:
+        with open('tasks.json', 'w') as j:
+            json.dump(tasks, j, indent=4)
     return tasks
 
 
