@@ -22,9 +22,6 @@ python utils/relative_to_abs.py
 ## Training[^1]
 
 ```shell
-WEIGHTS=
-wget $WEIGHTS -qO best.pt
-
 EPOCHS=30
 BATCH_SIZE=16
 PRETRAINED_WEIGHTS="<weights_download_link>"  # or one of the pretrained models if \
