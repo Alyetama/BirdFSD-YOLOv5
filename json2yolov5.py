@@ -66,8 +66,13 @@ def convert_to_yolo(task):
     except FileNotFoundError:
         logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! '
                      f'Skipping...')
-        Path(f'{imgs_dir}/{cur_img_name}').unlink()
-        return
+        try:
+            Path(f'{imgs_dir}/{cur_img_name}').unlink()
+            return
+        except FileNotFoundError:
+            logger.error(f'Could not validate {imgs_dir}/{cur_img_name} ! '
+                     f'Skipping...')
+            return
 
     if not valid_image:
         Path(f'{imgs_dir}/{cur_img_name}').unlink()
@@ -159,6 +164,7 @@ def get_data():
             logger.warning(f'Current entry raised KeyError {e}! '
                            f'Ignoring entry: {entry}')
     labels = list(set(labels))
+    print(labels)
     classes = [label for label in labels if label not in excluded_labels]
 
     Path('dataset-YOLO').mkdir(exist_ok=True)
@@ -174,7 +180,7 @@ def opts():
                         '--projects',
                         help='Comma-seperated projects ID',
                         type=str,
-                        required=True)
+                        default=os.environ['PROJECTS_ID'])
     parser.add_argument('-o',
                         '--output-dir',
                         help='Path to the output directory',
