@@ -34,4 +34,11 @@ python yolov5/train.py --img-size 768 --batch $BATCH_SIZE --epochs $EPOCHS \
     --data "dataset_config.yml" --weights $PRETRAINED_WEIGHTS
 ```
 
+## Related
+
+- [LS-Tasks-MongoDB](https://github.com/bird-feeder/LS-Tasks-MongoDB)
+- [label-studio-workers](https://github.com/bird-feeder/label-studio-workers)
+- [webapp-beta](https://github.com/bird-feeder/webapp-beta)
+
+
 [^1]: [yolov5/wiki/Train-Custom-Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
