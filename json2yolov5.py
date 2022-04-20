@@ -2,166 +2,293 @@
 # coding: utf-8
 
 import argparse
+import collections
 import imghdr
 import json
 import os
 import random
 import shutil
+import signal
+import sys
 import tarfile
 from glob import glob
 from pathlib import Path
 
+import matplotlib
+import matplotlib.pyplot as plt
+import pandas as pd
 import ray
 import requests
+import seaborn as sns
 from dotenv import load_dotenv
 from loguru import logger
 from tqdm import tqdm
 
 from mongodb_helper import get_tasks_from_mongodb
-"""This script converts the output of a Label-studio project to a YOLO dataset.
-
-The script will create a folder with the following structure:
-
-dataset-YOLO
-├── classes.txt
-├── dataset_config.yml
-├── images
-│   ├── train
-│   └── val
-└── labels
-    ├── train
-    └── val
-
-The script will also create a .tar file with the same name as the output folder.
-
-The script will also create a tasks_not_exported.json file with the IDs of the
-tasks that failed to export
-"""
 
 
-def to_srv(url):
-    return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
-                       f'{os.environ["SRV_HOST"]}/')
+def keyboard_interrupt_handler(sig, _):
+    logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
+    logger.warning('Attempting to shut down ray...')
+    ray.shutdown()
+    logger.warning('Terminating the session gracefully...')
+    sys.exit(1)
 
 
-def bbox_ls_to_yolo(x, y, width, height):
-    x = (x + width / 2) / 100
-    y = (y + height / 2) / 100
-    w = width / 100
-    h = height / 100
-    return x, y, w, h
+class JSON2YOLO:
+    """Converts the output of a Label-studio project to a YOLO dataset.
 
+    The output is a folder with the following structure:
 
-@ray.remote
-def convert_to_yolo(task):
-    img_url = to_srv(task['image'])
-    cur_img_name = Path(img_url).name
-    r = requests.get(img_url)
-    with open(f'{imgs_dir}/{cur_img_name}', 'wb') as f:
-        f.write(r.content)
+    dataset-YOLO
+    ├── classes.txt
+    ├── dataset_config.yml
+    ├── images
+    │   ├── train
+    │   └── val
+    └── labels
+        ├── train
+        └── val
 
-    try:
-        valid_image = imghdr.what(f'{imgs_dir}/{cur_img_name}')
-    except FileNotFoundError:
-        logger.error(f'Could not validate {imgs_dir}/{cur_img_name}'
-                     f'from {task["id"]}! Skipping...')
+    The output will also be stored in a tarball with the same name as the output
+    folder.
+
+    The ID of the tasks that failed to export for any reason, will be written
+    to a file named `tasks_not_exported.json`.
+    """
+
+    def __init__(self,
+                 projects,
+                 output_dir='dataset-YOLO',
+                 only_tar_file=False):
+        self.projects = projects
+        self.output_dir = output_dir
+        self.only_tar_file = only_tar_file
+        self.imgs_dir = f'{self.output_dir}/ls_images'
+        self.labels_dir = f'{self.output_dir}/ls_labels'
+        self.classes = None
+        self.tasks_not_exported = []
+
+    @staticmethod
+    def to_srv(url):
+        return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
+                           f'{os.environ["SRV_HOST"]}/')
+
+    @staticmethod
+    def bbox_ls_to_yolo(x, y, width, height):
+        x = (x + width / 2) / 100
+        y = (y + height / 2) / 100
+        w = width / 100
+        h = height / 100
+        return x, y, w, h
+
+    def get_data(self):
+        data = []
+        projects_id = self.projects.split(',')
+        for project_id in tqdm(projects_id, desc='Projects'):
+            data.append(
+                get_tasks_from_mongodb(project_id, dump=False, json_min=True))
+        data = sum(data, [])
+
+        excluded_labels = [
+            'cannot identify', 'no animal', 'distorted image',
+            'severe occultation', 'animal other than bird or squirrel'
+        ]
+
+        labels = []
+        for entry in data:
+            try:
+                labels.append([
+                    label['rectanglelabels'][0] for label in entry['label']
+                ][0])
+            except KeyError as e:
+                logger.warning(f'Current entry raised KeyError {e}! '
+                               f'Ignoring entry: {entry}')
+        labels = list(set(labels))
+
+        self.classes = [
+            label for label in labels if label not in excluded_labels
+        ]
+
+        logger.debug(f'Number of classes: {len(self.classes)}')
+        logger.debug(f'Classes: {self.classes}')
+
+        Path('dataset-YOLO').mkdir(exist_ok=True)
+        with open(f'{self.output_dir}/classes.txt', 'w') as f:
+            for class_ in self.classes:
+                f.write(f'{class_}\n')
+        return data
+
+    @ray.remote
+    def convert_to_yolo(self, task):
+        img_url = self.to_srv(task['image'])
+        cur_img_name = Path(img_url).name
+        r = requests.get(img_url)
+        with open(f'{self.imgs_dir}/{cur_img_name}', 'wb') as f:
+            f.write(r.content)
+
         try:
-            Path(f'{imgs_dir}/{cur_img_name}').unlink()
-            return
+            valid_image = imghdr.what(f'{self.imgs_dir}/{cur_img_name}')
         except FileNotFoundError:
-            logger.error(f'Could not validate {imgs_dir}/{cur_img_name}'
+            logger.error(f'Could not validate {self.imgs_dir}/{cur_img_name}'
                          f'from {task["id"]}! Skipping...')
-            return
-
-    with open(f'{labels_dir}/{Path(cur_img_name).stem}.txt', 'w') as f:
-        try:
-            labels = task['label']
-        except KeyError:
-            tasks_not_exported.append(task['id'])
-            logger.warning('>>>>>>>>>> CORRUPTED TASK:', task['id'])
-            f.close()
-            Path(f'{labels_dir}/{Path(cur_img_name).stem}.txt').unlink()
-            Path(f'{imgs_dir}/{cur_img_name}').unlink()
-            return
-
-        for label in labels:
-            if label['rectanglelabels'][0] not in classes:
-                f.close()
-                Path(f'{labels_dir}/{Path(cur_img_name).stem}.txt').unlink()
-                Path(f'{imgs_dir}/{cur_img_name}').unlink()
+            try:
+                Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
                 return
-            x, y, width, height = [
-                v for k, v in label.items()
-                if k in ['x', 'y', 'width', 'height']
-            ]
-            x, y, width, height = bbox_ls_to_yolo(x, y, width, height)
+            except FileNotFoundError:
+                logger.error(
+                    f'Could not validate {self.imgs_dir}/{cur_img_name}'
+                    f'from {task["id"]}! Skipping...')
+                return
 
-            categories = list(enumerate(classes))  # noqa
-            label_idx = [
-                k[0] for k in categories if k[1] == label['rectanglelabels'][0]
-            ][0]
+        with open(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt',
+                  'w') as f:
+            try:
+                labels = task['label']
+            except KeyError:
+                self.tasks_not_exported.append(task['id'])
+                logger.warning('>>>>>>>>>> CORRUPTED TASK:', task['id'])
+                f.close()
+                Path(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
+                     ).unlink()
+                Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
+                return
 
-            f.write(f'{label_idx} {x} {y} {width} {height}')
-            f.write('\n')
+            for label in labels:
+                if label['rectanglelabels'][0] not in self.classes:
+                    f.close()
+                    Path(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
+                         ).unlink()
+                    Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
+                    return
+                x, y, width, height = [
+                    v for k, v in label.items()
+                    if k in ['x', 'y', 'width', 'height']
+                ]
+                x, y, width, height = self.bbox_ls_to_yolo(x, y, width, height)
+
+                categories = list(enumerate(self.classes))  # noqa
+                label_idx = [
+                    k[0] for k in categories
+                    if k[1] == label['rectanglelabels'][0]
+                ][0]
+
+                f.write(f'{label_idx} {x} {y} {width} {height}')
+                f.write('\n')
+        return label['rectanglelabels'][0]  # to create a count table
+
+    @staticmethod
+    def split_data(_output_dir):
+        for subdir in [
+                'images/train', 'labels/train', 'images/val', 'labels/val'
+        ]:
+            Path(f'{_output_dir}/{subdir}').mkdir(parents=True, exist_ok=True)
+
+        images = sorted(
+            glob(f'{Path(__file__).parent}/{_output_dir}/ls_images/*'))
+        labels = sorted(
+            glob(f'{Path(__file__).parent}/{_output_dir}/ls_labels/*'))
+        pairs = [(x, y) for x, y in zip(images, labels)]
+
+        len_ = len(images)
+        train_len = round(len_ * 0.8)
+        random.shuffle(pairs)
+
+        train, val = pairs[:train_len], pairs[train_len:]
+
+        for split, split_str in zip([train, val], ['train', 'val']):
+            for n, dtype in zip([0, 1], ['images', 'labels']):
+                _ = [
+                    shutil.copy2(
+                        x[n],
+                        f'{_output_dir}/{dtype}/{split_str}/{Path(x[n]).name}')
+                    for x in split
+                ]
+        return
+
+    def plot_results(self, results):
+        matplotlib.use('Agg')
+        plt.subplots(figsize=(12, 8), dpi=300)
+        plt.xticks(rotation=90)
+
+        sns.histplot(data=results, kde=True)
+        plt.title('Distribution Of Classes With A Kernel Density Estimate')
+        plt.savefig(f'{self.output_dir}/bar.jpg', bbox_inches='tight')
+        plt.cla()
+
+        data_count = dict(collections.Counter(results))
+        df = pd.DataFrame(data_count.items(), columns=['label', 'count'])
+        df = df.groupby('label').sum().reset_index()
+
+        ax = sns.barplot(data=df,
+                         x='label',
+                         y='count',
+                         hue='label',
+                         dodge=False)
+        plt.xticks(rotation=90)
+        plt.title('Instances Per Class')
+        ax.get_legend().remove()
+        plt.savefig(f'{self.output_dir}/hist.jpg', bbox_inches='tight')
+        return
+
+    def main(self):
+        signal.signal(signal.SIGINT, keyboard_interrupt_handler)
+        random.seed(8)
+
+        data = self.get_data()
+
+        Path(self.imgs_dir).mkdir(parents=True, exist_ok=True)
+        Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
+
+        futures = []
+        for task in data:
+            futures.append(self.convert_to_yolo.remote(self, task))
+
+        results = []
+        for future in tqdm(futures):
+            result = ray.get(future)
+            if result:
+                results.append(result)
+
+        if results:
+            self.plot_results(results)
+
+        if self.tasks_not_exported:
+            with open('tasks_not_exported.json', 'w') as f:
+                json.dump(self.tasks_not_exported, f)
+
+        assert len(glob(f'{self.output_dir}/images/*')) == len(
+            glob(f'{self.output_dir}/labels/*'))
+
+        self.split_data(self.output_dir)
+
+        shutil.rmtree(self.imgs_dir, ignore_errors=True)
+        shutil.rmtree(self.labels_dir, ignore_errors=True)
+
+        d = {
+            'path': f'{self.output_dir}',
+            'train': 'images/train',
+            'val': 'images/val',
+            'test': '',
+            'nc': len(self.classes),
+            'names': self.classes
+        }
+
+        with open(f'{self.output_dir}/dataset_config.yml', 'w') as f:
+            for k, v in d.items():
+                f.write(f'{k}: {v}\n')
+
+        folder_name = Path(self.output_dir).name
+        with tarfile.open(f'{folder_name}.tar', 'w') as tar:
+            tar.add(self.output_dir, folder_name)
+
+        if self.only_tar_file:
+            shutil.rmtree(self.output_dir, ignore_errors=True)
 
 
-def split_data(_output_dir):
-    for subdir in ['images/train', 'labels/train', 'images/val', 'labels/val']:
-        Path(f'{_output_dir}/{subdir}').mkdir(parents=True, exist_ok=True)
+if __name__ == '__main__':
+    load_dotenv()
 
-    images = sorted(glob(f'{Path(__file__).parent}/{_output_dir}/ls_images/*'))
-    labels = sorted(glob(f'{Path(__file__).parent}/{_output_dir}/ls_labels/*'))
-    pairs = [(x, y) for x, y in zip(images, labels)]
-
-    len_ = len(images)
-    train_len = round(len_ * 0.8)
-    random.shuffle(pairs)
-
-    train, val = pairs[:train_len], pairs[train_len:]
-
-    for split, split_str in zip([train, val], ['train', 'val']):
-        for n, dtype in zip([0, 1], ['images', 'labels']):
-            _ = [
-                shutil.copy2(
-                    x[n],
-                    f'{_output_dir}/{dtype}/{split_str}/{Path(x[n]).name}')
-                for x in split
-            ]
-
-
-def get_data():
-    global classes
-    data = []
-    for project_id in tqdm(args.projects.split(','), desc='Projects'):
-        data.append(
-            get_tasks_from_mongodb(project_id, dump=False, json_min=True))
-    data = sum(data, [])
-
-    excluded_labels = [
-        'cannot identify', 'no animal', 'distorted image',
-        'severe occultation', 'animal other than bird or squirrel'
-    ]
-
-    labels = []
-    for entry in data:
-        try:
-            labels.append(
-                [label['rectanglelabels'][0] for label in entry['label']][0])
-        except KeyError as e:
-            logger.warning(f'Current entry raised KeyError {e}! '
-                           f'Ignoring entry: {entry}')
-    labels = list(set(labels))
-    logger.info(labels)
-    classes = [label for label in labels if label not in excluded_labels]
-
-    Path('dataset-YOLO').mkdir(exist_ok=True)
-    with open(f'{output_dir}/classes.txt', 'w') as f:
-        for class_ in classes:
-            f.write(f'{class_}\n')
-    return data, classes
-
-
-def opts():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p',
                         '--projects',
@@ -173,72 +300,12 @@ def opts():
                         help='Path to the output directory',
                         type=str,
                         default='dataset-YOLO')
-    parser.add_argument(
-        '--remove',
-        help='Remove the output folder and only keep the .tar file',
-        action="store_true")
-    return parser.parse_args()
+    parser.add_argument('--only-tar-file',
+                        help='Only output a TAR file',
+                        action="store_true")
+    args = parser.parse_args()
 
-
-def main():
-    global classes
-    random.seed(8)
-
-    data, classes = get_data()
-
-    Path(imgs_dir).mkdir(parents=True, exist_ok=True)
-    Path(labels_dir).mkdir(parents=True, exist_ok=True)
-
-    futures = []
-    for task in data:
-        futures.append(convert_to_yolo.remote(task))
-
-    results = []
-    for future in tqdm(futures):
-        result = ray.get(future)
-        if result:
-            results.append(result)
-
-    if tasks_not_exported:
-        with open('tasks_not_exported.json', 'w') as f:
-            json.dump(tasks_not_exported, f)
-
-    assert len(glob(f'{output_dir}/images/*')) == len(
-        glob(f'{output_dir}/labels/*'))
-
-    split_data(output_dir)
-    shutil.rmtree(imgs_dir, ignore_errors=True)
-    shutil.rmtree(labels_dir, ignore_errors=True)
-
-    d = {
-        'path': f'{output_dir}',
-        'train': 'images/train',
-        'val': 'images/val',
-        'test': '',
-        'nc': len(classes),
-        'names': classes
-    }
-
-    with open(f'{output_dir}/dataset_config.yml', 'w') as f:
-        for k, v in d.items():
-            f.write(f'{k}: {v}\n')
-
-    folder_name = Path(output_dir).name
-    with tarfile.open(f'{folder_name}.tar', 'w') as tar:
-        tar.add(output_dir, folder_name)
-
-    if args.remove:
-        shutil.rmtree(output_dir, ignore_errors=True)
-
-
-if __name__ == '__main__':
-    load_dotenv()
-    args = opts()
-    output_dir = args.output_dir
-    imgs_dir = f'{output_dir}/ls_images'
-    labels_dir = f'{output_dir}/ls_labels'
-
-    classes = None
-    tasks_not_exported = []
-
-    main()
+    json2yolo = JSON2YOLO(projects=args.projects,
+                          output_dir=args.output_dir,
+                          only_tar_file=args.only_tar_file)
+    json2yolo.main()
