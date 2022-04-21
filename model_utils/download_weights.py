@@ -10,7 +10,10 @@ import subprocess
 from dotenv import load_dotenv
 from loguru import logger
 
-from .mongodb_helper import mongodb_db
+try:
+    from .mongodb_helper import mongodb_db
+except ImportError:
+    from mongodb_helper import mongodb_db
 
 
 class ModelVersionDoesNotExist(Exception):
