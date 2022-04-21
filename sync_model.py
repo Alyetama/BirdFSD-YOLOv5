@@ -6,10 +6,13 @@ import datetime
 import os
 import pickle
 import re
+import shlex
 import shutil
+import subprocess
 
 import bson
 import numpy as np
+import requests
 import wandb
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
@@ -63,16 +66,29 @@ class SyncModel:
             raise ModelVersionFormatError(
                 'Model versions is not formatted correctly!')
 
-        weights_path = f'{self.get_weights()}/best.pt'
-        with open(weights_path, 'rb') as pt:
-            weights = pt.read()
+        weights_path = self.get_weights()
+        renamed_weights_fname = f'BirdFSD-YOLOv5-{self.model_version}.pt'
+        os.rename(f'{weights_path}/best.pt',
+            f'{weights_path}/{renamed_weights_fname}')
+
+        upload_cmd = f'curl -u {os.environ["MINISERVE_USERNAME"]}:' \
+        f'{os.environ["MINISERVE_RAW_PASSWORD"]} -F ' \
+        f'"path=@{weights_path}/{renamed_weights_fname}" ' \
+        rf'{os.environ["MINISERVE_HOST"]}/upload\?path\=/'
+
+        weights_url = f'{os.environ["MINISERVE_HOST"]}/{renamed_weights_fname}'
+
+        p = subprocess.run(shlex.split(upload_cmd),
+            shell=False, check=True, capture_output=True, text=True)
+
+        print(weights_url)
 
         model = {
             '_id': self.model_version,
             'version': f'BirdFSD-YOLOv5-{self.model_version}',
             'projects': self.projects_id,
             'labels': labels_freq,
-            'weights': weights,
+            'weights': weights_url,
             'added_on': datetime.datetime.today(),
             'wandb_run_path': self.run_path,
             'number_of_classes': len(labels_freq),
