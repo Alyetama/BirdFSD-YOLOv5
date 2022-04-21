@@ -10,38 +10,47 @@ import subprocess
 from dotenv import load_dotenv
 from loguru import logger
 
-from mongodb_helper import mongodb_db
+from .mongodb_helper import mongodb_db
 
 
 class ModelVersionDoesNotExist(Exception):
     pass
 
 
-def main():
-    db = mongodb_db()
+class DownloadModelWeights:
+    def __init__(self, model_version, output='best.pt'):
+        self.model_version = model_version
+        self.output = output
 
-    model_document = db.model.find_one({'version': args.model_version})
-    if not model_document:
-        avail_models = db.model.find().distinct('version')
-        raise ModelVersionDoesNotExist(
-            f'The model `{args.model_version}` does not exist! '
-            f'\nAvailable models: {json.dumps(avail_models, indent=4)}'
-        )
-    weights_url = model_document['weights']
-    logger.debug(weights_url)
+    def get_weights(self, skip_download=False):
+        db = mongodb_db()
 
-    download_cmd = f'curl -X GET -u \"{os.environ["MINISERVE_USERNAME"]}:' \
-    f'{os.environ["MINISERVE_RAW_PASSWORD"]}\" "{weights_url}" ' \
-    f'--output {args.output}'
+        model_document = db.model.find_one({'version': self.model_version})
+        if not model_document:
+            avail_models = db.model.find().distinct('version')
+            raise ModelVersionDoesNotExist(
+                f'The model `{self.model_version}` does not exist! '
+                f'\nAvailable models: {json.dumps(avail_models, indent=4)}'
+            )
+        weights_url = model_document['weights']
+        logger.debug(weights_url)
 
-    p = subprocess.run(shlex.split(download_cmd),
-                       shell=False,
-                       check=True,
-                       capture_output=True,
-                       text=True)
+        if not skip_download:
+            download_cmd = f'curl -X GET -u ' \
+            f'\"{os.environ["MINISERVE_USERNAME"]}:' \
+            f'{os.environ["MINISERVE_RAW_PASSWORD"]}\" "{weights_url}" ' \
+            f'--output {self.output}'
 
-    logger.debug(f'stderr: {p.stderr}')
-    logger.debug(f'returncode: {p.returncode}')
+            p = subprocess.run(shlex.split(download_cmd),
+                               shell=False,
+                               check=True,
+                               capture_output=True,
+                               text=True)
+
+            logger.debug(f'stderr: {p.stderr}')
+            logger.debug(f'returncode: {p.returncode}')
+
+        return weights_url
 
 
 if __name__ == '__main__':
@@ -58,6 +67,14 @@ if __name__ == '__main__':
                         default='best.pt',
                         help='Output file name',
                         type=str)
+    parser.add_argument('--skip-download',
+                        action='store_true',
+                        help='Return the downloads URL without downloading '
+                        'the file')
     args = parser.parse_args()
 
-    main()
+    dmw = DownloadModelWeights(
+        model_version=args.model_version,
+        output=args.output)
+    _ = dmw.get_weights(args.skip_download)
+

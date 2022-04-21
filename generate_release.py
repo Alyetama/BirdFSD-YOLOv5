@@ -6,9 +6,7 @@ import base64
 import json
 import os
 import shutil
-import sys
 import tarfile
-from datetime import datetime
 from glob import glob
 from pathlib import Path
 
@@ -17,62 +15,7 @@ import wandb
 from dotenv import load_dotenv
 from loguru import logger
 
-
-def flush_artifacts(runs):
-    """Flushes all artifacts from a given run.
-
-    Parameters
-    ----------
-    runs : list
-        A list of wandb.wandb_run.Run objects.
-
-    Returns
-    -------
-    None
-    """
-    for cur_run in runs:
-        artifacts = list(cur_run.logged_artifacts())
-        _tagged_artifacts = [(x, x.aliases) for x in artifacts]
-        for artif in _tagged_artifacts:
-            if not any(x for x in artif[1] if x in ['best', 'last', 'latest']):
-                try:
-                    artif[0].delete(delete_aliases=True)
-                    logger.debug(f'Deleted {artif}...')
-                except wandb.errors.CommError as e:
-                    logger.error(e)
-
-
-def get_artifacts(run, download=False):
-    """Get the best artifact from a wandb run.
-
-    Parameters
-    ----------
-    run: wandb.wandb_run.Run
-        A wandb run object.
-    download: bool
-        Whether to download the artifact.
-
-    Returns
-    -------
-    wandb.wandb_artifact.Artifact
-        The best artifact from the run.
-    """
-    artifacts = list(run.logged_artifacts())
-    _tagged_artifacts = [(x, x.aliases) for x in artifacts]
-    for artif in _tagged_artifacts:
-        if not any(x for x in artif[1] if x in ['best', 'last', 'latest']):
-            try:
-                artif[0].delete(delete_aliases=True)
-                logger.debug(f'Deleted {artif}...')
-            except wandb.errors.CommError:
-                continue
-
-    tagged_artifacts = [x for x in _tagged_artifacts if 'best' in x[1]]
-    artifact = [x for x in tagged_artifacts if 'best' in x[1]][0][0]
-    if download:
-        assert 'best' in artifact.aliases
-        return artifact.download()
-    return artifacts
+from model_utils import download_weights
 
 
 def upload_image(image_path, imgbb_token):
@@ -124,48 +67,29 @@ def find_file(run, fname):
     return file, imgbb_res.json()['data']['url']
 
 
-def get_assets(best_run, output_name, move_to='releases'):
+def get_assets(run, output_name):
     """Downloads the best model from the run with the given ID, extracts the model
     weights, configuration, & classes and saves them to a file.
 
     Parameters
     ----------
-    best_run: wandb.wandb_run.Run
-        The best run from which to extract the model weights.
+    run: wandb.wandb_run.Run
+        The run from which to extract information.
     output_name: str
         The name of the output file.
-    move_to: str
-        The directory to which to move the output files.
 
     Returns
     -------
     tuple
-        The paths to the weights file, the config file, and the classes file.
+        The the config dictionary and the paths to the the config and classes
+        files.
     """
-    logger.debug(best_run)
-    weights_fname = f'{output_name}/{output_name}-best.pt'
-
-    if args.supply:
-        artifact = api.artifact(args.supply)
-        artifact_local = artifact.download()
-        logger.debug(artifact_local)
-    else:
-        artifact_local = get_artifacts(best_run, download=True)
-    try:
-        shutil.move(f'{artifact_local}/best.pt', weights_fname)
-    except FileNotFoundError:
-        assert 'best' in get_artifacts(best_run).aliases
-        shutil.move(f'{artifact_local}/last.pt', weights_fname)
-    shutil.rmtree('artifacts', ignore_errors=True)
-
+    logger.debug(run)
     config_fname = f'{output_name}/{output_name}-config.json'
-    cfg = best_run.config
+    cfg = run.config
 
-    for k in [('val', -3), ('train', -3), ('path', -2), ('weights', -2)]:
-        if k[0] == 'weights':
-            relative_path = '/'.join(Path(cfg[k[0]]).parts[k[1]:])
-        else:
-            relative_path = '/'.join(Path(cfg['data_dict'][k[0]]).parts[k[1]:])
+    for k in [('val', -3), ('train', -3), ('path', -2)]:
+        relative_path = '/'.join(Path(cfg['data_dict'][k[0]]).parts[k[1]:])
         cfg['data_dict'][k[0]] = relative_path
 
     logger.debug(cfg)
@@ -174,79 +98,61 @@ def get_assets(best_run, output_name, move_to='releases'):
         json.dump(cfg, j, indent=4)
 
     classes_fname = f'{output_name}/{output_name}-classes.txt'
-    bbd_url = [
-        x for x in list(best_run.files())
-        if 'BoundingBoxDebugger' in x.name and '.json' in x.name
-    ][0].direct_url
-    r = requests.get(bbd_url)
-    class_labels = json.loads(r.content)['class_labels']
+    classes = cfg['data_dict']['names']
 
     with open(classes_fname, 'w') as f:
-        f.writelines([f'{x}\n' for x in class_labels.values()])
+        f.writelines([f'{x}\n' for x in classes])
 
-    if move_to:
-        Path(move_to).mkdir(exist_ok=True)
+    Path('releases').mkdir(exist_ok=True)
 
     with tarfile.open(f'{output_name}.tar.gz', 'w:gz') as tar:
         tar.add(output_name, output_name)
 
-    if move_to:
-        if Path(move_to).exists():
-            # shutil.rmtree(move_to, ignore_errors=True)
-            shutil.move(output_name, move_to)
-            shutil.move(f'{output_name}.tar.gz', move_to)
+    if Path(f'releases/{output_name}').exists() and args.overwrite:
+        shutil.rmtree(f'releases/{output_name}', ignore_errors=True)
+    shutil.move(output_name, 'releases')
+    shutil.move(f'{output_name}.tar.gz', 'releases')
 
     files_to_move = [x for x in glob('releases/*') if not Path(x).is_dir()]
-    Path(f'{move_to}/{output_name}').mkdir(exist_ok=True)
-    _ = [shutil.move(x, f'{move_to}/{output_name}') for x in files_to_move]
-    return weights_fname, config_fname, classes_fname, cfg
+    Path(f'releases/{output_name}').mkdir(exist_ok=True)
+    _ = [shutil.move(x, f'releases/{output_name}') for x in files_to_move]
+    return config_fname, classes_fname, cfg
 
 
-def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
+def release_notes(run, f1_score, output_name, cfg):
     """Creates a release notes file.
 
     Parameters
     ----------
     run: wandb.wandb_run.Run
-        The best run from which to extract the model weights.
+        The current run from which to extract the model weights.
     f1_score: str
-        The F1 score of the best run.
+        The F1 score of the current run.
     output_name: str
         The name of the output file.
     cfg: dict
         The run's configuration.
-    move_to: str
-        The directory to which to move the output files.
 
     Returns
     -------
     str
         The content of the generated release notes file.
     """
-    run_timestamp = datetime.fromtimestamp(run.summary['_timestamp'])
 
     _run = {
-        'Start time':
-        run.created_at,
-        'Local tag':
-        run_timestamp.strftime('%d%m%Y'),
-        'W&B run URL':
-        run.url,
-        'W&B run ID':
-        run.id,
-        'W&B run name':
-        run.name,
-        'W&B run path':
-        '/'.join(run.path),
-        'W&B artifact path':
-        f'{"/".join(run.path[:-1])}/{get_artifacts(run)[0].name}'
+        'Start time': run.created_at,
+        'W&B run URL': run.url,
+        'W&B run ID': run.id,
+        'W&B run name': run.name,
+        'W&B run path': '/'.join(run.path),
+        'Number of classes': cfg['data_dict']['nc']
     }
 
     if cfg.get('base_ml_framework'):
         ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
         _run.update(ml_framework_versions)
 
-    with open(f'{move_to}/{output_name}/{output_name}-notes.md', 'w') as f:
+    with open(f'releases/{output_name}/{output_name}-notes.md', 'w') as f:
 
         for k, v in _run.items():
             if k == 'W&B run URL' or v == '':
@@ -280,6 +186,14 @@ def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
         except TypeError:
             logger.error('Failed to get files from the run...')
 
+        dmw = download_weights.DownloadModelWeights(
+            model_version=args.release_version)
+        weights_url = dmw.get_weights(skip_download=True)
+
+        f.write('\n<details>\n<summary>Model weights</summary>\n'
+                f'\n{weights_url} (requires authentication)'
+                '\n</details>\n')
+
         f.write('\n**Validation results**:\n')
         val_results = {
             k: v
@@ -295,7 +209,7 @@ def release_notes(run, f1_score, output_name, cfg, move_to='releases'):
             '\n'.join([f'   <td>{round(x, 4)}'
                        for x in val_results.values()]) + '</table>\n')
 
-    with open(f'{move_to}/{output_name}/{output_name}-notes.md') as f:
+    with open(f'releases/{output_name}/{output_name}-notes.md') as f:
         content = f.read()
 
     return content
@@ -306,14 +220,10 @@ def opts():
 
     Parameters
     ----------
-    -e (--entity): Name of W&B's entity
-    -p (--project-name): Name of W&B's project
     -n (--release-name): Release base name (e.g., BirdFSD-YOLOv5)
     -v (--release-version): Release version (e.g., v1.0.0-alpha.1.3)
-    -f (--flush): Flush and exit
-    --pick: Pick the best model manually
-    --supply: Supply the model path manually
     --repo: Link to the repository
+    --overwrite: Overwrites the release folder if it already exists
 
     Returns
     -------
@@ -321,39 +231,23 @@ def opts():
         A namespace containing the parsed command line arguments
     """
     parser = argparse.ArgumentParser(
-        epilog=f'Basic usage: python {Path(__file__).name} -e "entity" -p'
-        f' "project" -n "release_base_name" -v "v1.0.0-alpha"')
-    parser.add_argument('-e',
-                        '--entity',
-                        help='Name of W&B\'s entity',
-                        type=str,
-                        required=True)
-    parser.add_argument('-p',
-                        '--project-name',
-                        help='Name of W&B\'s project',
-                        type=str,
-                        required=True)
-    parser.add_argument('-n',
-                        '--release-name',
-                        help='Release base name (e.g., BirdFSD-YOLOv5)',
-                        type=str,
-                        required=True)
+        epilog=f'Basic usage: python {Path(__file__).name} '
+        '-v <release_version_name> -r <run_path> --repo <repo_link>')
     parser.add_argument('-v',
                         '--release-version',
                         help='Release version (e.g., v1.0.0-alpha.1.3)',
                         type=str,
                         required=True)
-    parser.add_argument('-f',
-                        '--flush',
-                        help='Flush and exit',
-                        action='store_true')
-    parser.add_argument('--pick',
-                        help='Pick the best model manually',
-                        action='store_true')
-    parser.add_argument('--supply',
-                        help='Supply the model path manually',
-                        type=str)
+    parser.add_argument('-r',
+                        '--run-path',
+                        help='The W&B run path to use',
+                        type=str,
+                        required=True)
     parser.add_argument('--repo', help='Link to the repository', type=str)
+    parser.add_argument('--overwrite',
+                        help='Overwrite if the release already exists on the ' \
+                        'local disk',
+                        action='store_true')
 
     return parser.parse_args()
 
@@ -362,71 +256,39 @@ def main():
     """This function is the main function of the program.
     It does the following:
         1. Creates a directory for the release
-        2. Flushes the artifacts from the runs if `flush` is set to `True`
-        3. Gets the scores for each run
-        4. Gets the best run
-        5. Gets the assets from the best run
-        6. Creates the release notes
-        7. Creates the release
+        2. Gets the f1-score of the run
+        3. Gets some data assets from the run
+        4. Creates the release notes
+        5. Generates a command to create the release
 
     Returns
     -------
     None
     """
-    output_name = f'{args.release_name}-{args.release_version}'
+    output_name = args.release_version
 
-    runs = list(api.runs())
+    api = wandb.Api()
+    run = api.from_path(args.run_path)
 
     Path(output_name).mkdir(exist_ok=True)
 
-    flush_artifacts(runs)
+    p = run.summary['best/precision']
+    r = run.summary['best/recall']
+    f1_score = 2 * ((p * r) / (p + r))
+    logger.debug(f'{run.name}: {f1_score}')
 
-    if args.flush:
-        sys.exit(0)
+    config, classes, cfg = get_assets(run, output_name)
 
-    scores = []
-    for _run in runs:
-        p = _run.summary['best/precision']
-        r = _run.summary['best/recall']
-        _f1_score = 2 * ((p * r) / (p + r))
-        logger.debug(f'{_run.name}: {_f1_score}')
-        scores.append({_run: _f1_score})
+    release_notes(run, f1_score=f1_score, output_name=output_name, cfg=cfg)
 
-    vals = [list(x.values())[0] for x in scores]
-    best_score = max(vals)
-    best_run = list([x for x in scores
-                     if list(x.values())[0] == best_score][0].keys())[0]
-
-    if args.supply:
-        run_name = args.supply.split('/')[-1].split(':')[0].split('_')[1]
-        logger.debug(run_name)
-        best_run = [x for x in runs if run_name in x.id][0]
-        logger.debug(best_run)
-
-    if args.pick:
-        _input = input('Run name: ')
-        best_run = [x for x in runs if x.name == _input][0]
-        p = best_run.summary['best/precision']
-        r = best_run.summary['best/recall']
-        best_score = 2 * ((p * r) / (p + r))
-
-    move_to = 'releases'
-    weights, config, classes, cfg = get_assets(best_run, output_name, move_to)
-
-    release_notes(best_run,
-                  f1_score=best_score,
-                  output_name=output_name,
-                  cfg=cfg,
-                  move_to=move_to)
-
+    files = [f'releases/{output_name}/*{x}' for x in ['.json', '.gz', '.txt']]
     logger.info(f'gh release create {args.release_version} -d -F '
-                f'"{move_to}/{output_name}/{output_name}-notes.md" --title '
+                f'"releases/{output_name}/{output_name}-notes.md" --title '
                 f'"{args.release_version}" --repo '
-                f'{args.repo} {move_to}/{output_name}/*')
+                f'{args.repo} {" ".join(files)}')
 
 
 if __name__ == '__main__':
     load_dotenv()
     args = opts()
-    api = wandb.Api({'entity': args.entity, 'project': args.project_name})
     main()
