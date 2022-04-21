@@ -19,18 +19,15 @@ module load cuda/10.2
 #-------------------------------------
 nvidia-smi
 #-------------------------------------
-rm -rf "dataset-YOLO" "dataset-YOLO.tar" "dataset_config.yml"
+rm -rf 'dataset-YOLO' 'dataset-YOLO.tar' 'dataset_config.yml'
 python json2yolov5.py
 mv dataset-YOLO/dataset_config.yml .
-python utils/relative_to_abs.py
-#-------------------------------------
-rm "best.pt"
-wget -q "https://d.aibird.me/best.pt"
+python model_utils/relative_to_abs.py
 #-------------------------------------
 BATCH_SIZE=16
 EPOCHS=100
-PRETRAINED_WEIGHTS="best.pt"
+PRETRAINED_WEIGHTS='best.pt'
 #-------------------------------------
 python yolov5/train.py --img-size 768 --batch $BATCH_SIZE --epochs $EPOCHS \
-   --data "dataset_config.yml" --weights $PRETRAINED_WEIGHTS --device 0
+   --data 'dataset_config.yml' --weights $PRETRAINED_WEIGHTS --device 0
 #-------------------------------------
