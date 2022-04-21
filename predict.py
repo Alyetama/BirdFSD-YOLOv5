@@ -14,9 +14,8 @@ import numpy as np
 import requests
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
-from tqdm import tqdm
-
 from model_utils.mongodb_helper import get_tasks_from_mongodb
+from tqdm import tqdm
 
 try:
     import torch
@@ -32,8 +31,8 @@ else:
 
 def keyboard_interrupt_handler(sig, _):
     """This function handles the KeyboardInterrupt (CTRL+C) signal.
-    It's a handler for the signal, which means it's called when the OS sends the signal.
-    The signal is sent when the user presses CTRL+C.
+    It's a handler for the signal, which means it's called when the OS sends
+    the signal. The signal is sent when the user presses CTRL+C.
 
     Parameters
     ----------
@@ -98,9 +97,9 @@ class LoadModel:
 
 
 class Predict(LoadModel, _Headers):
-    """This class is used to predict bounding boxes for images in a given project.
-    It uses the YOLOv5 model to predict bounding boxes and then posts the
-    predictions to the Label Studio server.
+    """This class is used to predict bounding boxes for images in a given
+    project. It uses the YOLOv5 model to predict bounding boxes and then posts
+    the predictions to the Label Studio server.
 
     Parameters
     ----------
@@ -271,7 +270,10 @@ class Predict(LoadModel, _Headers):
         Examples
         --------
         >>> get_task(1)
-        {'id': 1, 'data': {'image': 'http://localhost:8000/data/local-files/1.jpg'}}
+        {
+            'id': 1,
+            'data': {'image': 'http://localhost:8000/data/local-files/1.jpg'}
+        }
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -398,7 +400,8 @@ class Predict(LoadModel, _Headers):
 
     @staticmethod
     def pred_result(x, y, w, h, score, label):
-        """This function takes in the x, y, width, height, score, and label of a prediction and returns a dictionary with the prediction's information.
+        """This function takes in the x, y, width, height, score, and label of
+        a prediction and returns a dictionary with the prediction's information.
 
         Parameters
         ----------
@@ -435,7 +438,8 @@ class Predict(LoadModel, _Headers):
         }
 
     def pred_post(self, results, scores, task_id):
-        """This function is used to create an API POST request of a single prediction results.
+        """This function is used to create an API POST request of a single
+        prediction results.
 
         Parameters
         ----------
@@ -462,7 +466,8 @@ class Predict(LoadModel, _Headers):
         }
 
     def post_prediction(self, task):
-        """This function is called by the `predict` method. It takes a task as an argument and performs the following steps:
+        """This function is called by the `predict` method. It takes a task as
+        an argument and performs the following steps:
 
         1. It downloads the image from the task's `data` field.
         2. It runs the image through the model and gets the predictions.
@@ -471,9 +476,11 @@ class Predict(LoadModel, _Headers):
 
         If the task has no data, it skips the task.
 
-        If the task has no predictions, it deletes the task if `delete_if_no_predictions` is set to `True`.
+        If the task has no predictions, it deletes the task if
+        `delete_if_no_predictions` is set to `True`.
 
-        If `if_empty_apply_label` is set to a label, it applies a the string of `if_empty_apply_label` if not set to `None`.
+        If `if_empty_apply_label` is set to a label, it applies a the string of
+        `if_empty_apply_label` if not set to `None`.
 
         Parameters
         ----------
@@ -487,6 +494,18 @@ class Predict(LoadModel, _Headers):
         """
         try:
             task_id = task['id']
+            pred_ids = task['predictions']
+
+            for pred_id in pred_ids:
+                url = f'{os.environ["LS_HOST"]}/api/predictions/{pred_id}'
+                resp = requests.get(url, headers=headers)
+                pred_details = resp.json()
+                if self.model_version == pred_details['model_version']:
+                    logger.debug(
+                        f'Task {task_id} is already predicted with model '
+                        f'`{self.model_version}`. Skipping...')
+                    return
+
             try:
                 img = self.download_image(
                     self.get_task(task_id)['data']['image'])
