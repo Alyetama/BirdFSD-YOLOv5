@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import json
 import os
 import shlex
 import subprocess
@@ -12,10 +13,21 @@ from loguru import logger
 from mongodb_helper import mongodb_db
 
 
+class ModelVersionDoesNotExist(Exception):
+    pass
+
+
 def main():
     db = mongodb_db()
 
-    weights_url = db.model.find_one({'version': args.model_version})['weights']
+    model_document = db.model.find_one({'version': args.model_version})
+    if not model_document:
+        avail_models = db.model.find().distinct('version')
+        raise ModelVersionDoesNotExist(
+            f'The model `{args.model_version}` does not exist! '
+            f'\nAvailable models: {json.dumps(avail_models, indent=4)}'
+        )
+    weights_url = model_document['weights']
     logger.debug(weights_url)
 
     download_cmd = f'curl -X GET -u \"{os.environ["MINISERVE_USERNAME"]}:' \
@@ -28,7 +40,6 @@ def main():
                        capture_output=True,
                        text=True)
 
-    logger.debug(f'stdout: {p.stdout}')
     logger.debug(f'stderr: {p.stderr}')
     logger.debug(f'returncode: {p.returncode}')
 
