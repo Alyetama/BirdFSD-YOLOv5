@@ -5,8 +5,8 @@ import json
 import os
 import sys
 
-import requests
 import pymongo
+import requests
 from dotenv import load_dotenv
 
 

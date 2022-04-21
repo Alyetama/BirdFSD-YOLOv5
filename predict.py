@@ -12,17 +12,16 @@ from typing import Union
 
 import numpy as np
 import requests
+from PIL import UnidentifiedImageError
+from dotenv import load_dotenv
+from tqdm import tqdm
+
+from model_utils.mongodb_helper import get_tasks_from_mongodb
 
 try:
     import torch
 except RuntimeError as e:
     sys.exit(1)
-
-from dotenv import load_dotenv
-from PIL import UnidentifiedImageError
-from tqdm import tqdm
-
-from mongodb_helper import get_tasks_from_mongodb
 
 if 'google.colab' in sys.modules:
     sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')

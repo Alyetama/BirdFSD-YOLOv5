@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import argparse
 from pathlib import Path
 
@@ -22,7 +25,7 @@ def opts():
         '-d',
         '--destination',
         help='Output file destination (directory path). Default: current '
-             'working directory.',
+        'working directory.',
         type=str,
         default='.')
     return parser.parse_args()

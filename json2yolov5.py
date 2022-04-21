@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from tqdm import tqdm
 
-from mongodb_helper import get_tasks_from_mongodb
+from model_utils.mongodb_helper import get_tasks_from_mongodb
 
 
 def keyboard_interrupt_handler(sig, _):

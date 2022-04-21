@@ -1,30 +1,48 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import argparse
 import json
 import os
-from datetime import date
 
 import requests
 from dotenv import load_dotenv
 from loguru import logger
 
 
-def update_today_view(_date):
+def update_view():
     url = f'{os.environ["LS_HOST"]}/api/dm/views/{args.view_id}/'
     resp = requests.get(url, headers=headers)
     view = resp.json()
 
-    _filter = [{
-        'filter': 'filter:tasks:created_at',
-        'operator': 'greater',
-        'type': 'Datetime',
-        'value': f'{_date}T04:00:00.000Z'
+    with open(args.classes_path) as f:
+        _classes = [x.rstrip() for x in f.readlines() if x != 'squirrels\n']
+    logger.debug(_classes)
+
+    filter_items = [{
+        'filter': 'filter:tasks:total_annotations',
+        'operator': 'equal',
+        'type': 'Number',
+        'value': 0
+    }, {
+        'filter': 'filter:tasks:predictions_results',
+        'operator': 'contains',
+        'type': 'String',
+        'value': 'squirrels'
     }]
 
-    view['data']['filters']['items'] = _filter
-    view['data']['ordering'] = ['tasks:id']
+    for _class in _classes:
+        filter_items.append({
+            'filter': 'filter:tasks:predictions_results',
+            'operator': 'not_contains',
+            'type': 'String',
+            'value': _class
+        })
+
+    view['data']['filters']['items'] = filter_items
+
     logger.debug(f'URL: {url} ; DATA: {view}')
     resp = requests.put(url, data=json.dumps(view), headers=headers)
-
     logger.debug(resp.json())
 
 
@@ -40,6 +58,11 @@ def opts():
                         help='View to filter',
                         type=int,
                         required=True)
+    parser.add_argument('-c',
+                        '--classes-path',
+                        help='Path to classes.txt',
+                        type=str,
+                        required=True)
     return parser.parse_args()
 
 
@@ -52,11 +75,7 @@ if __name__ == '__main__':
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
     headers['Content-type'] = 'application/json'
 
-    DATE = date.today()
-    update_today_view(DATE)
+    update_view()
     print('-' * 40)
-    logger.info(
-        'Visit this link to get the IDs: '
-        f'https://ls.aibird.me/projects/{args.project_id}/'
-        f'data?tab={args.view_id}'
-    )
+    logger.info('Delete all tasks under: https://ls.aibird.me/projects/'
+                f'{args.project_id}/data?tab={args.view_id}')
