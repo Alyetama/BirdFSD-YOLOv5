@@ -9,16 +9,16 @@ import shutil
 import tarfile
 from glob import glob
 from pathlib import Path
+from typing import Union
 
 import requests
 import wandb
 from dotenv import load_dotenv
 from loguru import logger
-
 from model_utils import download_weights
 
 
-def upload_image(image_path, imgbb_token):
+def upload_image(image_path: str, imgbb_token: str) -> str:
     """Uploads an image to imgbb.com and returns the URL.
 
     Parameters
@@ -43,7 +43,7 @@ def upload_image(image_path, imgbb_token):
     return res
 
 
-def find_file(run, fname):
+def find_file(run: wandb.wandb_run.Run, fname: str) -> Union[tuple, None]:
     """Finds a file in a run and uploads it to imgbb.
 
     Parameters
@@ -67,9 +67,11 @@ def find_file(run, fname):
     return file, imgbb_res.json()['data']['url']
 
 
-def get_assets(run, output_name):
-    """Downloads the best model from the run with the given ID, extracts the model
-    weights, configuration, & classes and saves them to a file.
+def get_assets(run: wandb.wandb_run.Run,
+               output_name: str) -> Union[tuple, None]:
+    """Downloads the best model from the run with the given ID,
+    extracts the model weights, configuration, & classes and saves them to a
+    file.
 
     Parameters
     ----------
@@ -119,14 +121,15 @@ def get_assets(run, output_name):
     return config_fname, classes_fname, cfg
 
 
-def release_notes(run, f1_score, output_name, cfg):
+def release_notes(run: wandb.wandb_run.Run, f1_score: float, output_name: str,
+                  cfg: dict) -> str:
     """Creates a release notes file.
 
     Parameters
     ----------
     run: wandb.wandb_run.Run
         The current run from which to extract the model weights.
-    f1_score: str
+    f1_score: float
         The F1 score of the current run.
     output_name: str
         The name of the output file.
@@ -215,7 +218,7 @@ def release_notes(run, f1_score, output_name, cfg):
     return content
 
 
-def opts():
+def opts() -> argparse.Namespace:
     """This is a function to parse command line arguments.
 
     Parameters
@@ -252,7 +255,7 @@ def opts():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     """This function is the main function of the program.
     It does the following:
         1. Creates a directory for the release
@@ -279,13 +282,14 @@ def main():
 
     config, classes, cfg = get_assets(run, output_name)
 
-    release_notes(run, f1_score=f1_score, output_name=output_name, cfg=cfg)
+    _ = release_notes(run, f1_score=f1_score, output_name=output_name, cfg=cfg)
 
     files = [f'releases/{output_name}/*{x}' for x in ['.json', '.gz', '.txt']]
     logger.info(f'gh release create {args.release_version} -d -F '
                 f'"releases/{output_name}/{output_name}-notes.md" --title '
                 f'"{args.release_version}" --repo '
                 f'{args.repo} {" ".join(files)}')
+    return
 
 
 if __name__ == '__main__':

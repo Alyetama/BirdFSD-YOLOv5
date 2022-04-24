@@ -8,6 +8,7 @@ import re
 import shlex
 import shutil
 import subprocess
+from typing import Union
 
 import numpy as np
 import pymongo
@@ -24,7 +25,8 @@ class ModelVersionFormatError(Exception):
 
 class SyncModel:
 
-    def __init__(self, projects_id: str, model_version: str, run_path: str):
+    def __init__(self, projects_id: str, model_version: str,
+                 run_path: str) -> None:
         self.projects_id = projects_id
         self.model_version = model_version
         self.run_path = run_path
@@ -96,7 +98,7 @@ class SyncModel:
                     labels.append(label['rectanglelabels'])
         return labels
 
-    def get_weights(self) -> str:
+    def get_weights(self) -> Union[str, None]:
         """This function downloads the best weights from the run specified by the run_path.
         It returns the path to the downloaded weights.
         
@@ -104,11 +106,19 @@ class SyncModel:
         -------
         str
             The path to the downloaded weights.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the selected run path does not have best weights file.
         """
         api = wandb.Api()
         for m in list(api.from_path(self.run_path).logged_artifacts()):
             if 'best' in m.aliases:
                 return m.download()
+            else:
+                raise FileNotFoundError(
+                    'Could not find best weights file in this run!')
 
     def add_new_version(self, db: pymongo.database.Database,
                         labels: list) -> dict:
@@ -147,7 +157,6 @@ class SyncModel:
                            check=True,
                            capture_output=True,
                            text=True)
-        print(weights_url)
 
         model = {
             '_id': self.model_version,
@@ -168,6 +177,7 @@ class SyncModel:
             db.model.insert_one(model)
 
         shutil.rmtree('artifacts')
+        print(model['weights'])
         return model
 
     def update(self) -> None:

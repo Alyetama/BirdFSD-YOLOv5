@@ -9,3 +9,4 @@ Pillow
 matplotlib
 seaborn
 pandas
+wandb>=0.12.15

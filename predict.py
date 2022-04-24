@@ -12,15 +12,11 @@ from typing import Union
 
 import numpy as np
 import requests
+import torch
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
 from model_utils.mongodb_helper import get_tasks_from_mongodb
 from tqdm import tqdm
-
-try:
-    import torch
-except RuntimeError as e:
-    sys.exit(1)
 
 if 'google.colab' in sys.modules:
     sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
@@ -29,7 +25,7 @@ else:
     from loguru import logger
 
 
-def keyboard_interrupt_handler(sig, _):
+def keyboard_interrupt_handler(sig: int, _) -> None:
     """This function handles the KeyboardInterrupt (CTRL+C) signal.
     It's a handler for the signal, which means it's called when the OS sends
     the signal. The signal is sent when the user presses CTRL+C.
@@ -38,11 +34,11 @@ def keyboard_interrupt_handler(sig, _):
     ----------
     The function takes two arguments:
     sig:
-        The ID of the signal that was sent.
+        The id of the signal that was sent.
     frame:
         The current stack frame.
     """
-    logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
+    logger.warning(f'KeyboardInterrupt (id: {sig}) has been caught...')
     logger.info('Terminating the session gracefully...')
     sys.exit(1)
 
@@ -54,11 +50,11 @@ class _Headers:
     It returns a dictionary with the headers.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @staticmethod
-    def make_headers():
+    def make_headers() -> requests.structures.CaseInsensitiveDict:
         """Make headers for the request.
 
         Returns:
@@ -82,14 +78,14 @@ class LoadModel:
     The model is returned by the model method.
     """
 
-    def __init__(self, weights: str):
+    def __init__(self, weights: str) -> None:
         self.weights = weights
 
-    def model(self):
+    def model(self) -> torch.nn.Module:
         """Loads a pretrained YOLOv5 model for a given dataset.
 
         Returns:
-            (nn.Module): a YOLOv5 model.
+            (torch.nn.Module): a YOLOv5 model.
         """
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
@@ -106,7 +102,7 @@ class Predict(LoadModel, _Headers):
     weights : str
         Path to the weights file.
     project_id : int
-        ID of the project to predict.
+        Id of the project to predict.
     tasks_range : str, optional
         Range of tasks to predict.
         Example: '1,10' will predict tasks 1 to 10.
@@ -140,7 +136,7 @@ class Predict(LoadModel, _Headers):
     model : YOLOv5
         YOLOv5 model.
     project_id : int
-        ID of the project to predict.
+        Id of the project to predict.
     tasks_range : str
         Range of tasks to predict.
     predict_all : bool
@@ -164,8 +160,6 @@ class Predict(LoadModel, _Headers):
 
     Methods
     -------
-    get_model_version()
-        Get the model version.
     get_task(task_id)
         Get a task from the Label Studio server.
     download_image(img_url)
@@ -194,11 +188,11 @@ class Predict(LoadModel, _Headers):
                  tasks_range: str = '',
                  predict_all: bool = False,
                  one_task: Union[None, int] = None,
-                 model_version: Union[None, str] = None,
+                 model_version: str = None,
                  multithreading: bool = True,
                  delete_if_no_predictions: bool = True,
                  if_empty_apply_label: str = None,
-                 debug: bool = False):
+                 debug: bool = False) -> None:
         super().__init__(weights)
         self.headers = super().make_headers()
         self.model = super().model()
@@ -214,31 +208,8 @@ class Predict(LoadModel, _Headers):
         self.counter = 0
         self.total_tasks = None
 
-    def get_model_version(self):
-        """Get the model version.
-    
-        If the model version is not specified, a default value is used.
-        
-        Parameters
-        ----------
-        self : object
-            The object instance.
-        
-        Returns
-        -------
-        model_version : str
-            The model version.
-        """
-        if not self.model_version:
-            model_version = 'BirdFSD-YOLOv5-v1.0.0-unknown'
-            logger.warning(f'Model version was not specified! Defaulting to '
-                           f'{model_version}')
-        else:
-            model_version = self.model_version
-        return model_version
-
     @staticmethod
-    def to_srv(url):
+    def to_srv(url: str) -> str:
         """Converts a private file URL to a public server URL.
     
         Parameters
@@ -255,7 +226,7 @@ class Predict(LoadModel, _Headers):
                            f'{os.environ["SRV_HOST"]}/')
 
     def get_task(self, _task_id: int) -> dict:
-        """This function returns a task from the local server.
+        """This function returns a single task from a project.
         
         Parameters
         ----------
@@ -282,7 +253,7 @@ class Predict(LoadModel, _Headers):
         return data
 
     @staticmethod
-    def download_image(img_url):
+    def download_image(img_url: str) -> str:
         """Download an image from a URL and save it to a local file.
         
         Parameters
@@ -303,7 +274,8 @@ class Predict(LoadModel, _Headers):
         logger.debug(img_local_path)
         return img_local_path
 
-    def yolo_to_ls(self, x, y, width, height, score, n):
+    def yolo_to_ls(self, x: float, y: float, width: float, height: float,
+                   score: float, n: int) -> tuple:
         """Converts YOLOv5 output to a tuple of the form:
         [x, y, width, height, score, label]
 
@@ -339,15 +311,10 @@ class Predict(LoadModel, _Headers):
             label = n
         return x, y, w, h, round(score, 2), label
 
-    def get_all_tasks(self):
+    def get_all_tasks(self) -> list:
         """Fetch all tasks from the project.
 
         This function fetches all tasks from the project.
-
-        Parameters
-        ----------
-        self : object
-            The object instance.
 
         Returns
         -------
@@ -359,21 +326,21 @@ class Predict(LoadModel, _Headers):
         ls_host = os.environ["LS_HOST"]
         url = f'{ls_host}/api/projects/{self.project_id}/export?{q}'
         if self.debug:
-            url = f'{os.environ["LS_HOST"]}/api/tasks/7409'  # hardcoded task ID
+            url = f'{os.environ["LS_HOST"]}/api/tasks/7409'  # hardcoded task id
         resp = requests.get(url, headers=self.headers)
         if self.debug:
             return [resp.json()]
         return resp.json()
 
     @staticmethod
-    def selected_tasks(tasks, start, end):
+    def selected_tasks(tasks: list, start: int, end: int) -> list:
         """Returns a list of tasks from the given list of tasks,
         whose id is in the range [start, end].
 
         Parameters
         ----------
         tasks : list
-            A list of tasks.
+            A list of tasks id.
         start : int
             The start of the range.
         end : int
@@ -386,7 +353,7 @@ class Predict(LoadModel, _Headers):
         """
         return [t for t in tasks if t['id'] in range(start, end + 1)]
 
-    def single_task(self, task_id):
+    def single_task(self, task_id: int) -> list:
         """Get a single task by id.
 
         :param task_id: The id of the task to get.
@@ -399,19 +366,20 @@ class Predict(LoadModel, _Headers):
         return [resp.json()]
 
     @staticmethod
-    def pred_result(x, y, w, h, score, label):
+    def pred_result(x: float, y: float, w: float, h: float, score: float,
+                    label: str) -> dict:
         """This function takes in the x, y, width, height, score, and label of
         a prediction and returns a dictionary with the prediction's information.
 
         Parameters
         ----------
-        x : int
+        x : float
             The x coordinate of the prediction.
-        y : int
+        y : float
             The y coordinate of the prediction.
-        w : int
+        w : float
             The width of the prediction.
-        h : int
+        h : float
             The height of the prediction.
         score : float
             The confidence score of the prediction.
@@ -437,7 +405,7 @@ class Predict(LoadModel, _Headers):
             "from_name": "label"
         }
 
-    def pred_post(self, results, scores, task_id):
+    def pred_post(self, results: list, scores: list, task_id: int) -> dict:
         """This function is used to create an API POST request of a single
         prediction results.
 
@@ -465,7 +433,7 @@ class Predict(LoadModel, _Headers):
             'task': task_id
         }
 
-    def post_prediction(self, task):
+    def post_prediction(self, task: dict) -> None:
         """This function is called by the `predict` method. It takes a task as
         an argument and performs the following steps:
 
@@ -559,8 +527,9 @@ class Predict(LoadModel, _Headers):
                 self.counter += 1
                 logger.info(
                     f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
+        return
 
-    def apply_predictions(self):
+    def apply_predictions(self) -> None:
         """This function applies predictions to tasks.
 
         Returns
@@ -610,6 +579,7 @@ class Predict(LoadModel, _Headers):
         else:
             for task in tqdm(tasks):
                 self.post_prediction(task)
+        return
 
 
 if __name__ == '__main__':
@@ -624,13 +594,18 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('-p',
                         '--project_id',
-                        help='Label-studio project ID',
+                        help='Label-studio project id',
                         type=int,
+                        required=True)
+    parser.add_argument('-v',
+                        '--model-version',
+                        help='Name of the model version',
+                        type=str,
                         required=True)
     parser.add_argument(
         '-r',
         '--tasks-range',
-        help='Comma-separated range of task IDs (e.g., "10,18")',
+        help='Comma-separated range of task ids (e.g., "10,18")',
         type=str,
         default='')
     parser.add_argument('-a',
@@ -641,11 +616,6 @@ if __name__ == '__main__':
                         '--one-task',
                         help='Predict a single task',
                         type=Union[None, int],
-                        default=None)
-    parser.add_argument('-v',
-                        '--model-version',
-                        help='Name of the model version',
-                        type=Union[None, str],
                         default=None)
     parser.add_argument('-m',
                         '--multithreading',

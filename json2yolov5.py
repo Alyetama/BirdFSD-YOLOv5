@@ -13,6 +13,7 @@ import sys
 import tarfile
 from glob import glob
 from pathlib import Path
+from typing import Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -22,12 +23,11 @@ import requests
 import seaborn as sns
 from dotenv import load_dotenv
 from loguru import logger
+from model_utils.mongodb_helper import get_tasks_from_mongodb
 from tqdm import tqdm
 
-from model_utils.mongodb_helper import get_tasks_from_mongodb
 
-
-def keyboard_interrupt_handler(sig, _):
+def keyboard_interrupt_handler(sig: int, _) -> None:
     logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
     logger.warning('Attempting to shut down ray...')
     ray.shutdown()
@@ -58,9 +58,9 @@ class JSON2YOLO:
     """
 
     def __init__(self,
-                 projects,
-                 output_dir='dataset-YOLO',
-                 only_tar_file=False):
+                 projects: str,
+                 output_dir: str = 'dataset-YOLO',
+                 only_tar_file: bool = False):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
@@ -70,19 +70,20 @@ class JSON2YOLO:
         self.tasks_not_exported = []
 
     @staticmethod
-    def to_srv(url):
+    def to_srv(url: str) -> str:
         return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
                            f'{os.environ["SRV_HOST"]}/')
 
     @staticmethod
-    def bbox_ls_to_yolo(x, y, width, height):
+    def bbox_ls_to_yolo(x: float, y: float, width: float,
+                        height: float) -> str:
         x = (x + width / 2) / 100
         y = (y + height / 2) / 100
         w = width / 100
         h = height / 100
         return x, y, w, h
 
-    def get_data(self):
+    def get_data(self) -> list:
         data = []
         projects_id = self.projects.split(',')
         for project_id in tqdm(projects_id, desc='Projects'):
@@ -120,7 +121,7 @@ class JSON2YOLO:
         return data
 
     @ray.remote
-    def convert_to_yolo(self, task):
+    def convert_to_yolo(self, task: dict) -> Union[str, None]:
         img_url = self.to_srv(task['image'])
         cur_img_name = Path(img_url).name
         r = requests.get(img_url)
@@ -178,7 +179,7 @@ class JSON2YOLO:
         return label['rectanglelabels'][0]  # to create a count table
 
     @staticmethod
-    def split_data(_output_dir):
+    def split_data(_output_dir: str) -> None:
         for subdir in [
                 'images/train', 'labels/train', 'images/val', 'labels/val'
         ]:
@@ -206,7 +207,7 @@ class JSON2YOLO:
                 ]
         return
 
-    def plot_results(self, results):
+    def plot_results(self, results: list) -> None:
         matplotlib.use('Agg')
         plt.subplots(figsize=(12, 8), dpi=300)
         plt.xticks(rotation=90)
@@ -231,7 +232,7 @@ class JSON2YOLO:
         plt.savefig(f'{self.output_dir}/hist.jpg', bbox_inches='tight')
         return
 
-    def main(self):
+    def run(self):
         signal.signal(signal.SIGINT, keyboard_interrupt_handler)
         random.seed(8)
 
@@ -284,6 +285,7 @@ class JSON2YOLO:
 
         if self.only_tar_file:
             shutil.rmtree(self.output_dir, ignore_errors=True)
+        return
 
 
 if __name__ == '__main__':
@@ -308,4 +310,4 @@ if __name__ == '__main__':
     json2yolo = JSON2YOLO(projects=args.projects,
                           output_dir=args.output_dir,
                           only_tar_file=args.only_tar_file)
-    json2yolo.main()
+    json2yolo.run()
