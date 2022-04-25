@@ -42,21 +42,24 @@ class DownloadModelWeights:
         weights_url = model_document['weights']
         logger.debug(weights_url)
 
-        if not skip_download:
-            download_cmd = f'curl -X GET -u ' \
-            f'\"{os.environ["MINISERVE_USERNAME"]}:' \
-            f'{os.environ["MINISERVE_RAW_PASSWORD"]}\" "{weights_url}" ' \
-            f'--output {self.output}'
+        if skip_download:
+            return weights_url
 
-            p = subprocess.run(shlex.split(download_cmd),
-                               shell=False,
-                               check=True,
-                               capture_output=True,
-                               text=True)
+        download_cmd = f'curl -X GET -u ' \
+        f'\"{os.environ["MINISERVE_USERNAME"]}:' \
+        f'{os.environ["MINISERVE_RAW_PASSWORD"]}\" "{weights_url}" ' \
+        f'--output {self.output}'
 
-            logger.debug(f'stderr: {p.stderr}')
-            logger.debug(f'returncode: {p.returncode}')
+        p = subprocess.run(shlex.split(download_cmd),
+                           shell=False,
+                           check=True,
+                           capture_output=True,
+                           text=True)
 
+        logger.debug(f'stderr: {p.stderr}')
+        logger.debug(f'returncode: {p.returncode}')
+        print(f'\n\nModel version: {model_document["version"]}')
+        print(f'Model weights file: {self.output}')
         return weights_url
 
 

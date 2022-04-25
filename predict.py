@@ -17,7 +17,7 @@ from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from model_utils.mongodb_helper import get_tasks_from_mongodb
+from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
 
 if 'google.colab' in sys.modules:
     from model_utils.colab_logger import logger
@@ -157,6 +157,8 @@ class Predict(LoadModel, _Headers):
         Counter for the progress bar.
     total_tasks : Union[None, int]
         Total number of tasks that have been predicted.
+    db: pymongo.database.Database
+        An instance of mongoDB client.
 
     Methods
     -------
@@ -176,6 +178,8 @@ class Predict(LoadModel, _Headers):
         Create a prediction result.
     pred_post(results, scores, task_id)
         Create a prediction post.
+    pred_exists(task)
+        Check if a prediction with the current model exists in the task.
     post_prediction(task)
         Post a prediction to the Label Studio server.
     apply_predictions()
@@ -207,6 +211,7 @@ class Predict(LoadModel, _Headers):
         self.debug = debug
         self.counter = 0
         self.total_tasks = None
+        self.db = mongodb_db()
 
     @staticmethod
     def to_srv(url: str) -> str:
@@ -224,33 +229,6 @@ class Predict(LoadModel, _Headers):
         """
         return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
                            f'{os.environ["SRV_HOST"]}/')
-
-    def get_task(self, _task_id: int) -> dict:
-        """This function returns a single task from a project.
-        
-        Parameters
-        ----------
-        _task_id : int
-            The id of the task to be returned.
-        
-        Returns
-        -------
-        dict
-            A dictionary containing the task data.
-        
-        Examples
-        --------
-        >>> get_task(1)
-        {
-            'id': 1,
-            'data': {'image': 'http://localhost:8000/data/local-files/1.jpg'}
-        }
-        """
-        url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
-        resp = requests.get(url, headers=self.headers)
-        data = resp.json()
-        data['data']['image'] = self.to_srv(data['data']['image'])
-        return data
 
     @staticmethod
     def download_image(img_url: str) -> str:
@@ -310,6 +288,33 @@ class Predict(LoadModel, _Headers):
         except ValueError:
             label = n
         return x, y, w, h, round(score, 2), label
+
+    def get_task(self, _task_id: int) -> dict:
+        """This function returns a single task from a project.
+        
+        Parameters
+        ----------
+        _task_id : int
+            The id of the task to be returned.
+        
+        Returns
+        -------
+        dict
+            A dictionary containing the task data.
+        
+        Examples
+        --------
+        >>> get_task(1)
+        {
+            'id': 1,
+            'data': {'image': 'http://localhost:8000/data/local-files/1.jpg'}
+        }
+        """
+        url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
+        resp = requests.get(url, headers=self.headers)
+        data = resp.json()
+        data['data']['image'] = self.to_srv(data['data']['image'])
+        return data
 
     def get_all_tasks(self) -> list:
         """Fetch all tasks from the project.
@@ -433,6 +438,23 @@ class Predict(LoadModel, _Headers):
             'task': task_id
         }
 
+    def pred_exists(self, task):
+        preds_col = self.db[f'project_{self.project_id}_preds']
+        for pred_id in task['predictions']:
+            pred_details = preds_col.find_one(
+                {'_id': pred_id})
+            if not pred_details:
+                logger.warning(
+                    f'There is no data about prediction {pred_id} on mongoDB! '
+                    'Skipping...'
+                )
+                continue
+            if pred_details['model_version'] == self.model_version:
+                logger.debug(
+                    f'Task {task["id"]} is already predicted with model '
+                    f'`{self.model_version}`. Skipping...')
+                return True
+
     def post_prediction(self, task: dict) -> None:
         """This function is called by the `predict` method. It takes a task as
         an argument and performs the following steps:
@@ -460,19 +482,12 @@ class Predict(LoadModel, _Headers):
         dict
             A dictionary with the prediction's information.
         """
-        try:
-            task_id = task['id']
-            pred_ids = task['predictions']
 
-            for pred_id in pred_ids:
-                url = f'{os.environ["LS_HOST"]}/api/predictions/{pred_id}'
-                resp = requests.get(url, headers=headers)
-                pred_details = resp.json()
-                if self.model_version == pred_details['model_version']:
-                    logger.debug(
-                        f'Task {task_id} is already predicted with model '
-                        f'`{self.model_version}`. Skipping...')
-                    return
+        try:
+            if self.pred_exists(task):
+                return
+
+            task_id = task['id']
 
             try:
                 img = self.download_image(
@@ -495,8 +510,8 @@ class Predict(LoadModel, _Headers):
                     return
                 elif self.if_empty_apply_label:
                     pred_xywhn = [[
-                        0.5, 0.5, 0.05, 0.05, 0, self.if_empty_apply_label
-                    ]]  # hardcoded arbiturary x, y, w, h values
+                        .0, .0, .0, .0, .0, self.if_empty_apply_label
+                    ]]  # hardcoded zeros
 
             results = []
             scores = []
@@ -544,14 +559,17 @@ class Predict(LoadModel, _Headers):
         if self.one_task:
             tasks = self.single_task(self.one_task)
         else:
-            if not Path('tasks.json').exists():
+            if args.get_tasks_with_api:
+                logger.info('Getting tasks with label-studio API...')
                 tasks = self.get_all_tasks()
             else:
-                logger.debug('Loading tasks from a local file...')
-                with open('tasks.json') as j:
-                    tasks = json.load(j)
+                logger.info('Getting tasks from MongoDB...')
+                tasks = get_tasks_from_mongodb(args.project_id,
+                                               dump=False,
+                                               json_min=False)
 
             if not self.predict_all and not self.tasks_range and not self.debug:
+                logger.debug('Predicting tasks with no predictions...')
                 tasks = [t for t in tasks if not t['predictions']]
 
         if self.tasks_range:
@@ -559,10 +577,10 @@ class Predict(LoadModel, _Headers):
             tasks_range = [int(n) for n in self.tasks_range.split(',')]
             tasks = self.selected_tasks(tasks, *tasks_range)
 
-        if not Path('tasks.json').exists():
-            logger.debug('Writing tasks to a file...')
-            with open('tasks.json', 'w') as j:
-                json.dump(tasks, j)
+        # if not Path('tasks.json').exists():
+        #     logger.debug('Writing tasks to a file...')
+        #     with open('tasks.json', 'w') as j:
+        #         json.dump(tasks, j)
 
         logger.info(f'Tasks to predict: {len(tasks)}')
         self.total_tasks = len(tasks)
@@ -582,10 +600,7 @@ class Predict(LoadModel, _Headers):
         return
 
 
-if __name__ == '__main__':
-    load_dotenv()
-    logger.add('logs.log')
-
+def opts():
     parser = argparse.ArgumentParser()
     parser.add_argument('-w',
                         '--weights',
@@ -615,15 +630,14 @@ if __name__ == '__main__':
     parser.add_argument('-t',
                         '--one-task',
                         help='Predict a single task',
-                        type=Union[None, int],
+                        type=int,
                         default=None)
     parser.add_argument('-m',
                         '--multithreading',
                         help='Enable multithreading',
                         action='store_true')
-    parser.add_argument('-M',
-                        '--mongodb',
-                        help='Get tasks from MongoDB',
+    parser.add_argument('--get-tasks-with-api',
+                        help='Use label-studio API to get tasks data',
                         action='store_true')
     parser.add_argument(
         '-D',
@@ -635,19 +649,20 @@ if __name__ == '__main__':
         '--if-empty-apply-label',
         help='Label to apply for tasks where the model could not predict '
         'anything',
-        type=Union[None, str],
+        type=str,
         default=None)
     parser.add_argument('-d',
                         '--debug',
                         help='Run in debug mode (runs on one task)',
                         action='store_true')
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+if __name__ == '__main__':
+    load_dotenv()
+    logger.add('logs.log')
+    args = opts()
     signal.signal(signal.SIGINT, keyboard_interrupt_handler)
-
-    if args.mongodb:
-        logger.info('Getting tasks from MongoDB...')
-        get_tasks_from_mongodb(args.project_id)
 
     predict = Predict(args.weights, args.project_id, args.tasks_range,
                       args.predict_all, args.one_task, args.model_version,

@@ -60,7 +60,7 @@ def get_tasks_from_mongodb(project_id, dump=True, json_min=False):
         col = db[f'project_{project_id}_min']
     else:
         col = db[f'project_{project_id}']
-    tasks = list(col.find({}, {}))
+    tasks = list(col.find({}))
 
     if dump:
         with open('tasks.json', 'w') as j:
