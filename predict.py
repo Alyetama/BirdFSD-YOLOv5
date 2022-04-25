@@ -110,7 +110,7 @@ class Predict(LoadModel, _Headers):
     ----------
     weights : str
         Path to the weights file.
-    project_id : str
+    project_id : int
         Id of the project to predict.
     tasks_range : str, optional
         Range of tasks to predict.
@@ -144,7 +144,7 @@ class Predict(LoadModel, _Headers):
         Headers for the requests.
     model : YOLOv5
         YOLOv5 model.
-    project_id : str
+    project_id : int
         Id of the project to predict.
     tasks_range : str
         Range of tasks to predict.
@@ -197,7 +197,7 @@ class Predict(LoadModel, _Headers):
 
     def __init__(self,
                  weights: str,
-                 project_id: str,
+                 project_id: int,
                  tasks_range: str = '',
                  predict_all: bool = False,
                  one_task: Union[None, int] = None,
@@ -565,7 +565,7 @@ class Predict(LoadModel, _Headers):
                     f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
         return
 
-    def apply_predictions(self, project_id: str) -> None:
+    def apply_predictions(self) -> None:
         """This function applies predictions to tasks.
 
         Returns
@@ -637,10 +637,9 @@ def opts():
                         help='Path to the model weights',
                         type=str)
     parser.add_argument('-p',
-                        '--project_id',
-                        help='Label-studio project id or comma-separated ' \
-                        'list of project ids',
-                        type=str,
+                        '--project-id',
+                        help='Label-studio project id',
+                        type=int,
                         required=True)
     parser.add_argument('-v',
                         '--model-version',
