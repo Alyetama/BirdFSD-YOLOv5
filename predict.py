@@ -15,12 +15,12 @@ import requests
 import torch
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
-from model_utils.mongodb_helper import get_tasks_from_mongodb
 from tqdm import tqdm
 
+from model_utils.mongodb_helper import get_tasks_from_mongodb
+
 if 'google.colab' in sys.modules:
-    sys.path.insert(0, '/content/BirdFSD-YOLOv5/utils')
-    from colab_logger import logger  # noqa
+    from model_utils.colab_logger import logger
 else:
     from loguru import logger
 

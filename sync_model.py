@@ -14,9 +14,10 @@ import numpy as np
 import pymongo
 import wandb
 from dotenv import load_dotenv
-from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
 from pymongo.errors import DuplicateKeyError
 from tqdm import tqdm
+
+from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
 
 
 class ModelVersionFormatError(Exception):
