@@ -608,12 +608,12 @@ class Predict(LoadModel, _Headers):
 
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = []
-                results = [
+                results = []
+                futures = [
                     executor.submit(self.post_prediction, x) for x in tasks
                 ]
-                for future in concurrent.futures.as_completed(results):
-                    futures.append(future.result())
+                for future in concurrent.futures.as_completed(futures):
+                    results.append(future.result())
 
         else:
             results = []
