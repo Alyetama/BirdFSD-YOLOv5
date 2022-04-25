@@ -557,8 +557,7 @@ class Predict(LoadModel, _Headers):
         list
             A list of tasks with predictions applied.
         """
-        print(self.model_version)
-        raise SystemExit
+
         if self.delete_if_no_predictions and self.if_empty_apply_label:
             logger.error('Can\'t have both --delete-if-no-predictions and '
                          '--if-empty-apply-label!')
