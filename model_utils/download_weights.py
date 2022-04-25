@@ -28,7 +28,11 @@ class DownloadModelWeights:
     def get_weights(self, skip_download=False):
         db = mongodb_db()
 
-        model_document = db.model.find_one({'version': self.model_version})
+        if args.model_version == 'latest':
+            latest_model_ts = max(db.model.find().distinct('added_on'))
+            model_document = db.model.find_one({'added_on': latest_model_ts})
+        else:
+            model_document = db.model.find_one({'version': self.model_version})
         if not model_document:
             avail_models = db.model.find().distinct('version')
             raise ModelVersionDoesNotExist(
