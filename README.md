@@ -36,7 +36,6 @@ python yolov5/train.py --img-size 768 --batch $BATCH_SIZE --epochs $EPOCHS \
 
 ## Related
 
-- [LS-Tasks-MongoDB](https://github.com/bird-feeder/LS-Tasks-MongoDB)
 - [label-studio-workers](https://github.com/bird-feeder/label-studio-workers)
 - [webapp-beta](https://github.com/bird-feeder/webapp-beta)
 

@@ -15,9 +15,9 @@ import requests
 import torch
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
-from tqdm import tqdm
-
+from model_utils.download_weights import DownloadModelWeights
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
+from tqdm import tqdm
 
 if 'google.colab' in sys.modules:
     from model_utils.colab_logger import logger
@@ -78,8 +78,9 @@ class LoadModel:
     The model is returned by the model method.
     """
 
-    def __init__(self, weights: str) -> None:
+    def __init__(self, weights: str, model_version: str) -> None:
         self.weights = weights
+        self.model_version = model_version
 
     def model(self) -> torch.nn.Module:
         """Loads a pretrained YOLOv5 model for a given dataset.
@@ -87,6 +88,13 @@ class LoadModel:
         Returns:
             (torch.nn.Module): a YOLOv5 model.
         """
+        if not self.weights:
+            dmw = DownloadModelWeights(self.model_version, output='best.pt')
+            self.weights, weights_url, weights_model_version = dmw.get_weights(
+                skip_download=False)
+            logger.info(f'Downloaded weights from {weights_url}')
+            if self.model_version == 'latest':
+                self.model_version = weights_model_version
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
                               path=self.weights)
@@ -197,14 +205,13 @@ class Predict(LoadModel, _Headers):
                  delete_if_no_predictions: bool = True,
                  if_empty_apply_label: str = None,
                  debug: bool = False) -> None:
-        super().__init__(weights)
+        super().__init__(weights, model_version)
         self.headers = super().make_headers()
         self.model = super().model()
         self.project_id = project_id
         self.tasks_range = tasks_range
         self.predict_all = predict_all
         self.one_task = one_task
-        self.model_version = model_version
         self.multithreading = multithreading
         self.delete_if_no_predictions = delete_if_no_predictions
         self.if_empty_apply_label = if_empty_apply_label
@@ -441,13 +448,11 @@ class Predict(LoadModel, _Headers):
     def pred_exists(self, task):
         preds_col = self.db[f'project_{self.project_id}_preds']
         for pred_id in task['predictions']:
-            pred_details = preds_col.find_one(
-                {'_id': pred_id})
+            pred_details = preds_col.find_one({'_id': pred_id})
             if not pred_details:
                 logger.warning(
                     f'There is no data about prediction {pred_id} on mongoDB! '
-                    'Skipping...'
-                )
+                    'Skipping...')
                 continue
             if pred_details['model_version'] == self.model_version:
                 logger.debug(
@@ -552,6 +557,8 @@ class Predict(LoadModel, _Headers):
         list
             A list of tasks with predictions applied.
         """
+        print(self.model_version)
+        raise SystemExit
         if self.delete_if_no_predictions and self.if_empty_apply_label:
             logger.error('Can\'t have both --delete-if-no-predictions and '
                          '--if-empty-apply-label!')
@@ -605,8 +612,7 @@ def opts():
     parser.add_argument('-w',
                         '--weights',
                         help='Path to the model weights',
-                        type=str,
-                        required=True)
+                        type=str)
     parser.add_argument('-p',
                         '--project_id',
                         help='Label-studio project id',

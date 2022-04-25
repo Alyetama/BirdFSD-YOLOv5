@@ -28,7 +28,7 @@ class DownloadModelWeights:
     def get_weights(self, skip_download=False):
         db = mongodb_db()
 
-        if args.model_version == 'latest':
+        if self.model_version == 'latest':
             latest_model_ts = max(db.model.find().distinct('added_on'))
             model_document = db.model.find_one({'added_on': latest_model_ts})
         else:
@@ -43,7 +43,7 @@ class DownloadModelWeights:
         logger.debug(weights_url)
 
         if skip_download:
-            return weights_url
+            return self.output, weights_url
 
         download_cmd = f'curl -X GET -u ' \
         f'\"{os.environ["MINISERVE_USERNAME"]}:' \
@@ -60,7 +60,7 @@ class DownloadModelWeights:
         logger.debug(f'returncode: {p.returncode}')
         print(f'\n\nModel version: {model_document["version"]}')
         print(f'Model weights file: {self.output}')
-        return weights_url
+        return self.output, weights_url, model_document["version"]
 
 
 if __name__ == '__main__':
@@ -86,5 +86,5 @@ if __name__ == '__main__':
     dmw = DownloadModelWeights(
         model_version=args.model_version,
         output=args.output)
-    _ = dmw.get_weights(args.skip_download)
+    _, _ = dmw.get_weights(args.skip_download)
 

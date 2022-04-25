@@ -192,7 +192,7 @@ def release_notes(run: wandb.wandb_run.Run, f1_score: float, output_name: str,
 
         dmw = download_weights.DownloadModelWeights(
             model_version=args.release_version)
-        weights_url = dmw.get_weights(skip_download=True)
+        _, weights_url, _ = dmw.get_weights(skip_download=True)
 
         f.write('\n<details>\n<summary>Model weights</summary>\n'
                 f'\n{weights_url} (requires authentication)'
