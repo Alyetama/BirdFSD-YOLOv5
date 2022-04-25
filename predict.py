@@ -15,9 +15,10 @@ import requests
 import torch
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
+from tqdm import tqdm
+
 from model_utils.download_weights import DownloadModelWeights
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-from tqdm import tqdm
 
 if 'google.colab' in sys.modules:
     from model_utils.colab_logger import logger
@@ -488,6 +489,12 @@ class Predict(LoadModel, _Headers):
             A dictionary with the prediction's information.
         """
 
+        if not self.delete_if_no_predictions and not self.if_empty_apply_label:
+            logger.error(
+                'Action for tasks without detections is not specified!')
+            logger.error('Available actions: [\'--delete-if-no-predictions\', '
+                         '\'--if-empty-apply-label\']')
+            sys.exit(1)
         try:
             if self.pred_exists(task):
                 return
