@@ -10,3 +10,4 @@ matplotlib
 seaborn
 pandas
 wandb>=0.12.15
+schedule>=1.1.0

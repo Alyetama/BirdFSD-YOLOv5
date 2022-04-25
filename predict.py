@@ -453,9 +453,6 @@ class Predict(LoadModel, _Headers):
         for pred_id in task['predictions']:
             pred_details = preds_col.find_one({'_id': pred_id})
             if not pred_details:
-                logger.warning(
-                    f'There is no data about prediction {pred_id} on mongoDB! '
-                    'Skipping...')
                 continue
             if pred_details['model_version'] == self.model_version:
                 logger.debug(
