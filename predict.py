@@ -205,7 +205,8 @@ class Predict(LoadModel, _Headers):
                  multithreading: bool = True,
                  delete_if_no_predictions: bool = True,
                  if_empty_apply_label: str = None,
-                 debug: bool = False) -> None:
+                 debug: bool = False,
+                 get_tasks_with_api: bool = False) -> None:
         super().__init__(weights, model_version)
         self.headers = super().make_headers()
         self.model = super().model()
@@ -219,6 +220,7 @@ class Predict(LoadModel, _Headers):
         self.debug = debug
         self.counter = 0
         self.total_tasks = None
+        self.get_tasks_with_api = False
         self.db = mongodb_db()
 
     @staticmethod
@@ -580,12 +582,12 @@ class Predict(LoadModel, _Headers):
         if self.one_task:
             tasks = self.single_task(self.one_task)
         else:
-            if args.get_tasks_with_api:
+            if self.get_tasks_with_api:
                 logger.info('Getting tasks with label-studio API...')
                 tasks = self.get_all_tasks()
             else:
                 logger.info('Getting tasks from MongoDB...')
-                tasks = get_tasks_from_mongodb(args.project_id,
+                tasks = get_tasks_from_mongodb(self.project_id,
                                                dump=False,
                                                json_min=False)
 
