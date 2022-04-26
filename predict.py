@@ -634,7 +634,7 @@ class Predict(LoadModel, _Headers):
         for tmp_file in self.flush:
             Path(tmp_file).unlink(missing_ok=True)
 
-        logger.info(f'Prediction step took: {time.time() - start}s')
+        logger.info(f'Prediction step took: {round(time.time() - start, 2)}s')
         return
 
 
