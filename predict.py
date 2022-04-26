@@ -7,6 +7,7 @@ import json
 import os
 import signal
 import sys
+import time
 from pathlib import Path
 from typing import Union
 
@@ -137,6 +138,8 @@ class Predict(LoadModel, _Headers):
     debug : bool, optional
         Debug mode.
         Default: False
+    db : pymongo.database.Database
+        A MongoDB client instance
 
     Attributes
     ----------
@@ -166,8 +169,10 @@ class Predict(LoadModel, _Headers):
         Counter for the progress bar.
     total_tasks : Union[None, int]
         Total number of tasks that have been predicted.
-    db: pymongo.database.Database
-        An instance of mongoDB client.
+    db : pymongo.database.Database
+        An instance of mongoDB client (if connection string exists in .env).
+    flush : list
+        List object used to flush temp files written to disk during prediction.
 
     Methods
     -------
@@ -222,6 +227,7 @@ class Predict(LoadModel, _Headers):
         self.total_tasks = None
         self.get_tasks_with_api = False
         self.db = mongodb_db()
+        self.flush = []
 
     @staticmethod
     def to_srv(url: str) -> str:
@@ -240,8 +246,7 @@ class Predict(LoadModel, _Headers):
         return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
                            f'{os.environ["SRV_HOST"]}/')
 
-    @staticmethod
-    def download_image(img_url: str) -> str:
+    def download_image(self, img_url: str) -> str:
         """Download an image from a URL and save it to a local file.
         
         Parameters
@@ -256,9 +261,10 @@ class Predict(LoadModel, _Headers):
         """
         cur_img_name = Path(img_url).name
         r = requests.get(img_url)
-        with open(f'/tmp/{cur_img_name}', 'wb') as f:
-            f.write(r.content)
         img_local_path = f'/tmp/{cur_img_name}'
+        self.flush.append(img_local_path)
+        with open(img_local_path, 'wb') as f:
+            f.write(r.content)
         logger.debug(img_local_path)
         return img_local_path
 
@@ -449,6 +455,10 @@ class Predict(LoadModel, _Headers):
         }
 
     def pred_exists(self, task):
+        if not os.getenv('DB_CONNECTION_STRING'):
+            logger.warning('Not connected to a MongoDB database! '
+                'Skipping `pred_exists` check...')
+            return
         preds_col = self.db[f'project_{self.project_id}_preds']
         for pred_id in task['predictions']:
             pred_details = preds_col.find_one({'_id': pred_id})
@@ -570,6 +580,7 @@ class Predict(LoadModel, _Headers):
         list
             A list of tasks with predictions applied.
         """
+        start = time.time()
 
         if self.delete_if_no_predictions and self.if_empty_apply_label:
             logger.error('Can\'t have both --delete-if-no-predictions and '
@@ -597,11 +608,6 @@ class Predict(LoadModel, _Headers):
             tasks_range = [int(n) for n in self.tasks_range.split(',')]
             tasks = self.selected_tasks(tasks, *tasks_range)
 
-        # if not Path('tasks.json').exists():
-        #     logger.debug('Writing tasks to a file...')
-        #     with open('tasks.json', 'w') as j:
-        #         json.dump(tasks, j)
-
         logger.info(f'Tasks to predict: {len(tasks)}')
         self.total_tasks = len(tasks)
 
@@ -624,6 +630,11 @@ class Predict(LoadModel, _Headers):
         for task in tqdm(skipped_tasks):
             self.post_prediction(task)
 
+        logger.debug('Flushing temp files...')
+        for tmp_file in self.flush:
+            Path(tmp_file).unlink(missing_ok=True)
+
+        logger.info(f'Prediction step took: {time.time() - start}s')
         return
 
 

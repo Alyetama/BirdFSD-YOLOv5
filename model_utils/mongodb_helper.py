@@ -37,7 +37,10 @@ def mongodb_db():
     db: pymongo.database.Database
         The MongoDB database.
     """
-    client = pymongo.MongoClient(os.environ['DB_CONNECTION_STRING'])
+    db_connection_string = os.getenv('DB_CONNECTION_STRING')
+    if not db_connection_string:
+        return
+    client = pymongo.MongoClient(db_connection_string)
     db = client[os.environ['DB_NAME']]
     return db
 
