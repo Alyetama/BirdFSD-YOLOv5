@@ -45,7 +45,7 @@ class DownloadModelWeights:
         if skip_download:
             return self.output, weights_url
 
-        download_cmd = f'curl -X GET -u ' \
+        download_cmd = f'curl -X GET -s -u ' \
         f'\"{os.environ["MINISERVE_USERNAME"]}:' \
         f'{os.environ["MINISERVE_RAW_PASSWORD"]}\" "{weights_url}" ' \
         f'--output {self.output}'

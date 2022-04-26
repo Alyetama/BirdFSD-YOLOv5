@@ -618,7 +618,11 @@ class Predict(LoadModel, _Headers):
                     executor.submit(self.post_prediction, x) for x in tasks
                 ]
                 for future in concurrent.futures.as_completed(futures):
-                    results.append(future.result())
+                    try:
+                        results.append(future.result())
+                    except KeyboardInterrupt as e:
+                        logger.warning(e)
+                        sys.exit(1)
 
         else:
             results = []
@@ -708,8 +712,4 @@ if __name__ == '__main__':
                       args.predict_all, args.one_task, args.model_version,
                       args.multithreading, args.delete_if_no_predictions,
                       args.if_empty_apply_label, args.debug)
-
-    pids = args.project_id.split(',')
-    for pid in pids:
-        logger.info(f'Current project id: {pid}')
-        predict.apply_predictions(pid)
+    predict.apply_predictions()
