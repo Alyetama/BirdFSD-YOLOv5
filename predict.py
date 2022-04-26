@@ -708,5 +708,5 @@ if __name__ == '__main__':
 
     pids = args.project_id.split(',')
     for pid in pids:
-        logger.info(f'\nCurrent project id: {pid}\n')
+        logger.info(f'Current project id: {pid}')
         predict.apply_predictions(pid)
