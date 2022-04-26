@@ -632,7 +632,10 @@ class Predict(LoadModel, _Headers):
 
         logger.debug('Flushing temp files...')
         for tmp_file in self.flush:
-            Path(tmp_file).unlink(missing_ok=True)
+            try:
+                Path(tmp_file).unlink()
+            except FileNotFoundError:
+                continue
 
         logger.info(f'Prediction step took: {round(time.time() - start, 2)}s')
         return

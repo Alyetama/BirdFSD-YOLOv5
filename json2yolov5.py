@@ -91,10 +91,11 @@ class JSON2YOLO:
                 get_tasks_from_mongodb(project_id, dump=False, json_min=True))
         data = sum(data, [])
 
-        excluded_labels = [
-            'cannot identify', 'no animal', 'distorted image',
-            'severe occultation', 'animal other than bird or squirrel'
-        ]
+        excluded_labels = os.getenv('EXCLUDE_LABELS')
+        if excluded_labels:
+            excluded_labels = excluded_labels.split(',')
+        else:
+            excluded_labels = []
 
         labels = []
         for entry in data:
