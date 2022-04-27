@@ -1,0 +1,39 @@
+name: Predict
+
+on:
+  push
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.8"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Run sync_tasks.py
+      env: 
+        DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+        EXCLUDE_LABELS: ${{ secrets.EXCLUDE_LABELS }}
+        LS_HOST: ${{ secrets.LS_HOST }}
+        SRV_HOST: ${{ secrets.SRV_HOST }}
+        PROJECTS_ID: ${{ secrets.PROJECTS_ID }}
+        TOKEN: ${{ secrets.TOKEN }}
+        MINISERVE_HOST: ${{ secrets.MINISERVE_HOST }}
+        MINISERVE_PASSWORD: ${{ secrets.MINISERVE_PASSWORD }}
+        MINISERVE_RAW_PASSWORD: ${{ secrets.MINISERVE_RAW_PASSWORD }}
+        MINISERVE_USERNAME: ${{ secrets.MINISERVE_USERNAME }}
+        WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+      run: |
+        python auto_prediction_schedule.py --once
