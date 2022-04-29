@@ -25,17 +25,17 @@ jobs:
         pip install -r requirements.txt
     - name: Run sync_tasks.py
       env: 
-        DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
-        DB_NAME: ${{ secrets.DB_NAME }}
-        EXCLUDE_LABELS: ${{ secrets.EXCLUDE_LABELS }}
-        LS_HOST: ${{ secrets.LS_HOST }}
-        SRV_HOST: ${{ secrets.SRV_HOST }}
         PROJECTS_ID: ${{ secrets.PROJECTS_ID }}
         TOKEN: ${{ secrets.TOKEN }}
-        MINISERVE_HOST: ${{ secrets.MINISERVE_HOST }}
-        MINISERVE_PASSWORD: ${{ secrets.MINISERVE_PASSWORD }}
-        MINISERVE_RAW_PASSWORD: ${{ secrets.MINISERVE_RAW_PASSWORD }}
-        MINISERVE_USERNAME: ${{ secrets.MINISERVE_USERNAME }}
+        LS_HOST: ${{ secrets.LS_HOST }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+        DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+        EXCLUDE_LABELS: ${{ secrets.EXCLUDE_LABELS }}
+        MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+        MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+        MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        MINIO_REGION: ${{ secrets.MINIO_REGION }}
         WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+        IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
       run: |
         python auto_prediction_schedule.py --once
