@@ -5,9 +5,7 @@ import argparse
 import datetime
 import os
 import re
-import shlex
 import shutil
-import subprocess
 from typing import Union
 
 import numpy as np
@@ -17,6 +15,7 @@ from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 from tqdm import tqdm
 
+from model_utils.minio_helper import MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
 
 
@@ -146,25 +145,17 @@ class SyncModel:
         os.rename(f'{weights_path}/best.pt',
                   f'{weights_path}/{renamed_weights_fname}')
 
-        upload_cmd = f'curl -u {os.environ["MINISERVE_USERNAME"]}:' \
-        f'{os.environ["MINISERVE_RAW_PASSWORD"]} -F ' \
-        f'"path=@{weights_path}/{renamed_weights_fname}" ' \
-        rf'{os.environ["MINISERVE_HOST"]}/upload\?path\=/'
-
-        weights_url = f'{os.environ["MINISERVE_HOST"]}/{renamed_weights_fname}'
-
-        p = subprocess.run(shlex.split(upload_cmd),
-                           shell=False,
-                           check=True,
-                           capture_output=True,
-                           text=True)
+        minio = MinIO()
+        minio_resp = minio.upload(
+            bucket_name='model',
+            file_path=f'{weights_path}/{renamed_weights_fname}')
+        logger.debug(f'Uploaded object name: {minio_resp.object_name}')
 
         model = {
             '_id': self.model_version,
             'version': f'BirdFSD-YOLOv5-{self.model_version}',
             'projects': self.projects_id,
             'labels': labels_freq,
-            'weights': weights_url,
             'added_on': datetime.datetime.today(),
             'wandb_run_path': self.run_path,
             'number_of_classes': len(labels_freq),
