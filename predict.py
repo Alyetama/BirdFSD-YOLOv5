@@ -229,22 +229,22 @@ class Predict(LoadModel, _Headers):
         self.db = mongodb_db()
         self.flush = []
 
-    @staticmethod
-    def to_srv(url: str) -> str:
-        """Converts a private file URL to a public server URL.
+    # @staticmethod
+    # def to_srv(url: str) -> str:
+    #     """Converts a private file URL to a public server URL.
     
-        Parameters
-        ----------
-        url : str
-            The label-studio URL to convert.
+    #     Parameters
+    #     ----------
+    #     url : str
+    #         The label-studio URL to convert.
         
-        Returns
-        -------
-        str
-            The server URL.
-        """
-        return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
-                           f'{os.environ["SRV_HOST"]}/')
+    #     Returns
+    #     -------
+    #     str
+    #         The server URL.
+    #     """
+    #     return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
+    #                        f'{os.environ["SRV_HOST"]}/')
 
     def download_image(self, img_url: str) -> str:
         """Download an image from a URL and save it to a local file.
@@ -259,7 +259,7 @@ class Predict(LoadModel, _Headers):
         img_local_path : str
             The path to the local file containing the downloaded image.
         """
-        cur_img_name = Path(img_url).name
+        cur_img_name = Path(img_url.split('?')[0]).name
         r = requests.get(img_url)
         img_local_path = f'/tmp/{cur_img_name}'
         self.flush.append(img_local_path)
@@ -329,7 +329,7 @@ class Predict(LoadModel, _Headers):
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
         data = resp.json()
-        data['data']['image'] = self.to_srv(data['data']['image'])
+        # data['data']['image'] = self.to_srv(data['data']['image'])
         return data
 
     def get_all_tasks(self) -> list:

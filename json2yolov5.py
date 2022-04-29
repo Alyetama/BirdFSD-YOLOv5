@@ -69,10 +69,10 @@ class JSON2YOLO:
         self.classes = None
         self.tasks_not_exported = []
 
-    @staticmethod
-    def to_srv(url: str) -> str:
-        return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
-                           f'{os.environ["SRV_HOST"]}/')
+    # @staticmethod
+    # def to_srv(url: str) -> str:
+    #     return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
+    #                        f'{os.environ["SRV_HOST"]}/')
 
     @staticmethod
     def bbox_ls_to_yolo(x: float, y: float, width: float,
@@ -123,7 +123,8 @@ class JSON2YOLO:
 
     @ray.remote
     def convert_to_yolo(self, task: dict) -> Union[str, None]:
-        img_url = self.to_srv(task['image'])
+        # img_url = self.to_srv(task['image'])
+        img_url = task['image']
         cur_img_name = Path(img_url).name
         r = requests.get(img_url)
         with open(f'{self.imgs_dir}/{cur_img_name}', 'wb') as f:
