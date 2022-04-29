@@ -12,7 +12,7 @@ from minio import Minio
 class MinIO:
 
     def __init__(self):
-        self.client = Minio(os.environ['MINIO_SERVER_HOST'],
+        self.client = Minio(os.environ['MINIO_ENDPOINT'],
                             access_key=os.environ['MINIO_ACCESS_KEY'],
                             secret_key=os.environ['MINIO_SECRET_KEY'],
                             region=os.environ['MINIO_REGION'])
