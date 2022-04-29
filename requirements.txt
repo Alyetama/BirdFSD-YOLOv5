@@ -11,6 +11,7 @@ seaborn
 pandas
 wandb>=0.12.15
 schedule>=1.1.0
+minio>=7.1.7
 
 # yolov5 requirements
 opencv-python>=4.1.2
