@@ -12,6 +12,7 @@ import schedule
 from dotenv import load_dotenv
 from loguru import logger
 
+from model_utils.download_weights import DownloadModelWeights
 from model_utils.handlers import catch_keyboard_interrupt
 from predict import Predict
 
@@ -45,6 +46,18 @@ def main() -> None:
         'debug': False
     }
 
+    if not CONFIG['weights'] and CONFIG['model_version'] == 'latest':
+        dmw = DownloadModelWeights(CONFIG['model_version'])
+        weights, weights_url, weights_model_ver = dmw.get_weights(
+            skip_download=False)
+        logger.info(f'Downloaded weights to {weights}')
+        CONFIG['weights'] = weights
+        CONFIG['model_version'] = weights_model_ver
+    else:
+        if CONFIG['model_version'] == 'latest':
+            raise sys.exit(
+                'Need to specify model version if loaded from a file path!')
+
     if args.show_config:
         print(json.dumps(CONFIG, indent=4))
         sys.exit(0)
@@ -56,6 +69,11 @@ def main() -> None:
         CONFIG.update({'project_id': pid})
         predict = Predict(**CONFIG)
         predict.apply_predictions()
+
+    try:
+        Path('best.pt').unlink()
+    except FileNotFoundError:
+        pass
 
 
 if __name__ == '__main__':

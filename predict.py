@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 from loguru import logger
 from tqdm import tqdm
 
-from model_utils.download_weights import DownloadModelWeights
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
 
@@ -58,7 +57,7 @@ class LoadModel:
     The model is returned by the model method.
     """
 
-    def __init__(self, weights: Optional[str], model_version: str) -> None:
+    def __init__(self, weights: str, model_version: str) -> None:
         self.weights = weights
         self.model_version = model_version
 
@@ -68,13 +67,6 @@ class LoadModel:
         Returns:
             (torch.nn.Module): a YOLOv5 model.
         """
-        if not self.weights:
-            dmw = DownloadModelWeights(self.model_version)
-            self.weights, weights_url, weights_model_ver = dmw.get_weights(
-                skip_download=False)
-            logger.info(f'Downloaded weights to {self.weights}')
-            if self.model_version == 'latest':
-                self.model_version = weights_model_ver
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
                               path=self.weights)
@@ -178,7 +170,7 @@ class Predict(LoadModel, _Headers):
 
     def __init__(
         self,
-        weights: Optional[str],
+        weights: str,
         project_id: int,
         tasks_range: Optional[str] = None,
         predict_all: bool = False,
@@ -586,12 +578,6 @@ class Predict(LoadModel, _Headers):
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 results = list(tqdm(executor.map(self.post_prediction, tasks),
                     total=len(tasks)))
-                # for future in concurrent.futures.as_completed(futures):
-                #     results.append(future.result())
-                #     pbar.update(1)
-                #     p += 1
-                #     logger.trace(f'Progress: {p} / {len(tasks)}')
-
         else:
             results = []
             for task in tqdm(tasks):
