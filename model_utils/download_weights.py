@@ -8,11 +8,9 @@ from dotenv import load_dotenv
 from loguru import logger
 
 try:
-    from .mongodb_helper import mongodb_db
-    from .minio_helper import MinIO
+    from . import mongodb_helper, minio_helper, handlers
 except ImportError:
-    from mongodb_helper import mongodb_db
-    from minio_helper import MinIO
+    import mongodb_helper, minio_helper, handlers
 
 
 class ModelVersionDoesNotExist(Exception):
@@ -26,8 +24,10 @@ class DownloadModelWeights:
         self.output = output
 
     def get_weights(self, skip_download=False):
-        db = mongodb_db()
-        minio = MinIO()
+        handlers.catch_keyboard_interrupt()
+
+        db = mongodb_helper.mongodb_db()
+        minio = minio_helper.MinIO()
 
         if self.model_version == 'latest':
             latest_model_ts = max(db.model.find().distinct('added_on'))
@@ -40,16 +40,18 @@ class DownloadModelWeights:
                 f'The model `{self.model_version}` does not exist! '
                 f'\nAvailable models: {json.dumps(avail_models, indent=4)}')
 
+        model_object_name = f'{model_document["version"]}.pt'
         weights_url = minio.get_presigned_download_url(
-            bucket_name='model', object_name=model_document['version'])
+            bucket_name='model', object_name=model_object_name)
 
         if skip_download:
             logger.debug(f'Download URL: {weights_url}')
             return self.output, weights_url
 
-        _ = minio.download(bucket_name='model',
-                           object_name=model_document['version'],
-                           destination=self.output)
+        logger.debug(f'Downloading {model_object_name}...')
+        minio.download(bucket_name='model',
+                       object_name=model_object_name,
+                       destination=self.output)
 
         logger.debug(f'\n\nModel version: {model_document["version"]}')
         logger.debug(f'Model weights file: {self.output}')
@@ -78,4 +80,4 @@ if __name__ == '__main__':
 
     dmw = DownloadModelWeights(model_version=args.model_version,
                                output=args.output)
-    _, _ = dmw.get_weights(args.skip_download)
+    dmw.get_weights(args.skip_download)

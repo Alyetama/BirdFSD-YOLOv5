@@ -4,7 +4,6 @@
 import argparse
 import json
 import os
-import signal
 import sys
 import time
 from pathlib import Path
@@ -13,13 +12,8 @@ import schedule
 from dotenv import load_dotenv
 from loguru import logger
 
+from model_utils.handlers import catch_keyboard_interrupt
 from predict import Predict
-
-
-def keyboard_interrupt_handler(sig: int, _) -> None:
-    logger.warning(f'KeyboardInterrupt (id: {sig}) has been caught...')
-    logger.info('Terminating the session gracefully...')
-    sys.exit(1)
 
 
 def opts() -> argparse.Namespace:
@@ -36,6 +30,8 @@ def opts() -> argparse.Namespace:
 
 
 def main() -> None:
+    catch_keyboard_interrupt()
+
     CONFIG = {
         'weights': '',
         'tasks_range': None,
@@ -45,20 +41,9 @@ def main() -> None:
         'multithreading': True,
         'delete_if_no_predictions': False,
         'if_empty_apply_label': 'no animal',
+        'get_tasks_with_api': False,
         'debug': False
     }
-
-    if not Path('config.json').exists():
-        logger.debug('Using default configuration...')
-        with open('config.json', 'w') as j:
-            json.dump(CONFIG, j, indent=4)
-    else:
-        with open('config.json') as j:
-            _CONFIG = json.load(j)
-        if CONFIG == _CONFIG:
-            logger.debug('Using default configuration...')
-        else:
-            CONFIG = _CONFIG
 
     if args.show_config:
         print(json.dumps(CONFIG, indent=4))
@@ -77,7 +62,6 @@ if __name__ == '__main__':
     load_dotenv()
     logger.add(f'{Path(__file__).parent}/logs.log')
     args = opts()
-    signal.signal(signal.SIGINT, keyboard_interrupt_handler)
 
     if args.once or args.show_config:
         main()

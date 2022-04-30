@@ -5,44 +5,22 @@ import argparse
 import concurrent.futures
 import json
 import os
-import signal
 import sys
 import time
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 import requests
 import torch
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
+from loguru import logger
 from tqdm import tqdm
 
 from model_utils.download_weights import DownloadModelWeights
+from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-
-if 'google.colab' in sys.modules:
-    from model_utils.colab_logger import logger
-else:
-    from loguru import logger
-
-
-def keyboard_interrupt_handler(sig: int, _) -> None:
-    """This function handles the KeyboardInterrupt (CTRL+C) signal.
-    It's a handler for the signal, which means it's called when the OS sends
-    the signal. The signal is sent when the user presses CTRL+C.
-
-    Parameters
-    ----------
-    The function takes two arguments:
-    sig:
-        The id of the signal that was sent.
-    frame:
-        The current stack frame.
-    """
-    logger.warning(f'KeyboardInterrupt (id: {sig}) has been caught...')
-    logger.info('Terminating the session gracefully...')
-    sys.exit(1)
 
 
 class _Headers:
@@ -80,7 +58,7 @@ class LoadModel:
     The model is returned by the model method.
     """
 
-    def __init__(self, weights: str, model_version: str) -> None:
+    def __init__(self, weights: Optional[str], model_version: str) -> None:
         self.weights = weights
         self.model_version = model_version
 
@@ -91,12 +69,12 @@ class LoadModel:
             (torch.nn.Module): a YOLOv5 model.
         """
         if not self.weights:
-            dmw = DownloadModelWeights(self.model_version, output='best.pt')
-            self.weights, weights_url, weights_model_version = dmw.get_weights(
+            dmw = DownloadModelWeights(self.model_version)
+            self.weights, weights_url, weights_model_ver = dmw.get_weights(
                 skip_download=False)
-            logger.info(f'Downloaded weights from {weights_url}')
+            logger.info(f'Downloaded weights to {self.weights}')
             if self.model_version == 'latest':
-                self.model_version = weights_model_version
+                self.model_version = weights_model_ver
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
                               path=self.weights)
@@ -163,12 +141,10 @@ class Predict(LoadModel, _Headers):
         Delete tasks that have no predictions.
     if_empty_apply_label : str
         Apply a label to tasks that have no predictions.
+    get_tasks_with_api : bool
+        Get tasks with label-studio API instead of MongoDB.
     debug : bool
         Debug mode.
-    counter : int
-        Counter for the progress bar.
-    total_tasks : Union[None, int]
-        Total number of tasks that have been predicted.
     db : pymongo.database.Database
         An instance of mongoDB client (if connection string exists in .env).
     flush : list
@@ -200,18 +176,20 @@ class Predict(LoadModel, _Headers):
         Apply predictions to the Label Studio server.
     """
 
-    def __init__(self,
-                 weights: str,
-                 project_id: int,
-                 tasks_range: str = '',
-                 predict_all: bool = False,
-                 one_task: Union[None, int] = None,
-                 model_version: str = None,
-                 multithreading: bool = True,
-                 delete_if_no_predictions: bool = True,
-                 if_empty_apply_label: str = None,
-                 debug: bool = False,
-                 get_tasks_with_api: bool = False) -> None:
+    def __init__(
+        self,
+        weights: Optional[str],
+        project_id: int,
+        tasks_range: Optional[str] = None,
+        predict_all: bool = False,
+        one_task: Union[None, int] = None,
+        model_version: str = None,
+        multithreading: bool = True,
+        delete_if_no_predictions: bool = True,
+        if_empty_apply_label: str = None,
+        get_tasks_with_api: bool = False,
+        debug: bool = False,
+    ) -> None:
         super().__init__(weights, model_version)
         self.headers = super().make_headers()
         self.model = super().model()
@@ -222,22 +200,20 @@ class Predict(LoadModel, _Headers):
         self.multithreading = multithreading
         self.delete_if_no_predictions = delete_if_no_predictions
         self.if_empty_apply_label = if_empty_apply_label
+        self.get_tasks_with_api = get_tasks_with_api
         self.debug = debug
-        self.counter = 0
-        self.total_tasks = None
-        self.get_tasks_with_api = False
         self.db = mongodb_db()
         self.flush = []
 
     # @staticmethod
     # def to_srv(url: str) -> str:
     #     """Converts a private file URL to a public server URL.
-    
+
     #     Parameters
     #     ----------
     #     url : str
     #         The label-studio URL to convert.
-        
+
     #     Returns
     #     -------
     #     str
@@ -457,7 +433,7 @@ class Predict(LoadModel, _Headers):
     def pred_exists(self, task):
         if not os.getenv('DB_CONNECTION_STRING'):
             logger.warning('Not connected to a MongoDB database! '
-                'Skipping `pred_exists` check...')
+                           'Skipping `pred_exists` check...')
             return
         preds_col = self.db[f'project_{self.project_id}_preds']
         for pred_id in task['predictions']:
@@ -560,16 +536,10 @@ class Predict(LoadModel, _Headers):
             logger.error(f'Temporarily skipped {task_id}...')
             logger.error(f'Skipped task {task_id}: {task}')
             return task
-
         except Exception as _e:
             logger.error('>>>>>>>>>>>>>>>>>>>>>>>>>> UNEXPECTED EXCEPTION!')
             logger.exception(_e)
             logger.error('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
-        finally:
-            if self.multithreading:
-                self.counter += 1
-                logger.info(
-                    f'🏃‍♂️ Progress: {self.counter} / {self.total_tasks} 🟢')
         return
 
     def apply_predictions(self) -> None:
@@ -581,6 +551,7 @@ class Predict(LoadModel, _Headers):
             A list of tasks with predictions applied.
         """
         start = time.time()
+        catch_keyboard_interrupt()
 
         if self.delete_if_no_predictions and self.if_empty_apply_label:
             logger.error('Can\'t have both --delete-if-no-predictions and '
@@ -613,16 +584,13 @@ class Predict(LoadModel, _Headers):
 
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                results = []
-                futures = [
-                    executor.submit(self.post_prediction, x) for x in tasks
-                ]
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        results.append(future.result())
-                    except KeyboardInterrupt as e:
-                        logger.warning(e)
-                        sys.exit(1)
+                results = list(tqdm(executor.map(self.post_prediction, tasks),
+                    total=len(tasks)))
+                # for future in concurrent.futures.as_completed(futures):
+                #     results.append(future.result())
+                #     pbar.update(1)
+                #     p += 1
+                #     logger.trace(f'Progress: {p} / {len(tasks)}')
 
         else:
             results = []
@@ -706,10 +674,15 @@ if __name__ == '__main__':
     load_dotenv()
     logger.add('logs.log')
     args = opts()
-    signal.signal(signal.SIGINT, keyboard_interrupt_handler)
-
-    predict = Predict(args.weights, args.project_id, args.tasks_range,
-                      args.predict_all, args.one_task, args.model_version,
-                      args.multithreading, args.delete_if_no_predictions,
-                      args.if_empty_apply_label, args.debug)
+    predict = Predict(weights=args.weights,
+                      project_id=args.project_id,
+                      tasks_range=args.tasks_range,
+                      predict_all=args.predict_all,
+                      one_task=args.one_task,
+                      model_version=args.model_version,
+                      multithreading=args.multithreading,
+                      delete_if_no_predictions=args.delete_if_no_predictions,
+                      if_empty_apply_label=args.if_empty_apply_label,
+                      get_tasks_with_api=args.get_tasks_with_api,
+                      debug=args.debug)
     predict.apply_predictions()

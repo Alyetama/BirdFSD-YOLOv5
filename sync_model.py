@@ -98,7 +98,7 @@ class SyncModel:
                     labels.append(label['rectanglelabels'])
         return labels
 
-    def get_weights(self) -> Union[str, None]:
+    def get_weights_from_path(self) -> Union[str, None]:
         """This function downloads the best weights from the run specified by the run_path.
         It returns the path to the downloaded weights.
         
@@ -140,7 +140,7 @@ class SyncModel:
         unique, counts = np.unique(labels, return_counts=True)
         labels_freq = {k: int(v) for k, v in np.asarray((unique, counts)).T}
 
-        weights_path = self.get_weights()
+        weights_path = self.get_weights_from_path()
         renamed_weights_fname = f'BirdFSD-YOLOv5-{self.model_version}.pt'
         os.rename(f'{weights_path}/best.pt',
                   f'{weights_path}/{renamed_weights_fname}')
