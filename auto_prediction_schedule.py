@@ -14,6 +14,7 @@ from loguru import logger
 
 from model_utils.download_weights import DownloadModelWeights
 from model_utils.handlers import catch_keyboard_interrupt
+from model_utils.utils import add_logger, upload_logs
 from predict import Predict
 
 
@@ -31,6 +32,7 @@ def opts() -> argparse.Namespace:
 
 
 def main() -> None:
+    logs_file = add_logger(__file__)
     catch_keyboard_interrupt()
 
     CONFIG = {
@@ -75,10 +77,12 @@ def main() -> None:
     except FileNotFoundError:
         pass
 
+    upload_logs(logs_file)
+    return
+
 
 if __name__ == '__main__':
     load_dotenv()
-    logger.add(f'{Path(__file__).parent}/logs.log')
     args = opts()
 
     if args.once or args.show_config:

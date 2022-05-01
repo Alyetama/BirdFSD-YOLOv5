@@ -3,8 +3,6 @@
 
 from pathlib import Path
 
-from loguru import logger
-
 
 def main():
     """Changes the dataset path from relative to absolute"""
@@ -17,11 +15,8 @@ def main():
 
     with open('dataset_config.yml', 'w') as f:
         f.writelines(lines)
-
-    logger.debug(lines)
+    print(lines)
 
 
 if __name__ == '__main__':
-    logger.add('logs.log')
-    logger.debug(Path().cwd())
     main()

@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Union, Optional
 
@@ -20,6 +21,7 @@ from tqdm import tqdm
 
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
+from model_utils.utils import add_logger, upload_logs
 
 
 class _Headers:
@@ -196,23 +198,6 @@ class Predict(LoadModel, _Headers):
         self.debug = debug
         self.db = mongodb_db()
         self.flush = []
-
-    # @staticmethod
-    # def to_srv(url: str) -> str:
-    #     """Converts a private file URL to a public server URL.
-
-    #     Parameters
-    #     ----------
-    #     url : str
-    #         The label-studio URL to convert.
-
-    #     Returns
-    #     -------
-    #     str
-    #         The server URL.
-    #     """
-    #     return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
-    #                        f'{os.environ["SRV_HOST"]}/')
 
     def download_image(self, img_url: str) -> str:
         """Download an image from a URL and save it to a local file.
@@ -543,6 +528,7 @@ class Predict(LoadModel, _Headers):
             A list of tasks with predictions applied.
         """
         start = time.time()
+        logs_file = add_logger(__file__)
         catch_keyboard_interrupt()
 
         if self.delete_if_no_predictions and self.if_empty_apply_label:
@@ -596,6 +582,7 @@ class Predict(LoadModel, _Headers):
                 continue
 
         logger.info(f'Prediction step took: {round(time.time() - start, 2)}s')
+        upload_logs(logs_file)
         return
 
 
@@ -658,7 +645,6 @@ def opts():
 
 if __name__ == '__main__':
     load_dotenv()
-    logger.add('logs.log')
     args = opts()
     predict = Predict(weights=args.weights,
                       project_id=args.project_id,

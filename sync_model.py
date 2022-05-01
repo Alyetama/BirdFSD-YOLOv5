@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from model_utils.minio_helper import MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
+from model_utils.utils import add_logger, upload_logs
 
 
 class ModelVersionFormatError(Exception):
@@ -181,10 +182,12 @@ class SyncModel:
         -------
         None
         """
+        logs_file = add_logger(__file__)
         self.check_version_format()
         db = mongodb_db()
         labels = self.get_labels(db)
         _ = self.add_new_version(db, labels)
+        upload_logs(logs_file)
         return
 
 

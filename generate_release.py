@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from model_utils import download_weights
+from model_utils.utils import add_logger, upload_logs
 
 
 def upload_image(image_path: str, imgbb_token: str) -> str:
@@ -269,6 +270,7 @@ def main() -> None:
     -------
     None
     """
+    logs_file = add_logger(__file__)
     output_name = args.release_version
 
     api = wandb.Api()
@@ -290,6 +292,7 @@ def main() -> None:
                 f'"releases/{output_name}/{output_name}-notes.md" --title '
                 f'"{args.release_version}" --repo '
                 f'{args.repo} {" ".join(files)}')
+    upload_logs(logs_file)
     return
 
 

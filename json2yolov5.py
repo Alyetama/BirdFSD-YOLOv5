@@ -8,8 +8,6 @@ import json
 import os
 import random
 import shutil
-import signal
-import sys
 import tarfile
 from glob import glob
 from pathlib import Path
@@ -23,16 +21,11 @@ import requests
 import seaborn as sns
 from dotenv import load_dotenv
 from loguru import logger
-from model_utils.mongodb_helper import get_tasks_from_mongodb
 from tqdm import tqdm
 
-
-def keyboard_interrupt_handler(sig: int, _) -> None:
-    logger.warning(f'KeyboardInterrupt (ID: {sig}) has been caught...')
-    logger.warning('Attempting to shut down ray...')
-    ray.shutdown()
-    logger.warning('Terminating the session gracefully...')
-    sys.exit(1)
+from model_utils.handlers import catch_keyboard_interrupt
+from model_utils.mongodb_helper import get_tasks_from_mongodb
+from model_utils.utils import add_logger, upload_logs
 
 
 class JSON2YOLO:
@@ -235,7 +228,8 @@ class JSON2YOLO:
         return
 
     def run(self):
-        signal.signal(signal.SIGINT, keyboard_interrupt_handler)
+        logs_file = add_logger(__file__)
+        catch_keyboard_interrupt()
         random.seed(8)
 
         data = self.get_data()
@@ -287,6 +281,8 @@ class JSON2YOLO:
 
         if self.only_tar_file:
             shutil.rmtree(self.output_dir, ignore_errors=True)
+
+        upload_logs(logs_file)
         return
 
 
