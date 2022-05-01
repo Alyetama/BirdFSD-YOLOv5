@@ -51,7 +51,7 @@ class DownloadModelWeights:
         logger.debug(f'Downloading {model_object_name}...')
         minio.download(bucket_name='model',
                        object_name=model_object_name,
-                       destination=self.output)
+                       dest=self.output)
 
         logger.debug(f'\n\nModel version: {model_document["version"]}')
         logger.debug(f'Model weights file: {self.output}')

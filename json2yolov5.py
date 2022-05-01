@@ -130,13 +130,13 @@ class JSON2YOLO:
         try:
             valid_image = imghdr.what(f'{self.imgs_dir}/{cur_img_name}')
         except FileNotFoundError:
-            logger.error(f'Could not validate {self.imgs_dir}/{cur_img_name}'
+            print(f'Could not validate {self.imgs_dir}/{cur_img_name}'
                          f'from {task["id"]}! Skipping...')
             try:
                 Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
                 return
             except FileNotFoundError:
-                logger.error(
+                print(
                     f'Could not validate {self.imgs_dir}/{cur_img_name}'
                     f'from {task["id"]}! Skipping...')
                 return
@@ -147,7 +147,7 @@ class JSON2YOLO:
                 labels = task['label']
             except KeyError:
                 self.tasks_not_exported.append(task['id'])
-                logger.warning('>>>>>>>>>> CORRUPTED TASK:', task['id'])
+                print('>>>>>>>>>> CORRUPTED TASK:', task['id'])
                 f.close()
                 Path(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
                      ).unlink()
