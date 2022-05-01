@@ -41,8 +41,8 @@ class DownloadModelWeights:
                 f'\nAvailable models: {json.dumps(avail_models, indent=4)}')
 
         model_object_name = f'{model_document["version"]}.pt'
-        weights_url = minio.get_presigned_download_url(
-            bucket_name='model', object_name=model_object_name)
+        weights_url = minio.client.presigned_get_object(
+            'model', model_object_name)
 
         if skip_download:
             logger.debug(f'Download URL: {weights_url}')

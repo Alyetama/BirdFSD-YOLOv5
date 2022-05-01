@@ -9,6 +9,7 @@ import os
 import random
 import shutil
 import tarfile
+import time
 from glob import glob
 from pathlib import Path
 from typing import Union
@@ -24,6 +25,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from model_utils.handlers import catch_keyboard_interrupt
+from model_utils.minio_helper import BucketDoesNotExist, MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb
 from model_utils.utils import add_logger, upload_logs
 
@@ -53,10 +55,12 @@ class JSON2YOLO:
     def __init__(self,
                  projects: str,
                  output_dir: str = 'dataset-YOLO',
-                 only_tar_file: bool = False):
+                 only_tar_file: bool = False,
+                 enable_s3: bool = False):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
+        self.enable_s3 = enable_s3
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -282,6 +286,21 @@ class JSON2YOLO:
         if self.only_tar_file:
             shutil.rmtree(self.output_dir, ignore_errors=True)
 
+        if self.enable_s3:
+            minio = MinIO()
+            if not minio.client.bucket_exists('dataset'):
+                raise BucketDoesNotExist('Bucket `dataset` does not exist!')
+
+            objs = list(minio.client.list_objects('dataset'))
+            latest_ts = max([o.last_modified for o in objs])
+            latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
+
+            if latest_obj.size != Path(f'{folder_name}.tar').stat().st_size:
+                logger.info('Uploading dataset...')
+                minio.client.fput_object('dataset',
+                                         f'{folder_name}-{time.time()}.tar',
+                                         f'{folder_name}.tar')
+
         upload_logs(logs_file)
         return
 
@@ -303,9 +322,13 @@ if __name__ == '__main__':
     parser.add_argument('--only-tar-file',
                         help='Only output a TAR file',
                         action="store_true")
+    parser.add_argument('--enable-s3',
+                        help='Upload the output to an S3 bucket',
+                        action="store_true")
     args = parser.parse_args()
 
     json2yolo = JSON2YOLO(projects=args.projects,
                           output_dir=args.output_dir,
-                          only_tar_file=args.only_tar_file)
+                          only_tar_file=args.only_tar_file,
+                          enable_s3=args.enable_s3)
     json2yolo.run()

@@ -9,6 +9,10 @@ from pathlib import Path
 from minio import Minio
 
 
+class BucketDoesNotExist(Exception):
+    pass
+
+
 class MinIO:
 
     def __init__(self):
@@ -26,18 +30,13 @@ class MinIO:
             destination = object_name
         return self.client.fget_object(bucket_name, object_name, destination)
 
-    def get_presigned_download_url(self, bucket_name, object_name):
-        return self.client.presigned_get_object(bucket_name, object_name)
-
     def get_model_weights(self, model_version: str = 'latest') -> str:
         objects = list(self.client.list_objects('model'))
         if model_version == 'latest':
             latest_ts = max([obj.last_modified for obj in objects])
-            latest_model_list = [
+            latest_model_object = [
                 obj for obj in objects if obj.last_modified == latest_ts
-            ]
-            assert len(latest_model_list) == 1
-            latest_model_object = latest_model_list[0]
+            ][0]
             return latest_model_object.object_name
         else:
             for obj in objects:

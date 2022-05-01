@@ -1,4 +1,4 @@
-name: Predict
+name: JSON to YOLOv5 (data preprocessing)
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Run auto_prediction_schedule.py
+    - name: Run json2yolov5.py
       env: 
         PROJECTS_ID: ${{ secrets.PROJECTS_ID }}
         TOKEN: ${{ secrets.TOKEN }}
@@ -36,4 +36,4 @@ jobs:
         MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         MINIO_REGION: ${{ secrets.MINIO_REGION }}
       run: |
-        python auto_prediction_schedule.py --once
+        python json2yolov5.py --only-tar-file --enable-s3
