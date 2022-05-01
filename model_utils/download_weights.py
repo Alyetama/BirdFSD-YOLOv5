@@ -74,7 +74,7 @@ if __name__ == '__main__':
                         type=str)
     parser.add_argument('--skip-download',
                         action='store_true',
-                        help='Return the downloads URL without downloading '
+                        help='Return the download URL without downloading '
                         'the file')
     args = parser.parse_args()
 

@@ -7,7 +7,6 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Union, Optional
 
@@ -119,6 +118,8 @@ class Predict(LoadModel, _Headers):
         Headers for the requests.
     model : YOLOv5
         YOLOv5 model.
+    model_version : str
+        Model version to use.
     project_id : int
         Id of the project to predict.
     tasks_range : str
@@ -127,8 +128,6 @@ class Predict(LoadModel, _Headers):
         Predict all tasks in the project.
     one_task : Union[None, int]
         Predict a single task.
-    model_version : Union[None, str]
-        Model version to use.
     multithreading : bool
         Use multithreading.
     delete_if_no_predictions : bool
@@ -173,11 +172,11 @@ class Predict(LoadModel, _Headers):
     def __init__(
         self,
         weights: str,
+        model_version: str,
         project_id: int,
         tasks_range: Optional[str] = None,
         predict_all: bool = False,
         one_task: Union[None, int] = None,
-        model_version: str = None,
         multithreading: bool = True,
         delete_if_no_predictions: bool = True,
         if_empty_apply_label: str = None,
@@ -562,8 +561,9 @@ class Predict(LoadModel, _Headers):
 
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                results = list(tqdm(executor.map(self.post_prediction, tasks),
-                    total=len(tasks)))
+                results = list(
+                    tqdm(executor.map(self.post_prediction, tasks),
+                         total=len(tasks)))
         else:
             results = []
             for task in tqdm(tasks):
@@ -592,15 +592,15 @@ def opts():
                         '--weights',
                         help='Path to the model weights',
                         type=str)
-    parser.add_argument('-p',
-                        '--project-id',
-                        help='Label-studio project id',
-                        type=int,
-                        required=True)
     parser.add_argument('-v',
                         '--model-version',
                         help='Name of the model version',
                         type=str,
+                        required=True)
+    parser.add_argument('-p',
+                        '--project-id',
+                        help='Label-studio project id',
+                        type=int,
                         required=True)
     parser.add_argument(
         '-r',
@@ -647,11 +647,11 @@ if __name__ == '__main__':
     load_dotenv()
     args = opts()
     predict = Predict(weights=args.weights,
+                      model_version=args.model_version,
                       project_id=args.project_id,
                       tasks_range=args.tasks_range,
                       predict_all=args.predict_all,
                       one_task=args.one_task,
-                      model_version=args.model_version,
                       multithreading=args.multithreading,
                       delete_if_no_predictions=args.delete_if_no_predictions,
                       if_empty_apply_label=args.if_empty_apply_label,

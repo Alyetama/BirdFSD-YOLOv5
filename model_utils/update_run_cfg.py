@@ -35,16 +35,17 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p',
-                        '--run-path',
-                        help='Path to the W&B run',
-                        type=str,
-                        required=True)
+    parser.add_argument(
+        '-p',
+        '--run-path',
+        help='Path to the W&B run (i.e., `<entity>/<project>/<run_id>`)',
+        type=str,
+        required=True)
     parser.add_argument('-d',
                         '--dataset-dir',
                         help='Path to the dataset directory',
                         type=str,
-                        default='../dataset-YOLO')
+                        required=True)
     args = parser.parse_args()
 
     main()
