@@ -48,7 +48,7 @@ class MinIO:
             return self.download('dataset', object_name, dest)
         else:
             objs = list(self.client.list_objects('dataset'))
-            latest_ts = max([o.last_modified for o in objs])
+            latest_ts = max([o.last_modified for o in objs if o.last_modified])
             latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
             return self.download('dataset', latest_obj.object_name, dest)
 
