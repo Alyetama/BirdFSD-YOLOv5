@@ -297,14 +297,18 @@ class JSON2YOLO(MinIO):
             if not self.client.bucket_exists('dataset'):
                 raise BucketDoesNotExist('Bucket `dataset` does not exist!')
 
+            upload_dataset = False
             objs = list(self.client.list_objects('dataset'))
             if objs:
                 latest_ts = max([o.last_modified for o in objs])
                 latest_obj = [o for o in objs
                               if o.last_modified == latest_ts][0]
-
-            if latest_obj.size != Path(
-                    f'{folder_name}.tar').stat().st_size or not objs:
+                if latest_obj.size != Path(
+                        f'{folder_name}.tar').stat().st_size:
+                    upload_dataset = True
+            else:
+                upload_dataset = True
+            if upload_dataset:
                 logger.info('Uploading dataset...')
                 self.client.fput_object('dataset',
                                         f'{folder_name}-{time.time()}.tar',
