@@ -244,7 +244,7 @@ class JSON2YOLO(MinIO):
         return
 
     def run(self):
-        add_logger(__file__)
+        logs_file = add_logger(__file__)
         catch_keyboard_interrupt()
         random.seed(8)
 
