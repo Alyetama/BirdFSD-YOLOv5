@@ -10,7 +10,6 @@ import os
 import random
 import shutil
 import tarfile
-import time
 from datetime import timedelta
 from glob import glob
 from pathlib import Path
@@ -300,7 +299,8 @@ class JSON2YOLO(MinIO):
             upload_dataset = False
             objs = list(self.client.list_objects('dataset'))
             if objs:
-                latest_ts = max([o.last_modified for o in objs])
+                latest_ts = max(
+                    [o.last_modified for o in objs if o.last_modified])
                 latest_obj = [o for o in objs
                               if o.last_modified == latest_ts][0]
                 if latest_obj.size != Path(
@@ -309,9 +309,10 @@ class JSON2YOLO(MinIO):
             else:
                 upload_dataset = True
             if upload_dataset:
+                ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
+                dataset_name = f'{folder_name}-{ts}.tar'
                 logger.info('Uploading dataset...')
-                self.client.fput_object('dataset',
-                                        f'{folder_name}-{time.time()}.tar',
+                self.client.fput_object('dataset', dataset_name,
                                         f'{folder_name}.tar')
 
         upload_logs(logs_file)
