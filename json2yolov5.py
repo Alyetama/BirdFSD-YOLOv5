@@ -3,6 +3,7 @@
 
 import argparse
 import collections
+import concurrent.futures
 import imghdr
 import json
 import os
@@ -10,14 +11,14 @@ import random
 import shutil
 import tarfile
 import time
+from datetime import timedelta
 from glob import glob
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-import ray
 import requests
 import seaborn as sns
 from dotenv import load_dotenv
@@ -30,7 +31,7 @@ from model_utils.mongodb_helper import get_tasks_from_mongodb
 from model_utils.utils import add_logger, upload_logs
 
 
-class JSON2YOLO:
+class JSON2YOLO(MinIO):
     """Converts the output of a Label-studio project to a YOLO dataset.
 
     The output is a folder with the following structure:
@@ -56,7 +57,8 @@ class JSON2YOLO:
                  projects: str,
                  output_dir: str = 'dataset-YOLO',
                  only_tar_file: bool = False,
-                 enable_s3: bool = False):
+                 enable_s3: bool = True):
+        super().__init__()
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
@@ -65,11 +67,6 @@ class JSON2YOLO:
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
         self.tasks_not_exported = []
-
-    # @staticmethod
-    # def to_srv(url: str) -> str:
-    #     return url.replace(f'{os.environ["LS_HOST"]}/data/local-files/?d=',
-    #                        f'{os.environ["SRV_HOST"]}/')
 
     @staticmethod
     def bbox_ls_to_yolo(x: float, y: float, width: float,
@@ -118,25 +115,40 @@ class JSON2YOLO:
                 f.write(f'{class_}\n')
         return data
 
-    @ray.remote
-    def convert_to_yolo(self, task: dict) -> Union[str, None]:
-        # img_url = self.to_srv(task['image'])
-        img_url = task['image']
-        cur_img_name = Path(img_url).name
+    def convert_to_yolo(self, task: dict) -> Optional[str]:
+        if self.enable_s3:
+            object_name = task['image'].split('s3://data/')[-1]
+            img_url = self.client.presigned_get_object(
+                'data', object_name, expires=timedelta(hours=6))
+            cur_img_name = Path(img_url.split('?')[0]).name
+            # try:
+            # except S3Error as e:
+            #     logger.error(
+            #         f'Could not find image {cur_img_name} in bucket `data`')
+            #     logger.error(e)
+        else:
+            img_url = task['image']
+            cur_img_name = Path(img_url).name
+
         r = requests.get(img_url)
+        if '<Error>' in r.text:
+            logger.error(
+                f'Could not download the image `{img_url}`! Skipping...')
+            return
+
         with open(f'{self.imgs_dir}/{cur_img_name}', 'wb') as f:
             f.write(r.content)
 
         try:
             valid_image = imghdr.what(f'{self.imgs_dir}/{cur_img_name}')
         except FileNotFoundError:
-            print(f'Could not validate {self.imgs_dir}/{cur_img_name}'
+            logger.error(f'Could not validate {self.imgs_dir}/{cur_img_name}'
                          f'from {task["id"]}! Skipping...')
             try:
                 Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
                 return
             except FileNotFoundError:
-                print(
+                logger.error(
                     f'Could not validate {self.imgs_dir}/{cur_img_name}'
                     f'from {task["id"]}! Skipping...')
                 return
@@ -147,7 +159,7 @@ class JSON2YOLO:
                 labels = task['label']
             except KeyError:
                 self.tasks_not_exported.append(task['id'])
-                print('>>>>>>>>>> CORRUPTED TASK:', task['id'])
+                logger.error('>>>>>>>>>> CORRUPTED TASK:', task)
                 f.close()
                 Path(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
                      ).unlink()
@@ -232,24 +244,19 @@ class JSON2YOLO:
         return
 
     def run(self):
-        logs_file = add_logger(__file__)
+        add_logger(__file__)
         catch_keyboard_interrupt()
         random.seed(8)
 
-        data = self.get_data()
+        tasks = self.get_data()
 
         Path(self.imgs_dir).mkdir(parents=True, exist_ok=True)
         Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
 
-        futures = []
-        for task in data:
-            futures.append(self.convert_to_yolo.remote(self, task))
-
-        results = []
-        for future in tqdm(futures):
-            result = ray.get(future)
-            if result:
-                results.append(result)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = list(
+                tqdm(executor.map(self.convert_to_yolo, tasks),
+                     total=len(tasks)))
 
         if results:
             self.plot_results(results)
@@ -287,19 +294,21 @@ class JSON2YOLO:
             shutil.rmtree(self.output_dir, ignore_errors=True)
 
         if self.enable_s3:
-            minio = MinIO()
-            if not minio.client.bucket_exists('dataset'):
+            if not self.client.bucket_exists('dataset'):
                 raise BucketDoesNotExist('Bucket `dataset` does not exist!')
 
-            objs = list(minio.client.list_objects('dataset'))
-            latest_ts = max([o.last_modified for o in objs])
-            latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
+            objs = list(self.client.list_objects('dataset'))
+            if objs:
+                latest_ts = max([o.last_modified for o in objs])
+                latest_obj = [o for o in objs
+                              if o.last_modified == latest_ts][0]
 
-            if latest_obj.size != Path(f'{folder_name}.tar').stat().st_size:
+            if latest_obj.size != Path(
+                    f'{folder_name}.tar').stat().st_size or not objs:
                 logger.info('Uploading dataset...')
-                minio.client.fput_object('dataset',
-                                         f'{folder_name}-{time.time()}.tar',
-                                         f'{folder_name}.tar')
+                self.client.fput_object('dataset',
+                                        f'{folder_name}-{time.time()}.tar',
+                                        f'{folder_name}.tar')
 
         upload_logs(logs_file)
         return
