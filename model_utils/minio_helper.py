@@ -7,9 +7,13 @@ import textwrap
 from datetime import timedelta
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
 from minio import Minio
+
+try:
+    from . import utils
+except ImportError:
+    import utils
 
 
 class BucketDoesNotExist(Exception):
@@ -55,14 +59,8 @@ class MinIO:
 
         presigned_url = self.client.presigned_get_object(
             'dataset', object_name, expires=timedelta(hours=6))
-        print('Downloading...')
-        r = requests.get(presigned_url)
-        if '<Error>' in r.text:
-            raise ConnectionError(
-                f'Could not download the dataset!\nFull error message: {r.text}'
-            )
-        with open(object_name, 'wb') as f:
-            f.write(r.content)
+
+        utils.requests_download(presigned_url, object_name)
         return object_name
 
 

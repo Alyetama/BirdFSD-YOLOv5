@@ -3,14 +3,15 @@
 
 import argparse
 import json
+from datetime import timedelta
 
 from dotenv import load_dotenv
 from loguru import logger
 
 try:
-    from . import mongodb_helper, minio_helper, handlers
+    from . import mongodb_helper, minio_helper, handlers, utils
 except ImportError:
-    import mongodb_helper, minio_helper, handlers
+    import mongodb_helper, minio_helper, handlers, utils
 
 
 class ModelVersionDoesNotExist(Exception):
@@ -47,14 +48,15 @@ class DownloadModelWeights:
         if skip_download:
             logger.debug(f'Download URL: {weights_url}')
             return self.output, weights_url
-
         logger.debug(f'Downloading {model_object_name}...')
-        minio.download(bucket_name='model',
-                       object_name=model_object_name,
-                       dest=self.output)
+
+        presigned_url = minio.client.presigned_get_object(
+            'model', model_object_name, expires=timedelta(hours=6))
+        utils.requests_download(presigned_url, model_object_name)
 
         logger.debug(f'\n\nModel version: {model_document["version"]}')
         logger.debug(f'Model weights file: {self.output}')
+
         return self.output, weights_url, model_document["version"]
 
 
