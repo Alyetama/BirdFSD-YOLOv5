@@ -1,17 +1,17 @@
 requests>=2.27.1
 python-dotenv>=0.19.2
 loguru>=0.5.3
-ray>=1.11.0
-tqdm>=4.62.3
-numpy>=1.22.3
-pymongo[srv]>=4.0.2
-Pillow>=9.1.0
-matplotlib>=3.5.2
-seaborn>=0.11.2
-pandas>=1.4.2
-wandb>=0.4.22
+ray
+tqdm
+Pillow
+matplotlib
+seaborn
+pandas
+wandb>=0.12.15
 schedule>=1.1.0
 minio>=7.1.7
+pymongo[srv]>=4.0.2
+numpy
 
 # yolov5 requirements
 opencv-python>=4.1.2

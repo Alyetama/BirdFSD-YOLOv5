@@ -52,7 +52,7 @@ class DownloadModelWeights:
 
         presigned_url = minio.client.presigned_get_object(
             'model', model_object_name, expires=timedelta(hours=6))
-        utils.requests_download(presigned_url, model_object_name)
+        utils.requests_download(presigned_url, self.output)
 
         logger.debug(f'\n\nModel version: {model_document["version"]}')
         logger.debug(f'Model weights file: {self.output}')
