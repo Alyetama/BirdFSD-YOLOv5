@@ -4,8 +4,11 @@
 import os
 import sys
 import textwrap
+from datetime import timedelta
 from pathlib import Path
 
+import requests
+from dotenv import load_dotenv
 from minio import Minio
 
 
@@ -44,13 +47,23 @@ class MinIO:
                     return obj.object_name
 
     def get_dataset(self, object_name=None, dest=None):
-        if object_name:
-            return self.download('dataset', object_name, dest)
-        else:
+        if not object_name:
             objs = list(self.client.list_objects('dataset'))
             latest_ts = max([o.last_modified for o in objs if o.last_modified])
             latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
-            return self.download('dataset', latest_obj.object_name, dest)
+            object_name = latest_obj.object_name
+
+        presigned_url = self.client.presigned_get_object(
+            'dataset', object_name, expires=timedelta(hours=6))
+        print('Downloading...')
+        r = requests.get(presigned_url)
+        if '<Error>' in r.text:
+            raise ConnectionError(
+                f'Could not download the dataset!\nFull error message: {r.text}'
+            )
+        with open(object_name, 'wb') as f:
+            f.write(r.content)
+        return object_name
 
 
 if __name__ == '__main__':
@@ -64,3 +77,6 @@ if __name__ == '__main__':
                     # Default output format: <hit ENTER>
                 $ aws configure set default.s3.signature_version s3v4''')
         print(message)
+    if '--download-dataset' in sys.argv:
+        load_dotenv()
+        _ = MinIO().get_dataset()

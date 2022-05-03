@@ -120,11 +120,6 @@ class JSON2YOLO(MinIO):
             img_url = self.client.presigned_get_object(
                 'data', object_name, expires=timedelta(hours=6))
             cur_img_name = Path(img_url.split('?')[0]).name
-            # try:
-            # except S3Error as e:
-            #     logger.error(
-            #         f'Could not find image {cur_img_name} in bucket `data`')
-            #     logger.error(e)
         else:
             img_url = task['image']
             cur_img_name = Path(img_url).name
