@@ -56,12 +56,14 @@ class JSON2YOLO:
                  output_dir: str = 'dataset-YOLO',
                  only_tar_file: bool = False,
                  enable_s3: bool = True,
-                 copy_data_from: str = None):
+                 copy_data_from: str = None,
+                 filter_underrepresented_classes: bool = False):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
         self.enable_s3 = enable_s3
         self.copy_data_from = copy_data_from
+        self.filter_underrepresented_classes = filter_underrepresented_classes
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -114,11 +116,16 @@ class JSON2YOLO:
                                f'Ignoring entry: {entry}')
 
         unique, counts = np.unique(labels, return_counts=True)
-        min_instances = np.median(counts)
-        self.classes = sorted([
-            label for label, count in zip(unique, counts)
-            if label not in excluded_labels and count >= min_instances
-        ])
+
+        if self.filter_underrepresented_classes:
+            min_instances = np.median(counts)
+            self.classes = sorted([
+                label for label, count in zip(unique, counts)
+                if label not in excluded_labels and count >= min_instances
+            ])
+        else:
+            self.classes = sorted(
+                [label for label in unique if label not in excluded_labels])
 
         logger.debug(f'Number of classes: {len(self.classes)}')
         logger.debug(f'Classes: {self.classes}')
@@ -383,11 +390,17 @@ if __name__ == '__main__':
         'local path to the S3 bucket where the data is stored) instead of ' \
         'downloading it',
         type=str)
+    parser.add_argument('--filter-underrepresented-classes',
+                        help='Only include classes with instances equal or ' \
+                        'above the overall median',
+                        action="store_true")
     args = parser.parse_args()
 
-    json2yolo = JSON2YOLO(projects=args.projects,
-                          output_dir=args.output_dir,
-                          only_tar_file=args.only_tar_file,
-                          enable_s3=args.enable_s3,
-                          copy_data_from=args.copy_data_from)
+    json2yolo = JSON2YOLO(
+        projects=args.projects,
+        output_dir=args.output_dir,
+        only_tar_file=args.only_tar_file,
+        enable_s3=args.enable_s3,
+        copy_data_from=args.copy_data_from,
+        filter_underrepresented_classes=args.filter_underrepresented_classes)
     json2yolo.run()
