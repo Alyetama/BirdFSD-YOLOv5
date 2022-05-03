@@ -600,7 +600,7 @@ def opts():
     parser.add_argument('-p',
                         '--project-id',
                         help='Label-studio project id',
-                        type=int,
+                        type=str,
                         required=True)
     parser.add_argument(
         '-r',
@@ -646,15 +646,33 @@ def opts():
 if __name__ == '__main__':
     load_dotenv()
     args = opts()
-    predict = Predict(weights=args.weights,
-                      model_version=args.model_version,
-                      project_id=args.project_id,
-                      tasks_range=args.tasks_range,
-                      predict_all=args.predict_all,
-                      one_task=args.one_task,
-                      multithreading=args.multithreading,
-                      delete_if_no_predictions=args.delete_if_no_predictions,
-                      if_empty_apply_label=args.if_empty_apply_label,
-                      get_tasks_with_api=args.get_tasks_with_api,
-                      debug=args.debug)
-    predict.apply_predictions()
+    project_ids = args.project_id.split(',')
+    if len(project_ids) == 1:
+        predict = Predict(
+            weights=args.weights,
+            model_version=args.model_version,
+            project_id=args.project_id,
+            tasks_range=args.tasks_range,
+            predict_all=args.predict_all,
+            one_task=args.one_task,
+            multithreading=args.multithreading,
+            delete_if_no_predictions=args.delete_if_no_predictions,
+            if_empty_apply_label=args.if_empty_apply_label,
+            get_tasks_with_api=args.get_tasks_with_api,
+            debug=args.debug)
+        predict.apply_predictions()
+    else:
+        for project_id in project_ids:
+            predict = Predict(
+                weights=args.weights,
+                model_version=args.model_version,
+                project_id=project_id,
+                tasks_range=args.tasks_range,
+                predict_all=args.predict_all,
+                one_task=args.one_task,
+                multithreading=args.multithreading,
+                delete_if_no_predictions=args.delete_if_no_predictions,
+                if_empty_apply_label=args.if_empty_apply_label,
+                get_tasks_with_api=args.get_tasks_with_api,
+                debug=args.debug)
+            predict.apply_predictions()
