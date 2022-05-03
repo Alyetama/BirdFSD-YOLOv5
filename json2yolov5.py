@@ -3,9 +3,7 @@
 
 import argparse
 import collections
-import concurrent.futures
 import imghdr
-import json
 import os
 import random
 import shutil
@@ -17,7 +15,9 @@ from typing import Optional
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import ray
 import requests
 import seaborn as sns
 from dotenv import load_dotenv
@@ -27,10 +27,9 @@ from tqdm import tqdm
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.minio_helper import BucketDoesNotExist, MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb
-from model_utils.utils import add_logger, upload_logs
 
 
-class JSON2YOLO(MinIO):
+class JSON2YOLO:
     """Converts the output of a Label-studio project to a YOLO dataset.
 
     The output is a folder with the following structure:
@@ -48,20 +47,21 @@ class JSON2YOLO(MinIO):
     The output will also be stored in a tarball with the same name as the output
     folder.
 
-    The ID of the tasks that failed to export for any reason, will be written
-    to a file named `tasks_not_exported.json`.
+    The tasks that failed to export for any reason, will be logged at the 
+    end of the run.
     """
 
     def __init__(self,
                  projects: str,
                  output_dir: str = 'dataset-YOLO',
                  only_tar_file: bool = False,
-                 enable_s3: bool = True):
-        super().__init__()
+                 enable_s3: bool = True,
+                 copy_data_from: str = None):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
         self.enable_s3 = enable_s3
+        self.copy_data_from = copy_data_from
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -77,11 +77,24 @@ class JSON2YOLO(MinIO):
         return x, y, w, h
 
     def get_data(self) -> list:
+
+        @ray.remote
+        def iter_projects(project_id):
+            return get_tasks_from_mongodb(project_id,
+                                          dump=False,
+                                          json_min=True)
+
         data = []
         projects_id = self.projects.split(',')
-        for project_id in tqdm(projects_id, desc='Projects'):
-            data.append(
-                get_tasks_from_mongodb(project_id, dump=False, json_min=True))
+
+        futures = []
+        for project_id in projects_id:
+            futures.append(iter_projects.remote(project_id))
+
+        data = []
+        for future in tqdm(futures, desc='Projects'):
+            data.append(ray.get(future))
+
         data = sum(data, [])
 
         excluded_labels = os.getenv('EXCLUDE_LABELS')
@@ -99,11 +112,13 @@ class JSON2YOLO(MinIO):
             except KeyError as e:
                 logger.warning(f'Current entry raised KeyError {e}! '
                                f'Ignoring entry: {entry}')
-        labels = list(set(labels))
 
-        self.classes = [
-            label for label in labels if label not in excluded_labels
-        ]
+        unique, counts = np.unique(labels, return_counts=True)
+        min_instances = np.median(counts)
+        self.classes = sorted([
+            label for label, count in zip(unique, counts)
+            if label not in excluded_labels and count >= min_instances
+        ])
 
         logger.debug(f'Number of classes: {len(self.classes)}')
         logger.debug(f'Classes: {self.classes}')
@@ -115,57 +130,68 @@ class JSON2YOLO(MinIO):
         return data
 
     def convert_to_yolo(self, task: dict) -> Optional[str]:
-        if self.enable_s3:
+        if self.copy_data_from or self.enable_s3:
             object_name = task['image'].split('s3://data/')[-1]
-            img_url = self.client.presigned_get_object(
-                'data', object_name, expires=timedelta(hours=6))
-            cur_img_name = Path(img_url.split('?')[0]).name
+            cur_img_name = Path(object_name).name
         else:
-            img_url = task['image']
-            cur_img_name = Path(img_url).name
+            if 's3://' in task['image'] and not self.enable_s3:
+                raise TypeError('You need to pass the flag `--enable-s3` '
+                                'for S3 objects!')
+            cur_img_name = Path(task['image']).name
 
-        r = requests.get(img_url)
-        if '<Error>' in r.text:
-            logger.error(
-                f'Could not download the image `{img_url}`! Skipping...')
-            return
+        cur_img_path = f'{self.imgs_dir}/{cur_img_name}'
+        cur_label_path = f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
 
-        with open(f'{self.imgs_dir}/{cur_img_name}', 'wb') as f:
-            f.write(r.content)
+        if self.copy_data_from:
+            shutil.copy(f'{self.copy_data_from}/{object_name}', cur_img_path)
+        else:
+            if self.enable_s3:
+                img_url = MinIO().client.presigned_get_object(
+                    'data', object_name, expires=timedelta(hours=6))
+            else:
+                img_url = task['image']
+            r = requests.get(img_url)
+            if '<Error>' in r.text:
+                logger.error(
+                    f'Could not download the image `{img_url}`! Skipping...')
+                return
+
+            with open(cur_img_path, 'wb') as f:
+                f.write(r.content)
 
         try:
-            valid_image = imghdr.what(f'{self.imgs_dir}/{cur_img_name}')
+            valid_image = imghdr.what(cur_img_path)
         except FileNotFoundError:
-            logger.error(f'Could not validate {self.imgs_dir}/{cur_img_name}'
-                         f'from {task["id"]}! Skipping...')
+            logger.error(
+                f'Could not validate {cur_img_path} from {task["id"]}! '
+                'Skipping...')
+            return
+
             try:
-                Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
+                Path(cur_img_path).unlink()
                 return
             except FileNotFoundError:
                 logger.error(
-                    f'Could not validate {self.imgs_dir}/{cur_img_name}'
-                    f'from {task["id"]}! Skipping...')
+                    f'Could not validate {cur_img_path} from {task["id"]}! '
+                    'Skipping...')
                 return
 
-        with open(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt',
-                  'w') as f:
+        with open(cur_label_path, 'w') as f:
             try:
                 labels = task['label']
             except KeyError:
-                self.tasks_not_exported.append(task['id'])
-                logger.error('>>>>>>>>>> CORRUPTED TASK:', task)
+                self.tasks_not_exported.append(task)
+                logger.error(f'>>>>>>>>>> CORRUPTED TASK: {task}')
                 f.close()
-                Path(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
-                     ).unlink()
-                Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
+                Path(cur_label_path).unlink()
+                Path(cur_img_path).unlink()
                 return
 
             for label in labels:
                 if label['rectanglelabels'][0] not in self.classes:
                     f.close()
-                    Path(f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
-                         ).unlink()
-                    Path(f'{self.imgs_dir}/{cur_img_name}').unlink()
+                    Path(cur_label_path).unlink()
+                    Path(cur_img_path).unlink()
                     return
                 x, y, width, height = [
                     v for k, v in label.items()
@@ -238,7 +264,12 @@ class JSON2YOLO(MinIO):
         return
 
     def run(self):
-        logs_file = add_logger(__file__)
+
+        @ray.remote
+        def iter_convert_to_yolo(task):
+            return self.convert_to_yolo(task)
+
+        minio_client = MinIO().client
         catch_keyboard_interrupt()
         random.seed(8)
 
@@ -247,17 +278,18 @@ class JSON2YOLO(MinIO):
         Path(self.imgs_dir).mkdir(parents=True, exist_ok=True)
         Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            results = list(
-                tqdm(executor.map(self.convert_to_yolo, tasks),
-                     total=len(tasks)))
+        futures = []
+        for task in tasks:
+            futures.append(iter_convert_to_yolo.remote(task))
+        results = []
+        for future in tqdm(futures, desc='Tasks'):
+            results.append(ray.get(future))
 
         if results:
             self.plot_results(results)
 
         if self.tasks_not_exported:
-            with open('tasks_not_exported.json', 'w') as f:
-                json.dump(self.tasks_not_exported, f)
+            logger.error(f'Corrupted tasks: {tasks_not_exported}')
 
         assert len(glob(f'{self.output_dir}/images/*')) == len(
             glob(f'{self.output_dir}/labels/*'))
@@ -288,11 +320,11 @@ class JSON2YOLO(MinIO):
             shutil.rmtree(self.output_dir, ignore_errors=True)
 
         if self.enable_s3:
-            if not self.client.bucket_exists('dataset'):
+            if not minio_client.bucket_exists('dataset'):
                 raise BucketDoesNotExist('Bucket `dataset` does not exist!')
 
             upload_dataset = False
-            objs = list(self.client.list_objects('dataset'))
+            objs = list(minio_client.list_objects('dataset'))
             if objs:
                 latest_ts = max(
                     [o.last_modified for o in objs if o.last_modified])
@@ -306,11 +338,20 @@ class JSON2YOLO(MinIO):
             if upload_dataset:
                 ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
                 dataset_name = f'{folder_name}-{ts}.tar'
-                logger.info('Uploading dataset...')
-                self.client.fput_object('dataset', dataset_name,
-                                        f'{folder_name}.tar')
-
-        upload_logs(logs_file)
+                local_ds_path = f'{Path(self.copy_data_from).parent}/dataset'
+                if self.copy_data_from and os.geteuid() != 0:
+                    logger.warning(
+                        'Cannot run a local copy. Current user has no root '
+                        'access. Using a remote upload operation instead...')
+                if self.copy_data_from and Path(
+                        local_ds_path).exists() and os.geteuid() == 0:
+                    logger.debug('Copying the dataset to the bucket...')
+                    shutil.copy(f'{folder_name}.tar',
+                                f'{local_ds_path}/{dataset_name}')
+                else:
+                    logger.info('Uploading the dataset...')
+                    minio_client.fput_object('dataset', dataset_name,
+                                             f'{folder_name}.tar')
         return
 
 
@@ -334,10 +375,19 @@ if __name__ == '__main__':
     parser.add_argument('--enable-s3',
                         help='Upload the output to an S3 bucket',
                         action="store_true")
+    parser.add_argument(
+        '--copy-data-from',
+        help=
+        'If running on the same host serving the S3 objects, you can use ' \
+        'this option to specify a path to copy the data from (i.e., the ' \
+        'local path to the S3 bucket where the data is stored) instead of ' \
+        'downloading it',
+        type=str)
     args = parser.parse_args()
 
     json2yolo = JSON2YOLO(projects=args.projects,
                           output_dir=args.output_dir,
                           only_tar_file=args.only_tar_file,
-                          enable_s3=args.enable_s3)
+                          enable_s3=args.enable_s3,
+                          copy_data_from=args.copy_data_from)
     json2yolo.run()

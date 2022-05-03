@@ -173,3 +173,4 @@ tasks.json
 config.json
 loki-config.yaml
 promtail-config.yaml
+debugging.py
