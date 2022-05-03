@@ -3,13 +3,13 @@ python-dotenv>=0.19.2
 loguru>=0.5.3
 ray>=1.11.0
 tqdm>=4.62.3
-numpy
+numpy>=1.22.3
 pymongo[srv]>=4.0.2
-Pillow
-matplotlib
-seaborn
-pandas
-wandb>=0.12.15
+Pillow>=9.1.0
+matplotlib>=3.5.2
+seaborn>=0.11.2
+pandas>=1.4.2
+wandb>=0.4.22
 schedule>=1.1.0
 minio>=7.1.7
 
@@ -19,3 +19,4 @@ PyYAML>=5.3.1
 scipy>=1.4.1
 torch>=1.7.0
 torchvision>=0.8.1
+tensorboard>=1.15

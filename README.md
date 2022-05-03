@@ -7,7 +7,9 @@
 git clone https://github.com/bird-feeder/BirdFSD-YOLOv5.git
 cd BirdFSD-YOLOv5
 
+conda create --name yolov5 python=3.8.13 --yes
 pip install -r requirements.txt
+
 git clone https://github.com/ultralytics/yolov5.git
 
 mv .env.example .env

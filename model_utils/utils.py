@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import argparse
 import functools
+import json
+import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 from loguru import logger
 from minio.error import S3Error
+from requests.structures import CaseInsensitiveDict
 from tqdm.auto import tqdm
 
 try:
@@ -17,7 +22,7 @@ except ImportError:
     import handlers, minio_helper
 
 
-def add_logger(current_file):
+def add_logger(current_file: str) -> str:
     Path('logs').mkdir(exist_ok=True)
     ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
     logs_file = f'logs/{Path(current_file).stem}_{ts}.log'
@@ -25,7 +30,7 @@ def add_logger(current_file):
     return logs_file
 
 
-def upload_logs(logs_file):
+def upload_logs(logs_file: str) -> None:
     minio = minio_helper.MinIO()
     try:
         logger.debug('Uploading logs...')
@@ -37,7 +42,7 @@ def upload_logs(logs_file):
     return
 
 
-def requests_download(url, filename):
+def requests_download(url: str, filename: str) -> None:
     """https://stackoverflow.com/a/63831344"""
     handlers.catch_keyboard_interrupt()
     r = requests.get(url, stream=True, allow_redirects=True)
@@ -53,3 +58,45 @@ def requests_download(url, filename):
         with open(filename, 'wb') as f:
             shutil.copyfileobj(r_raw, f)
     return
+
+
+def api_request(url: str, method: str = 'get', data: dict = None) -> dict:
+    headers = CaseInsensitiveDict()
+    headers['Content-type'] = 'application/json'
+    headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
+    if method == 'get':
+        resp = requests.get(url, headers=headers)
+    elif method == 'post':
+        resp = requests.post(url, headers=headers, data=json.dumps(data))
+    elif method == 'patch':
+        resp = requests.patch(url, headers=headers, data=json.dumps(data))
+    return resp.json()
+
+
+def get_project_ids(exclude_ids: str = None) -> str:
+    projects = api_request(
+        f'{os.environ["LS_HOST"]}/api/projects?page_size=10000')
+    project_ids = sorted([project['id'] for project in projects['results']])
+    project_ids = [str(p) for p in project_ids]
+    if exclude_ids:
+        exclude_ids = [p for p in exclude_ids.split(',')]
+        project_ids = [p for p in project_ids if p not in exclude_ids]
+    return ','.join(project_ids)
+
+
+def opts() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--get-project-ids',
+                        help='Get all project ids',
+                        action='store_true')
+    parser.add_argument('--exclude-ids',
+                        help='Comma-separated list of project ids to exclude',
+                        type=str)
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = opts()
+    load_dotenv()
+    if args.get_project_ids:
+        print(get_project_ids(exclude_ids=args.exclude_ids))
