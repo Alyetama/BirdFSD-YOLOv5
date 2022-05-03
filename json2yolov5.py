@@ -345,16 +345,16 @@ class JSON2YOLO:
             if upload_dataset:
                 ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
                 dataset_name = f'{folder_name}-{ts}.tar'
-                local_ds_path = f'{Path(self.copy_data_from).parent}/dataset'
                 if self.copy_data_from and os.geteuid() != 0:
-                    logger.warning(
+                    logger.error(
                         'Cannot run a local copy. Current user has no root '
                         'access. Using a remote upload operation instead...')
-                if self.copy_data_from and Path(
-                        local_ds_path).exists() and os.geteuid() == 0:
+
+                if self.copy_data_from and os.geteuid() == 0:
                     logger.debug('Copying the dataset to the bucket...')
+                    ds_path = f'{Path(self.copy_data_from).parent}/dataset'
                     shutil.copy(f'{folder_name}.tar',
-                                f'{local_ds_path}/{dataset_name}')
+                                f'{ds_path}/{dataset_name}')
                 else:
                     logger.info('Uploading the dataset...')
                     minio_client.fput_object('dataset', dataset_name,
