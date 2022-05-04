@@ -17,7 +17,6 @@ from tqdm import tqdm
 
 from model_utils.minio_helper import MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-from model_utils.utils import add_logger, upload_logs
 
 
 class ModelVersionFormatError(Exception):
@@ -35,11 +34,6 @@ class SyncModel:
     def check_version_format(self) -> re.Match:
         """Check the format of the model version.
 
-        Parameters
-        ----------
-        self : object
-            The object to check the version of.
-
         Returns
         -------
         re.Match
@@ -53,34 +47,23 @@ class SyncModel:
         Notes
         -----
         The version should be in the format of 'vX.Y.Z' or 'vX.Y.Z-alpha.N'.
-
-        Examples
-        --------
-        >>> check_version_format('v1.0.0')
-        <re.Match object; span=(0, 6), match='v1.0.0'>
-        >>> check_version_format('v1.0.0-alpha.1')
-        <re.Match object; span=(0, 14), match='v1.0.0-alpha.1'>
-        >>> check_version_format('1.0.0')
-        None
         """
         if 'alpha' in self.model_version:
-            match = re.match(r'^v[0-9]+\.[0-9]+\.[0-9]+-alpha.*$',
+            match = re.match(r'^v\d+\.\d+\.\d+-alpha.*$',
                              self.model_version)
         else:
-            match = re.match(r'^v[0-9]+\.[0-9]+\.[0-9]+$', self.model_version)
+            match = re.match(r'^v\d+\.\d+\.\d+$', self.model_version)
 
         if not match:
             raise ModelVersionFormatError(
                 'Model versions is not formatted correctly!')
         return match
 
-    def get_labels(self, db: pymongo.database.Database) -> list:
+    def get_labels(self, db: pymongo.database.Database) -> list:  # noqa
         """Get labels from MongoDB.
     
         Parameters
         ----------
-        self : object
-            An instance of the class.
         db : object
             An instance of the class.
         
@@ -100,8 +83,8 @@ class SyncModel:
         return labels
 
     def get_weights_from_path(self) -> Union[str, None]:
-        """This function downloads the best weights from the run specified by the run_path.
-        It returns the path to the downloaded weights.
+        """This function downloads the best weights from the run specified by
+        the run_path. It returns the path to the downloaded weights.
         
         Returns
         -------
@@ -121,7 +104,7 @@ class SyncModel:
                 raise FileNotFoundError(
                     'Could not find best weights file in this run!')
 
-    def add_new_version(self, db: pymongo.database.Database,
+    def add_new_version(self, db: pymongo.database.Database,  # noqa
                         labels: list) -> dict:
         """Add a new model version to the database.
 
@@ -150,7 +133,7 @@ class SyncModel:
         minio_resp = minio.upload(
             bucket_name='model',
             file_path=f'{weights_path}/{renamed_weights_fname}')
-        logger.debug(f'Uploaded object name: {minio_resp.object_name}')
+        print(f'Uploaded object name: {minio_resp.object_name}')
 
         model = {
             '_id': self.model_version,
@@ -182,12 +165,10 @@ class SyncModel:
         -------
         None
         """
-        logs_file = add_logger(__file__)
         self.check_version_format()
         db = mongodb_db()
         labels = self.get_labels(db)
         _ = self.add_new_version(db, labels)
-        upload_logs(logs_file)
         return
 
 

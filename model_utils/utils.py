@@ -19,7 +19,8 @@ from tqdm.auto import tqdm
 try:
     from . import handlers, minio_helper
 except ImportError:
-    import handlers, minio_helper
+    import handlers
+    import minio_helper
 
 
 def add_logger(current_file: str) -> str:
@@ -70,7 +71,7 @@ def api_request(url: str, method: str = 'get', data: dict = None) -> dict:
         resp = requests.post(url, headers=headers, data=json.dumps(data))
     elif method == 'patch':
         resp = requests.patch(url, headers=headers, data=json.dumps(data))
-    return resp.json()
+    return resp.json()  # noqa
 
 
 def get_project_ids(exclude_ids: str = None) -> str:

@@ -20,7 +20,7 @@ def keyboard_interrupt_handler(sig: int, _) -> None:
     The function takes two arguments:
     sig:
         The id of the signal that was sent.
-    frame:
+    _:
         The current stack frame.
     """
     logger.warning(f'KeyboardInterrupt (id: {sig}) has been caught...')

@@ -15,12 +15,13 @@ import requests
 import wandb
 from dotenv import load_dotenv
 from loguru import logger
-
 from model_utils import download_weights
+from requests import Response
+
 from model_utils.utils import add_logger, upload_logs
 
 
-def upload_image(image_path: str, imgbb_token: str) -> str:
+def upload_image(image_path: str, imgbb_token: str) -> Response:
     """Uploads an image to imgbb.com and returns the URL.
 
     Parameters
@@ -46,6 +47,7 @@ def upload_image(image_path: str, imgbb_token: str) -> str:
 
 
 def find_file(run: wandb.wandb_run.Run, fname: str) -> Union[tuple, None]:
+    # noqa
     """Finds a file in a run and uploads it to imgbb.
 
     Parameters
@@ -70,7 +72,7 @@ def find_file(run: wandb.wandb_run.Run, fname: str) -> Union[tuple, None]:
 
 
 def get_assets(run: wandb.wandb_run.Run,
-               output_name: str) -> Union[tuple, None]:
+               output_name: str) -> Union[tuple, None]:  # noqa
     """Downloads the best model from the run with the given ID,
     extracts the model weights, configuration, & classes and saves them to a
     file.
@@ -85,7 +87,7 @@ def get_assets(run: wandb.wandb_run.Run,
     Returns
     -------
     tuple
-        The the config dictionary and the paths to the the config and classes
+        The the config dictionary and the paths to the config and classes
         files.
     """
     logger.debug(run)
@@ -124,7 +126,7 @@ def get_assets(run: wandb.wandb_run.Run,
 
 
 def release_notes(run: wandb.wandb_run.Run, f1_score: float, output_name: str,
-                  cfg: dict) -> str:
+                  cfg: dict) -> str:  # noqa
     """Creates a release notes file.
 
     Parameters
@@ -250,8 +252,8 @@ def opts() -> argparse.Namespace:
                         required=True)
     parser.add_argument('--repo', help='Link to the repository', type=str)
     parser.add_argument('--overwrite',
-                        help='Overwrite if the release already exists on the ' \
-                        'local disk',
+                        help='Overwrite if the release already exists on '
+                        'the local disk',
                         action='store_true')
 
     return parser.parse_args()

@@ -16,6 +16,7 @@ import torch
 from PIL import UnidentifiedImageError
 from dotenv import load_dotenv
 from loguru import logger
+from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
 from model_utils.handlers import catch_keyboard_interrupt
@@ -34,14 +35,14 @@ class _Headers:
         pass
 
     @staticmethod
-    def make_headers() -> requests.structures.CaseInsensitiveDict:
+    def make_headers() -> CaseInsensitiveDict:
         """Make headers for the request.
 
         Returns:
             headers (dict): A dictionary of headers.
         """
         load_dotenv()
-        headers = requests.structures.CaseInsensitiveDict()  # noqa
+        headers = CaseInsensitiveDict()
         headers['Content-type'] = 'application/json'
         headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
         return headers
@@ -106,17 +107,12 @@ class Predict(LoadModel, _Headers):
     if_empty_apply_label : str, optional
         Apply a label to tasks that have no predictions.
         Default: None
-    debug : bool, optional
-        Debug mode.
-        Default: False
-    db : pymongo.database.Database
-        A MongoDB client instance
 
     Attributes
     ----------
     headers : dict
         Headers for the requests.
-    model : YOLOv5
+    model : torch.nn.Module
         YOLOv5 model.
     model_version : str
         Model version to use.
@@ -136,12 +132,10 @@ class Predict(LoadModel, _Headers):
         Apply a label to tasks that have no predictions.
     get_tasks_with_api : bool
         Get tasks with label-studio API instead of MongoDB.
-    debug : bool
-        Debug mode.
     db : pymongo.database.Database
         An instance of mongoDB client (if connection string exists in .env).
     flush : list
-        List object used to flush temp files written to disk during prediction.
+        Used to flush temp files written to disk during prediction.
 
     Methods
     -------
@@ -181,7 +175,6 @@ class Predict(LoadModel, _Headers):
         delete_if_no_predictions: bool = True,
         if_empty_apply_label: str = None,
         get_tasks_with_api: bool = False,
-        debug: bool = False,
     ) -> None:
         super().__init__(weights, model_version)
         self.headers = super().make_headers()
@@ -194,7 +187,6 @@ class Predict(LoadModel, _Headers):
         self.delete_if_no_predictions = delete_if_no_predictions
         self.if_empty_apply_label = if_empty_apply_label
         self.get_tasks_with_api = get_tasks_with_api
-        self.debug = debug
         self.db = mongodb_db()
         self.flush = []
 
@@ -269,14 +261,6 @@ class Predict(LoadModel, _Headers):
         -------
         dict
             A dictionary containing the task data.
-        
-        Examples
-        --------
-        >>> get_task(1)
-        {
-            'id': 1,
-            'data': {'image': 'http://localhost:8000/data/local-files/1.jpg'}
-        }
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -298,11 +282,7 @@ class Predict(LoadModel, _Headers):
         q = 'exportType=JSON&download_all_tasks=true'
         ls_host = os.environ["LS_HOST"]
         url = f'{ls_host}/api/projects/{self.project_id}/export?{q}'
-        if self.debug:
-            url = f'{os.environ["LS_HOST"]}/api/tasks/7409'  # hardcoded task id
         resp = requests.get(url, headers=self.headers)
-        if self.debug:
-            return [resp.json()]
         return resp.json()
 
     @staticmethod
@@ -329,10 +309,15 @@ class Predict(LoadModel, _Headers):
     def single_task(self, task_id: int) -> list:
         """Get a single task by id.
 
-        :param task_id: The id of the task to get.
-        :type task_id: int
-        :return: A list containing the task.
-        :rtype: list
+        Parameters
+        ----------
+        task_id : int
+            The id of the task to get.
+
+        Returns
+        -------
+        list
+            A list containing the task data.
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -342,7 +327,8 @@ class Predict(LoadModel, _Headers):
     def pred_result(x: float, y: float, w: float, h: float, score: float,
                     label: str) -> dict:
         """This function takes in the x, y, width, height, score, and label of
-        a prediction and returns a dictionary with the prediction's information.
+        a prediction and returns a dictionary with the prediction's
+        information.
 
         Parameters
         ----------
@@ -422,7 +408,7 @@ class Predict(LoadModel, _Headers):
                     f'`{self.model_version}`. Skipping...')
                 return True
 
-    def post_prediction(self, task: dict) -> None:
+    def post_prediction(self, task: dict) -> Optional[dict]:
         """This function is called by the `predict` method. It takes a task as
         an argument and performs the following steps:
 
@@ -436,20 +422,20 @@ class Predict(LoadModel, _Headers):
         If the task has no predictions, it deletes the task if
         `delete_if_no_predictions` is set to `True`.
 
-        If `if_empty_apply_label` is set to a label, it applies a the string of
+        If `if_empty_apply_label` is set to a label, it applies the string of
         `if_empty_apply_label` if not set to `None`.
 
         Parameters
         ----------
         task: dict
-            The labe-studio API response of a single task.
+            The label-studio API response of a single task.
 
         Returns
         -------
         dict
             A dictionary with the prediction's information.
         """
-
+        task_id = task['id']
         if not self.delete_if_no_predictions and not self.if_empty_apply_label:
             logger.error(
                 'Action for tasks without detections is not specified!')
@@ -459,9 +445,6 @@ class Predict(LoadModel, _Headers):
         try:
             if self.pred_exists(task):
                 return
-
-            task_id = task['id']
-
             try:
                 img = self.download_image(
                     self.get_task(task_id)['data']['image'])
@@ -547,7 +530,7 @@ class Predict(LoadModel, _Headers):
                                                dump=False,
                                                json_min=False)
 
-            if not self.predict_all and not self.tasks_range and not self.debug:
+            if not self.predict_all and not self.tasks_range:
                 logger.debug('Predicting tasks with no predictions...')
                 tasks = [t for t in tasks if not t['predictions']]
 
@@ -557,7 +540,6 @@ class Predict(LoadModel, _Headers):
             tasks = self.selected_tasks(tasks, *tasks_range)
 
         logger.info(f'Tasks to predict: {len(tasks)}')
-        self.total_tasks = len(tasks)
 
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -658,21 +640,19 @@ if __name__ == '__main__':
             multithreading=args.multithreading,
             delete_if_no_predictions=args.delete_if_no_predictions,
             if_empty_apply_label=args.if_empty_apply_label,
-            get_tasks_with_api=args.get_tasks_with_api,
-            debug=args.debug)
+            get_tasks_with_api=args.get_tasks_with_api)
         predict.apply_predictions()
     else:
-        for project_id in project_ids:
+        for proj_id in project_ids:
             predict = Predict(
                 weights=args.weights,
                 model_version=args.model_version,
-                project_id=project_id,
+                project_id=proj_id,
                 tasks_range=args.tasks_range,
                 predict_all=args.predict_all,
                 one_task=args.one_task,
                 multithreading=args.multithreading,
                 delete_if_no_predictions=args.delete_if_no_predictions,
                 if_empty_apply_label=args.if_empty_apply_label,
-                get_tasks_with_api=args.get_tasks_with_api,
-                debug=args.debug)
+                get_tasks_with_api=args.get_tasks_with_api)
             predict.apply_predictions()

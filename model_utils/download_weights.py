@@ -11,7 +11,10 @@ from loguru import logger
 try:
     from . import mongodb_helper, minio_helper, handlers, utils
 except ImportError:
-    import mongodb_helper, minio_helper, handlers, utils
+    import mongodb_helper
+    import minio_helper
+    import handlers
+    import utils
 
 
 class ModelVersionDoesNotExist(Exception):

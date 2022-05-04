@@ -50,7 +50,7 @@ class MinIO:
                 if obj.object_name.endswith(model_version):
                     return obj.object_name
 
-    def get_dataset(self, object_name=None, dest=None):
+    def get_dataset(self, object_name=None):
         if not object_name:
             objs = list(self.client.list_objects('dataset'))
             latest_ts = max([o.last_modified for o in objs if o.last_modified])

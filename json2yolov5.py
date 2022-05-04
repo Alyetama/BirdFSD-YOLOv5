@@ -44,8 +44,8 @@ class JSON2YOLO:
         ├── train
         └── val
 
-    The output will also be stored in a tarball with the same name as the output
-    folder.
+    The output will also be stored in a tarball with the same name as the
+     output folder.
 
     The tasks that failed to export for any reason, will be logged at the 
     end of the run.
@@ -71,7 +71,7 @@ class JSON2YOLO:
 
     @staticmethod
     def bbox_ls_to_yolo(x: float, y: float, width: float,
-                        height: float) -> str:
+                        height: float) -> tuple:
         x = (x + width / 2) / 100
         y = (y + height / 2) / 100
         w = width / 100
@@ -81,12 +81,9 @@ class JSON2YOLO:
     def get_data(self) -> list:
 
         @ray.remote
-        def iter_projects(project_id):
-            return get_tasks_from_mongodb(project_id,
-                                          dump=False,
-                                          json_min=True)
+        def iter_projects(proj_id):
+            return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)
 
-        data = []
         projects_id = self.projects.split(',')
 
         futures = []
@@ -144,6 +141,7 @@ class JSON2YOLO:
             if 's3://' in task['image'] and not self.enable_s3:
                 raise TypeError('You need to pass the flag `--enable-s3` '
                                 'for S3 objects!')
+            object_name = None
             cur_img_name = Path(task['image']).name
 
         cur_img_path = f'{self.imgs_dir}/{cur_img_name}'
@@ -168,20 +166,15 @@ class JSON2YOLO:
 
         try:
             valid_image = imghdr.what(cur_img_path)
+            if not valid_image:
+                logger.error(f'{cur_img_path} is not valid (task'
+                             f' id: {task["id"]})! Skipping...')
+                Path(cur_img_path).unlink()
         except FileNotFoundError:
             logger.error(
                 f'Could not validate {cur_img_path} from {task["id"]}! '
                 'Skipping...')
             return
-
-            try:
-                Path(cur_img_path).unlink()
-                return
-            except FileNotFoundError:
-                logger.error(
-                    f'Could not validate {cur_img_path} from {task["id"]}! '
-                    'Skipping...')
-                return
 
         with open(cur_label_path, 'w') as f:
             try:
@@ -273,8 +266,8 @@ class JSON2YOLO:
     def run(self):
 
         @ray.remote
-        def iter_convert_to_yolo(task):
-            return self.convert_to_yolo(task)
+        def iter_convert_to_yolo(t):
+            return self.convert_to_yolo(t)
 
         minio_client = MinIO().client
         catch_keyboard_interrupt()
@@ -296,7 +289,7 @@ class JSON2YOLO:
             self.plot_results(results)
 
         if self.tasks_not_exported:
-            logger.error(f'Corrupted tasks: {tasks_not_exported}')
+            logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
         assert len(glob(f'{self.output_dir}/images/*')) == len(
             glob(f'{self.output_dir}/labels/*'))
@@ -384,14 +377,13 @@ if __name__ == '__main__':
                         action="store_true")
     parser.add_argument(
         '--copy-data-from',
-        help=
-        'If running on the same host serving the S3 objects, you can use ' \
-        'this option to specify a path to copy the data from (i.e., the ' \
-        'local path to the S3 bucket where the data is stored) instead of ' \
-        'downloading it',
+        help='If running on the same host serving the S3 objects, you can '
+        'use this option to specify a path to copy the data from '
+        '(i.e., the local path to the S3 bucket where the data is '
+        'stored) instead of downloading it',
         type=str)
     parser.add_argument('--filter-underrepresented-classes',
-                        help='Only include classes with instances equal or ' \
+                        help='Only include classes with instances equal or '
                         'above the overall median',
                         action="store_true")
     args = parser.parse_args()

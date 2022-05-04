@@ -10,7 +10,7 @@ import torchvision
 import wandb
 
 
-def main():
+def main() -> None:
     api = wandb.Api()
     run = api.run(args.run_path)
 

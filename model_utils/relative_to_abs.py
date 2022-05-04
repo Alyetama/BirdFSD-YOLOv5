@@ -4,7 +4,7 @@
 from pathlib import Path
 
 
-def main():
+def main() -> None:
     """Changes the dataset path from relative to absolute"""
     with open('dataset_config.yml') as f:
         lines = f.readlines()

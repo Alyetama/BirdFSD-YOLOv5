@@ -4,13 +4,14 @@
 import json
 import os
 import sys
+from typing import Union
 
 import pymongo
 import requests
 from dotenv import load_dotenv
 
 
-def api_request(url):
+def api_request(url: str) -> dict:
     """Make a GET request to the given url.
     
     Parameters
@@ -29,7 +30,7 @@ def api_request(url):
     return resp.json()
 
 
-def mongodb_db():
+def mongodb_db() -> pymongo.database.Database:  # noqa
     """Connects to the MongoDB database.
 
     Returns
@@ -45,13 +46,19 @@ def mongodb_db():
     return db
 
 
-def get_tasks_from_mongodb(project_id, dump=True, json_min=False):
+def get_tasks_from_mongodb(project_id: Union[int, str],
+                           dump: bool = True,
+                           json_min: bool = False):
     """Get tasks from MongoDB.
 
     Parameters
     ----------
-    project_id : int
+    project_id : Union[int, str]
         The ID of the project to get tasks from.
+    dump : bool
+        Whether to dump the data to a JSON file.
+    json_min : bool
+        The data will be exported as JSON_MIN when set to True.
 
     Returns
     -------
