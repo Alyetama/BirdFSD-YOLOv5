@@ -44,8 +44,7 @@ def main() -> None:
         'multithreading': True,
         'delete_if_no_predictions': False,
         'if_empty_apply_label': 'no animal',
-        'get_tasks_with_api': False,
-        'debug': False
+        'get_tasks_with_api': False
     }
 
     if not CONFIG['weights'] and CONFIG['model_version'] == 'latest':
