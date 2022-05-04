@@ -27,6 +27,7 @@ from tqdm import tqdm
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.minio_helper import BucketDoesNotExist, MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb
+from model_utils.utils import get_project_ids
 
 
 class JSON2YOLO:
@@ -84,10 +85,13 @@ class JSON2YOLO:
         def iter_projects(proj_id):
             return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)
 
-        projects_id = self.projects.split(',')
+        if self.projects:
+            project_ids = self.projects.split(',')
+        else:
+            project_ids = get_project_ids().split(',')
 
         futures = []
-        for project_id in projects_id:
+        for project_id in project_ids:
             futures.append(iter_projects.remote(project_id))
 
         data = []
@@ -359,11 +363,12 @@ if __name__ == '__main__':
     load_dotenv()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p',
-                        '--projects',
-                        help='Comma-seperated projects ID',
-                        type=str,
-                        default=os.environ['PROJECTS_ID'])
+    parser.add_argument(
+        '-p',
+        '--projects',
+        help='Comma-seperated projects ID. If empty, it will select all '
+        'projects',
+        type=str)
     parser.add_argument('-o',
                         '--output-dir',
                         help='Path to the output directory',

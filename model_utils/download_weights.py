@@ -43,19 +43,17 @@ class DownloadModelWeights:
             raise ModelVersionDoesNotExist(
                 f'The model `{self.model_version}` does not exist! '
                 f'\nAvailable models: {json.dumps(avail_models, indent=4)}')
-
         model_object_name = f'{model_document["version"]}.pt'
+
         weights_url = minio.client.presigned_get_object(
-            'model', model_object_name)
+            'model', model_object_name, expires=timedelta(hours=6))
 
         if skip_download:
             logger.debug(f'Download URL: {weights_url}')
             return self.output, weights_url
         logger.debug(f'Downloading {model_object_name}...')
 
-        presigned_url = minio.client.presigned_get_object(
-            'model', model_object_name, expires=timedelta(hours=6))
-        utils.requests_download(presigned_url, self.output)
+        utils.requests_download(weights_url, self.output)
 
         logger.debug(f'\n\nModel version: {model_document["version"]}')
         logger.debug(f'Model weights file: {self.output}')

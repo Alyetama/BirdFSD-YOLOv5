@@ -6,7 +6,7 @@ import datetime
 import os
 import re
 import shutil
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 import pymongo
@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from model_utils.minio_helper import MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
+from model_utils.utils import get_project_ids
 
 
 class ModelVersionFormatError(Exception):
@@ -25,9 +26,9 @@ class ModelVersionFormatError(Exception):
 
 class SyncModel:
 
-    def __init__(self, projects_id: str, model_version: str,
+    def __init__(self, project_ids: Optional[str], model_version: str,
                  run_path: str) -> None:
-        self.projects_id = projects_id
+        self.project_ids = project_ids
         self.model_version = model_version
         self.run_path = run_path
 
@@ -49,8 +50,7 @@ class SyncModel:
         The version should be in the format of 'vX.Y.Z' or 'vX.Y.Z-alpha.N'.
         """
         if 'alpha' in self.model_version:
-            match = re.match(r'^v\d+\.\d+\.\d+-alpha.*$',
-                             self.model_version)
+            match = re.match(r'^v\d+\.\d+\.\d+-alpha.*$', self.model_version)
         else:
             match = re.match(r'^v\d+\.\d+\.\d+$', self.model_version)
 
@@ -72,8 +72,14 @@ class SyncModel:
         labels : list
             A list of labels.
         """
+
+        if self.project_ids:
+            project_ids = self.project_ids.split(',')
+        else:
+            project_ids = get_project_ids().split(',')
+
         labels = []
-        for project_id in tqdm(self.projects_id.split(','), desc='Projects'):
+        for project_id in tqdm(project_ids, desc='Projects'):
             data = get_tasks_from_mongodb(project_id,
                                           dump=False,
                                           json_min=True)
@@ -104,8 +110,10 @@ class SyncModel:
                 raise FileNotFoundError(
                     'Could not find best weights file in this run!')
 
-    def add_new_version(self, db: pymongo.database.Database,  # noqa
-                        labels: list) -> dict:
+    def add_new_version(
+            self,
+            db: pymongo.database.Database,  # noqa
+            labels: list) -> dict:
         """Add a new model version to the database.
 
         Parameters
@@ -135,10 +143,15 @@ class SyncModel:
             file_path=f'{weights_path}/{renamed_weights_fname}')
         print(f'Uploaded object name: {minio_resp.object_name}')
 
+        if self.project_ids:
+            project_ids = self.project_ids
+        else:
+            project_ids = get_project_ids()
+
         model = {
             '_id': self.model_version,
             'version': f'BirdFSD-YOLOv5-{self.model_version}',
-            'projects': self.projects_id,
+            'projects': project_ids,
             'labels': labels_freq,
             'added_on': datetime.datetime.today(),
             'wandb_run_path': self.run_path,
@@ -175,11 +188,12 @@ class SyncModel:
 if __name__ == '__main__':
     load_dotenv()
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p',
-                        '--projects-id',
-                        help='Comma-seperated projects ID',
-                        type=str,
-                        default=os.environ['PROJECTS_ID'])
+    parser.add_argument(
+        '-p',
+        '--project-ids',
+        help='Comma-seperated project ids. If empty, it will select all '
+        'projects',
+        type=str)
     parser.add_argument('-v',
                         '--model-version',
                         help='Model version',
@@ -192,7 +206,7 @@ if __name__ == '__main__':
                         required=True)
     args = parser.parse_args()
 
-    sync_model = SyncModel(projects_id=args.projects_id,
+    sync_model = SyncModel(project_ids=args.project_ids,
                            model_version=args.model_version,
                            run_path=args.run_path)
     sync_model.update()

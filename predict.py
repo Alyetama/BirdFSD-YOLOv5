@@ -8,9 +8,10 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, List, Union
 
 import numpy as np
+import ray
 import requests
 import torch
 from PIL import UnidentifiedImageError
@@ -21,7 +22,7 @@ from tqdm import tqdm
 
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-from model_utils.utils import add_logger, upload_logs
+from model_utils.utils import add_logger, upload_logs, get_project_ids
 
 
 class _Headers:
@@ -83,14 +84,14 @@ class Predict(LoadModel, _Headers):
     ----------
     weights : str
         Path to the weights file.
-    project_id : int
-        Id of the project to predict.
+    project_ids : str
+        Comma-seperated project ids. If empty, it will select all projects.
     tasks_range : str, optional
         Range of tasks to predict.
         Example: '1,10' will predict tasks 1 to 10.
         Default: ''
     predict_all : bool, optional
-        Predict all tasks in the project.
+        Predict all tasks in the project(s).
         Default: False
     one_task : Union[None, int], optional
         Predict a single task.
@@ -116,13 +117,13 @@ class Predict(LoadModel, _Headers):
         YOLOv5 model.
     model_version : str
         Model version to use.
-    project_id : int
-        Id of the project to predict.
-    tasks_range : str
+    project_ids : Optional[str]
+        Ids of the projects to predict.
+    tasks_range : Optional[str]
         Range of tasks to predict.
     predict_all : bool
-        Predict all tasks in the project.
-    one_task : Union[None, int]
+        Predict all tasks in the project(s).
+    one_task : Optional[int]
         Predict a single task.
     multithreading : bool
         Use multithreading.
@@ -163,23 +164,22 @@ class Predict(LoadModel, _Headers):
         Apply predictions to the Label Studio server.
     """
 
-    def __init__(
-        self,
-        weights: str,
-        model_version: str,
-        project_id: int,
-        tasks_range: Optional[str] = None,
-        predict_all: bool = False,
-        one_task: Union[None, int] = None,
-        multithreading: bool = True,
-        delete_if_no_predictions: bool = True,
-        if_empty_apply_label: str = None,
-        get_tasks_with_api: bool = False,
-    ) -> None:
+    def __init__(self,
+                 weights: str,
+                 model_version: str,
+                 project_ids: Optional[str] = None,
+                 tasks_range: Optional[str] = None,
+                 predict_all: bool = False,
+                 one_task: Optional[int] = None,
+                 multithreading: bool = True,
+                 delete_if_no_predictions: bool = True,
+                 if_empty_apply_label: str = None,
+                 get_tasks_with_api: bool = False,
+                 verbose: bool = False) -> None:
         super().__init__(weights, model_version)
         self.headers = super().make_headers()
         self.model = super().model()
-        self.project_id = project_id
+        self.project_ids = project_ids
         self.tasks_range = tasks_range
         self.predict_all = predict_all
         self.one_task = one_task
@@ -187,6 +187,7 @@ class Predict(LoadModel, _Headers):
         self.delete_if_no_predictions = delete_if_no_predictions
         self.if_empty_apply_label = if_empty_apply_label
         self.get_tasks_with_api = get_tasks_with_api
+        self.verbose = verbose
         self.db = mongodb_db()
         self.flush = []
 
@@ -268,10 +269,15 @@ class Predict(LoadModel, _Headers):
         # data['data']['image'] = self.to_srv(data['data']['image'])
         return data
 
-    def get_all_tasks(self) -> list:
+    def get_all_tasks(self, project_ids: List[str]) -> list:
         """Fetch all tasks from the project.
 
         This function fetches all tasks from the project.
+
+        Parameters
+        ----------
+        project_ids : str
+            Comma-seperated string of project ids.
 
         Returns
         -------
@@ -281,9 +287,29 @@ class Predict(LoadModel, _Headers):
         logger.debug('Fetching all tasks. This might take few minutes...')
         q = 'exportType=JSON&download_all_tasks=true'
         ls_host = os.environ["LS_HOST"]
-        url = f'{ls_host}/api/projects/{self.project_id}/export?{q}'
-        resp = requests.get(url, headers=self.headers)
-        return resp.json()
+
+        all_tasks = []
+        for project_id in tqdm(project_ids, desc='Projects'):
+            url = f'{ls_host}/api/projects/{project_id}/export?{q}'
+            resp = requests.get(url, headers=self.headers)
+            all_tasks.append(resp.json())
+
+        return sum(all_tasks, [])
+
+    @staticmethod
+    def get_all_tasks_from_mongodb(project_ids):
+
+        @ray.remote
+        def _get_all_tasks_from_mongodb(proj_id):
+            return get_tasks_from_mongodb(proj_id, dump=False, json_min=False)
+
+        futures = []
+        for project_id in project_ids:
+            futures.append(_get_all_tasks_from_mongodb.remote(project_id))
+        tasks = []
+        for future in tqdm(futures, desc='Projects'):
+            tasks.append(ray.get(future))
+        return sum(tasks, [])
 
     @staticmethod
     def selected_tasks(tasks: list, start: int, end: int) -> list:
@@ -392,23 +418,24 @@ class Predict(LoadModel, _Headers):
             'task': task_id
         }
 
-    def pred_exists(self, task):
+    def pred_exists(self, task: dict) -> Optional[bool]:
         if not os.getenv('DB_CONNECTION_STRING'):
             logger.warning('Not connected to a MongoDB database! '
                            'Skipping `pred_exists` check...')
             return
-        preds_col = self.db[f'project_{self.project_id}_preds']
+        preds_col = self.db[f'project_{task["project"]}_preds']
         for pred_id in task['predictions']:
             pred_details = preds_col.find_one({'_id': pred_id})
             if not pred_details:
                 continue
             if pred_details['model_version'] == self.model_version:
-                logger.debug(
-                    f'Task {task["id"]} is already predicted with model '
-                    f'`{self.model_version}`. Skipping...')
+                if self.verbose:
+                    logger.debug(
+                        f'Task {task["id"]} is already predicted with model '
+                        f'`{self.model_version}`. Skipping...')
                 return True
 
-    def post_prediction(self, task: dict) -> Optional[dict]:
+    def post_prediction(self, task: dict) -> Optional[Union[str, dict]]:
         """This function is called by the `predict` method. It takes a task as
         an argument and performs the following steps:
 
@@ -444,7 +471,7 @@ class Predict(LoadModel, _Headers):
             sys.exit(1)
         try:
             if self.pred_exists(task):
-                return
+                return 'SKIPPED'
             try:
                 img = self.download_image(
                     self.get_task(task_id)['data']['image'])
@@ -479,12 +506,14 @@ class Predict(LoadModel, _Headers):
                 logger.debug(result)
 
             _post = self.pred_post(results, scores, task_id)
-            logger.debug({'request': _post})
+            if self.verbose:
+                logger.debug({'request': _post})
             url = F'{os.environ["LS_HOST"]}/api/predictions/'
             resp = requests.post(url,
                                  headers=self.headers,
                                  data=json.dumps(_post))
-            logger.debug({'response': resp.json()})
+            if self.verbose:
+                logger.debug({'response': resp.json()})
 
         except UnidentifiedImageError as _e:
             logger.error(_e)
@@ -518,17 +547,20 @@ class Predict(LoadModel, _Headers):
                          '--if-empty-apply-label!')
             sys.exit(1)
 
+        if self.project_ids:
+            project_ids = self.project_ids.split(',')
+        else:
+            project_ids = get_project_ids().split(',')
+
         if self.one_task:
             tasks = self.single_task(self.one_task)
         else:
             if self.get_tasks_with_api:
                 logger.info('Getting tasks with label-studio API...')
-                tasks = self.get_all_tasks()
+                tasks = self.get_all_tasks(project_ids)
             else:
                 logger.info('Getting tasks from MongoDB...')
-                tasks = get_tasks_from_mongodb(self.project_id,
-                                               dump=False,
-                                               json_min=False)
+                tasks = self.get_all_tasks_from_mongodb(project_ids)
 
             if not self.predict_all and not self.tasks_range:
                 logger.debug('Predicting tasks with no predictions...')
@@ -539,22 +571,27 @@ class Predict(LoadModel, _Headers):
             tasks_range = [int(n) for n in self.tasks_range.split(',')]
             tasks = self.selected_tasks(tasks, *tasks_range)
 
-        logger.info(f'Tasks to predict: {len(tasks)}')
+        logger.info(f'Number of tasks to scan: {len(tasks)}')
 
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 results = list(
                     tqdm(executor.map(self.post_prediction, tasks),
-                         total=len(tasks)))
+                         total=len(tasks),
+                         desc='Prediction'))
         else:
             results = []
             for task in tqdm(tasks):
                 results.append(self.post_prediction(task))
 
-        skipped_tasks = [x for x in results if x]
+        error_tasks = [x for x in results if isinstance(x, dict)]
         logger.debug('Attempting to process temporarily skipped tasks...')
-        for task in tqdm(skipped_tasks):
-            self.post_prediction(task)
+        _results = []
+        for task in tqdm(error_tasks):
+            result = self.post_prediction(task)
+            if isinstance(result, dict):
+                logger.error(f'Could not process task {task["id"]}: {task}')
+            _results.append(result)
 
         logger.debug('Flushing temp files...')
         for tmp_file in self.flush:
@@ -563,7 +600,18 @@ class Predict(LoadModel, _Headers):
             except FileNotFoundError:
                 continue
 
-        logger.info(f'Prediction step took: {round(time.time() - start, 2)}s')
+        num_preds = len([x for x in results + _results if not x])
+        num_skipped = len([x for x in results + _results if x == 'SKIPPED'])
+        task_with_errors = [x for x in _results if isinstance(x, dict)]
+
+        logger.info(f'Made {num_preds} prediction(s)')
+        logger.info(f'Skipped {num_skipped}/{len(tasks)} task(s) that were '
+                    f'already predicted with `{self.model_version}`')
+        if task_with_errors:
+            logger.info(f'Could not process {len(task_with_errors)} task(s) '
+                        f'(see logs for details)')
+
+        logger.info(f'Took: {round(time.time() - start, 2)}s')
         upload_logs(logs_file)
         return
 
@@ -579,11 +627,12 @@ def opts():
                         help='Name of the model version',
                         type=str,
                         required=True)
-    parser.add_argument('-p',
-                        '--project-id',
-                        help='Label-studio project id',
-                        type=str,
-                        required=True)
+    parser.add_argument(
+        '-p',
+        '--project-ids',
+        help='Comma-seperated project ids. If empty, it will select all '
+        'projects',
+        type=str)
     parser.add_argument(
         '-r',
         '--tasks-range',
@@ -622,37 +671,27 @@ def opts():
                         '--debug',
                         help='Run in debug mode (runs on one task)',
                         action='store_true')
+    parser.add_argument('-V',
+                        '--verbose',
+                        help='Log additional details',
+                        action='store_true')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     load_dotenv()
     args = opts()
-    project_ids = args.project_id.split(',')
-    if len(project_ids) == 1:
-        predict = Predict(
-            weights=args.weights,
-            model_version=args.model_version,
-            project_id=args.project_id,
-            tasks_range=args.tasks_range,
-            predict_all=args.predict_all,
-            one_task=args.one_task,
-            multithreading=args.multithreading,
-            delete_if_no_predictions=args.delete_if_no_predictions,
-            if_empty_apply_label=args.if_empty_apply_label,
-            get_tasks_with_api=args.get_tasks_with_api)
-        predict.apply_predictions()
-    else:
-        for proj_id in project_ids:
-            predict = Predict(
-                weights=args.weights,
-                model_version=args.model_version,
-                project_id=proj_id,
-                tasks_range=args.tasks_range,
-                predict_all=args.predict_all,
-                one_task=args.one_task,
-                multithreading=args.multithreading,
-                delete_if_no_predictions=args.delete_if_no_predictions,
-                if_empty_apply_label=args.if_empty_apply_label,
-                get_tasks_with_api=args.get_tasks_with_api)
-            predict.apply_predictions()
+
+    predict = Predict(weights=args.weights,
+                      model_version=args.model_version,
+                      project_ids=args.project_ids,
+                      tasks_range=args.tasks_range,
+                      predict_all=args.predict_all,
+                      one_task=args.one_task,
+                      multithreading=args.multithreading,
+                      delete_if_no_predictions=args.delete_if_no_predictions,
+                      if_empty_apply_label=args.if_empty_apply_label,
+                      get_tasks_with_api=args.get_tasks_with_api,
+                      verbose=args.verbose)
+
+    predict.apply_predictions()

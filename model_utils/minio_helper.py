@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import mimetypes
 import os
 import sys
 import textwrap
@@ -28,9 +29,22 @@ class MinIO:
                             secret_key=os.environ['MINIO_SECRET_KEY'],
                             region=os.environ['MINIO_REGION'])
 
-    def upload(self, bucket_name, file_path):
+    def upload(self, bucket_name, file_path, public=False, scheme='https'):
         file = Path(file_path)
-        return self.client.fput_object(bucket_name, file.name, file)
+        content_type = mimetypes.guess_type(file_path)
+        if content_type[0]:
+            content_type = content_type[0]
+        else:
+            content_type = 'application/octet-stream'
+        res = self.client.fput_object(bucket_name,
+                                       file.name,
+                                       file,
+                                       content_type=content_type)
+        if public:
+            domain = f'{scheme}://{os.environ["MINIO_ENDPOINT"]}'
+            return f'{domain}/{bucket_name}/{file.name}'
+        else:
+            return res
 
     def download(self, bucket_name, object_name, dest=None):
         if not dest:

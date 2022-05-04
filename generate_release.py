@@ -2,224 +2,310 @@
 # coding: utf-8
 
 import argparse
-import base64
 import json
-import os
 import shutil
 import tarfile
+import textwrap
+import time
 from glob import glob
 from pathlib import Path
-from typing import Union
+from platform import platform
+from typing import Union, Optional
 
-import requests
 import wandb
 from dotenv import load_dotenv
 from loguru import logger
-from model_utils import download_weights
-from requests import Response
 
-from model_utils.utils import add_logger, upload_logs
-
-
-def upload_image(image_path: str, imgbb_token: str) -> Response:
-    """Uploads an image to imgbb.com and returns the URL.
-
-    Parameters
-    ----------
-    image_path : str
-        Path to the image to be uploaded.
-    imgbb_token : str
-        API token for imgbb.com.
-
-    Returns
-    -------
-    str
-        URL of the uploaded image.
-    """
-    with open(image_path, 'rb') as f:
-        url = 'https://api.imgbb.com/1/upload'
-        payload = {
-            'key': imgbb_token,
-            'image': base64.b64encode(f.read()),
-        }
-        res = requests.post(url, payload)
-    return res
+from model_utils.minio_helper import MinIO
+from model_utils.utils import add_logger, upload_logs, encrypt_file
 
 
-def find_file(run: wandb.wandb_run.Run, fname: str) -> Union[tuple, None]:
-    # noqa
-    """Finds a file in a run and uploads it to imgbb.
+class GenerateRelease:
+    def __init__(self, run_path: str, version: str, repo: Optional[str],
+                 overwrite: bool = False, dataset: str = None, encrypt: bool = False) -> \
+            None:
+        self.run_path = run_path
+        self.version = version
+        self.repo = repo
+        self.overwrite = overwrite
+        self.dataset = dataset
+        self.encrypt = encrypt
 
-    Parameters
-    ----------
-    run: wandb.wandb_run.Run
-        A Run object.
-    fname: str
-        A string, the name of the file to be found.
+    @staticmethod
+    def find_file(run, fname: str) -> \
+            Union[tuple, list, None]:
+        # noqa
+        """Finds a file in a run and uploads it to imgbb.
 
-    Returns
-    -------
-    tuple
-        A tuple of the file object and the url of the uploaded image.
-    """
-    try:
-        file = [x for x in list(run.files()) if fname in x.name][0]
-    except IndexError:
-        return
-    file.download()
-    imgbb_res = upload_image(file.name, os.environ['IMGBB_API_KEY'])
-    return file, imgbb_res.json()['data']['url']
+        Parameters
+        ----------
+        run:
+            The W&B run to use for the release.
+        fname: str
+            A string, the name of the file to be found.
 
-
-def get_assets(run: wandb.wandb_run.Run,
-               output_name: str) -> Union[tuple, None]:  # noqa
-    """Downloads the best model from the run with the given ID,
-    extracts the model weights, configuration, & classes and saves them to a
-    file.
-
-    Parameters
-    ----------
-    run: wandb.wandb_run.Run
-        The run from which to extract information.
-    output_name: str
-        The name of the output file.
-
-    Returns
-    -------
-    tuple
-        The the config dictionary and the paths to the config and classes
-        files.
-    """
-    logger.debug(run)
-    config_fname = f'{output_name}/{output_name}-config.json'
-    cfg = run.config
-
-    for k in [('val', -3), ('train', -3), ('path', -2)]:
-        relative_path = '/'.join(Path(cfg['data_dict'][k[0]]).parts[k[1]:])
-        cfg['data_dict'][k[0]] = relative_path
-
-    logger.debug(cfg)
-    print()
-    with open(config_fname, 'w') as j:
-        json.dump(cfg, j, indent=4)
-
-    classes_fname = f'{output_name}/{output_name}-classes.txt'
-    classes = cfg['data_dict']['names']
-
-    with open(classes_fname, 'w') as f:
-        f.writelines([f'{x}\n' for x in classes])
-
-    Path('releases').mkdir(exist_ok=True)
-
-    with tarfile.open(f'{output_name}.tar.gz', 'w:gz') as tar:
-        tar.add(output_name, output_name)
-
-    if Path(f'releases/{output_name}').exists() and args.overwrite:
-        shutil.rmtree(f'releases/{output_name}', ignore_errors=True)
-    shutil.move(output_name, 'releases')
-    shutil.move(f'{output_name}.tar.gz', 'releases')
-
-    files_to_move = [x for x in glob('releases/*') if not Path(x).is_dir()]
-    Path(f'releases/{output_name}').mkdir(exist_ok=True)
-    _ = [shutil.move(x, f'releases/{output_name}') for x in files_to_move]
-    return config_fname, classes_fname, cfg
-
-
-def release_notes(run: wandb.wandb_run.Run, f1_score: float, output_name: str,
-                  cfg: dict) -> str:  # noqa
-    """Creates a release notes file.
-
-    Parameters
-    ----------
-    run: wandb.wandb_run.Run
-        The current run from which to extract the model weights.
-    f1_score: float
-        The F1 score of the current run.
-    output_name: str
-        The name of the output file.
-    cfg: dict
-        The run's configuration.
-
-    Returns
-    -------
-    str
-        The content of the generated release notes file.
-    """
-
-    _run = {
-        'Start time': run.created_at,
-        'W&B run URL': run.url,
-        'W&B run ID': run.id,
-        'W&B run name': run.name,
-        'W&B run path': '/'.join(run.path),
-        'Number of classes': cfg['data_dict']['nc']
-    }
-
-    if cfg.get('base_ml_framework'):
-        ml_framework_versions = dict(sorted(cfg['base_ml_framework'].items()))
-        _run.update(ml_framework_versions)
-
-    with open(f'releases/{output_name}/{output_name}-notes.md', 'w') as f:
-
-        for k, v in _run.items():
-            if k == 'W&B run URL' or v == '':
-                f.write(f'**{k}**: {v}\n')
-            else:
-                f.write(f'**{k}**: `{v}`\n')
-
-        f.write('\n<details>\n<summary>Classes</summary>\n\n```YAML'
-                '\n- ' + '\n- '.join(run.config['data_dict']['names']) +
-                '\n```\n</details>\n')
-
+        Returns
+        -------
+        tuple
+            A tuple of the file object and the url of the uploaded image.
+        """
         try:
-            _, val_imgs_example_url = find_file(run, 'Validation')
+            files = [x for x in list(run.files()) if fname in x.name]  # noqa
+        except IndexError:
+            return
+        urls = []
+        for file in files:
+            file.download()
+            url = MinIO().upload('public', file.name, public=True)
+            if fname != 'Validation':
+                return file, url
+            else:
+                urls.append(url)
+        return urls
 
-            f.write('\n<details>\n<summary>Validation predictions</summary>\n'
-                    '\n' + f'<img src="{val_imgs_example_url}" alt="val"'
-                    ' width="1280" height="720">'
-                    '\n</details>\n')
+    def get_assets(self, run) -> Union[tuple, None]:
+        """Downloads the best model from the run with the given ID,
+        extracts the model's configuration, & classes and saves them
+        to a file.
 
-            cm_idx = run.summary['Results']['captions'].index(
-                'confusion_matrix.png')
-            cm_fname = run.summary['Results']['filenames'][cm_idx]
-            cm_file, cm_url = find_file(run, cm_fname)
+        Returns
+        -------
+        run:
+            The W&B run to use for the release.
+        tuple
+            The config dictionary and the paths to the config and classes
+            files.
+        """
+        logger.debug(run)
+        config_fname = f'{self.version}/{self.version}-config.json'
 
-            f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
-                    '\n' + f'<img src="{cm_url}" alt="cm"'
-                    ' width="1280" height="720">'
-                    '\n</details>\n')
+        for k in [('val', -3), ('train', -3), ('path', -2)]:
+            relative_path = '/'.join(
+                Path(run.config['data_dict'][k[0]]).parts[k[1]:])
+            run.config['data_dict'][k[0]] = relative_path
 
-            shutil.rmtree(Path(cm_file.name).parents[1], ignore_errors=True)
-        except TypeError:
-            logger.error('Failed to get files from the run...')
+        logger.debug(run.config)
+        print()
+        with open(config_fname, 'w') as j:
+            json.dump(run.config, j, indent=4)
 
-        dmw = download_weights.DownloadModelWeights(
-            model_version=args.release_version)
-        _, weights_url, _ = dmw.get_weights(skip_download=True)
+        classes_fname = f'{self.version}/{self.version}-classes.txt'
+        classes = run.config['data_dict']['names']
 
-        f.write('\n<details>\n<summary>Model weights</summary>\n'
-                f'\n{weights_url} (requires authentication)'
-                '\n</details>\n')
+        with open(classes_fname, 'w') as f:
+            f.writelines([f'{x}\n' for x in classes])
 
-        f.write('\n**Validation results**:\n')
-        val_results = {
-            k: v
-            for k, v in run.summary.items()
-            if any(x in k for x in ['val/', 'best/precision', 'best/recall'])
+        Path('releases').mkdir(exist_ok=True)
+
+        with tarfile.open(f'{self.version}.tar.gz', 'w:gz') as tar:
+            tar.add(self.version, self.version)
+
+        if Path(f'releases/{self.version}').exists() and self.overwrite:
+            shutil.rmtree(f'releases/{self.version}', ignore_errors=True)
+        shutil.move(self.version, 'releases')
+        shutil.move(f'{self.version}.tar.gz', 'releases')
+
+        files_to_move = [x for x in glob('releases/*') if not Path(x).is_dir()]
+        Path(f'releases/{self.version}').mkdir(exist_ok=True)
+        _ = [shutil.move(x, f'releases/{self.version}') for x in files_to_move]
+        return config_fname, classes_fname
+
+    def release_notes(self, run, f1_score: float) -> str:
+        """Creates a release notes file.
+
+        Parameters
+        ----------
+        run:
+            The W&B run to use for the release.
+        f1_score: float
+            The F1 score of the current run.
+
+        Returns
+        -------
+        str
+            The content of the generated release notes file.
+        """
+
+        _run = {
+            'Training start time':
+            run.created_at,
+            'Training duration':
+            time.strftime('%H:%M:%S', time.gmtime(run.summary['_runtime'])),
+            'W&B run URL':
+            run.url,
+            'W&B run ID':
+            run.id,
+            'W&B run name':
+            run.name,
+            'W&B run path':
+            '/'.join(run.path),
+            'Number of classes':
+            run.config['data_dict']['nc']
         }
-        val_results = dict(sorted(val_results.items()))
-        val_results.update({'F1-score': f1_score})
-        f.write('<table>\n<tr>\n')
-        f.write('\n'.join([f'   <td>{x}'
-                           for x in val_results.keys()]) + '<tr>\n')
-        f.write(
-            '\n'.join([f'   <td>{round(x, 4)}'
-                       for x in val_results.values()]) + '</table>\n')
 
-    with open(f'releases/{output_name}/{output_name}-notes.md') as f:
-        content = f.read()
+        if run.config.get('dataset_name'):
+            _run.update({'Dataset name': run.config['dataset_name']})
 
-    return content
+        with open(f'releases/{self.version}/{self.version}-notes.md',
+                  'w') as f:
+
+            for k, v in _run.items():
+                if k == 'W&B run URL' or v == '':
+                    f.write(f'**{k}**: {v}\n')
+                else:
+                    f.write(f'**{k}**: `{v}`\n')
+
+            if run.config.get('system_hardware'):
+                sys_cfg = run.config.get('system_hardware')
+                system_hardware_section = textwrap.dedent(f'''\
+                <details>
+                    <summary>System hardware</summary>
+                    <table>
+                        <tr>
+                            <td>CPU count
+                            <td>GPU count
+                            <td>GPU type
+                            <td>NVIDIA driver version
+                        <tr>
+                            <td>{sys_cfg["cpu_count"]}
+                            <td>{sys_cfg["gpu_count"]}
+                            <td>{sys_cfg["gpu_type"]}
+                            <td>{sys_cfg["nvidia_driver_version"]}
+                    </table>
+                </details>''')
+                f.write(system_hardware_section)
+
+            if run.config.get('base_ml_framework'):
+                ml = run.config.get('base_ml_framework')
+                base_ml_framework_section = textwrap.dedent(f'''\n
+                <details>
+                    <summary>Base ML framework</summary>
+                    <table>
+                        <tr>
+                            <td>Python
+                            <td>CUDA
+                            <td>Torch
+                            <td>Torchvision
+                        <tr>
+                            <td>{ml["Python"]}
+                            <td>{ml["CUDA"]}
+                            <td>{ml["Torch"]}
+                            <td>{ml["Torchvision"]}
+                    </table>
+                </details>''')
+                f.write(base_ml_framework_section)
+
+            f.write('\n<details>\n<summary>Classes</summary>\n\n```YAML'
+                    '\n- ' + '\n- '.join(run.config['data_dict']['names']) +
+                    '\n```\n')
+
+            hist_file, hist_url = self.find_file(run, 'hist.jpg')
+            f.write(f'\n<img src="{hist_url}" alt="classes-hist">'
+                    '\n</details>\n')
+            Path(hist_file.name).unlink()
+
+            try:
+                urls = self.find_file(run, 'Validation')
+                f.write(
+                    '\n<details>\n<summary>Validation predictions</summary>\n')
+                for n, val_imgs_example_url in enumerate(urls):
+                    f.write('\n' + f'<img src="{val_imgs_example_url}" '
+                            f'alt="val-{n}">')
+                f.write('\n</details>\n')
+
+                cm_idx = run.summary['Results']['captions'].index(
+                    'confusion_matrix.png')
+                cm_fname = run.summary['Results']['filenames'][cm_idx]
+                cm_file, cm_url = self.find_file(run, cm_fname)
+
+                f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
+                        '\n' + f'<img src="{cm_url}" alt="cm"'
+                        ' width="1280" height="720">'
+                        '\n</details>\n')
+
+                shutil.rmtree(Path(cm_file.name).parents[1],
+                              ignore_errors=True)
+            except TypeError:
+                logger.error('Failed to get files from the run...')
+
+            f.write('\n**Model performance**:\n')
+            val_results = {
+                k: v
+                for k, v in run.summary.items() if any(
+                    x in k for x in ['val/', 'best/precision', 'best/recall'])
+            }
+            val_results = dict(sorted(val_results.items()))
+            val_results.update({'F1-score': f1_score})
+            f.write('<table>\n<tr>\n')
+            f.write('\n'.join([f'   <td>{x}'
+                               for x in val_results.keys()]) + '<tr>\n')
+            f.write('\n'.join(
+                [f'   <td>{round(x, 4)}'
+                 for x in val_results.values()]) + '</table>\n')
+
+        with open(f'releases/{self.version}/{self.version}-notes.md') as f:
+            content = f.read()
+        return content
+
+    def generate(self) -> None:
+        """This function is the main function of the program.
+        It does the following:
+            1. Creates a directory for the release
+            2. Gets the f1-score of the run
+            3. Gets some data assets from the run
+            4. Creates the release notes
+            5. Generates a command to create the release
+
+        Returns
+        -------
+        None
+        """
+        logs_file = add_logger(__file__)
+
+        api = wandb.Api()
+        run = api.from_path(self.run_path)
+
+        Path(self.version).mkdir(exist_ok=True)
+
+        p = run.summary['best/precision']
+        r = run.summary['best/recall']
+        f1_score = 2 * ((p * r) / (p + r))
+        logger.debug(f'{run.name}: {f1_score}')
+
+        _ = self.get_assets(run)
+        _ = self.release_notes(run=run, f1_score=f1_score)
+
+        artifact = api.artifact(f'{Path(self.run_path).parent}/'
+                                f'run_{Path(self.run_path).name}_model:best')
+        _ = artifact.download('artifacts')
+        shutil.move(f'artifacts/best.pt', f'releases/{self.version}')
+        shutil.rmtree('artifacts')
+        if self.encrypt:
+            encrypt_file(f'releases/{self.version}/best.pt')
+
+        upload_logs(logs_file)
+
+        if self.repo:
+            files = [
+                f'releases/{self.version}/*{x}'
+                for x in ['.json', '.gz', '.txt', '.gpg']
+            ]
+
+            if self.dataset:
+                if self.encrypt:
+                    encrypt_file(self.dataset)
+                    files = files + [f'{self.dataset}.gpg']
+                else:
+                    files = files + [self.dataset]
+
+            gh_cli_cmd = f'gh release create {self.version} -d -F ' \
+            f'"releases/{self.version}/{self.version}-notes.md" --title ' \
+            f'"{self.version}" --repo ' \
+            f'{self.repo} {" ".join(files)}'
+            if 'macOS' in platform():
+                gh_cli_cmd = gh_cli_cmd + ' | xargs open'
+            print(gh_cli_cmd)
+        return
 
 
 def opts() -> argparse.Namespace:
@@ -239,18 +325,31 @@ def opts() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         epilog=f'Basic usage: python {Path(__file__).name} '
-        '-v <release_version_name> -r <run_path> --repo <repo_link>')
-    parser.add_argument('-v',
-                        '--release-version',
-                        help='Release version (e.g., v1.0.0-alpha.1.3)',
-                        type=str,
-                        required=True)
+        '-r <run_path> -v <version> -R <repo_URL>')
     parser.add_argument('-r',
                         '--run-path',
                         help='The W&B run path to use',
                         type=str,
                         required=True)
-    parser.add_argument('--repo', help='Link to the repository', type=str)
+    parser.add_argument('-v',
+                        '--version',
+                        help='Release version (e.g., MODEL-v1.0.0-alpha.1.3)',
+                        type=str,
+                        required=True)
+    parser.add_argument('-R',
+                        '--repo',
+                        help='URL to the repository (i.e., [...].git)',
+                        type=str)
+    parser.add_argument('-d',
+                        '--dataset',
+                        help='Path to the dataset used in the run '
+                        '(.tar.gpg file)',
+                        type=str)
+    parser.add_argument(
+        '-e',
+        '--encrypt',
+        action='store_true',
+        help='Encrypt the dataset and weights file before upload')
     parser.add_argument('--overwrite',
                         help='Overwrite if the release already exists on '
                         'the local disk',
@@ -259,46 +358,13 @@ def opts() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    """This function is the main function of the program.
-    It does the following:
-        1. Creates a directory for the release
-        2. Gets the f1-score of the run
-        3. Gets some data assets from the run
-        4. Creates the release notes
-        5. Generates a command to create the release
-
-    Returns
-    -------
-    None
-    """
-    logs_file = add_logger(__file__)
-    output_name = args.release_version
-
-    api = wandb.Api()
-    run = api.from_path(args.run_path)
-
-    Path(output_name).mkdir(exist_ok=True)
-
-    p = run.summary['best/precision']
-    r = run.summary['best/recall']
-    f1_score = 2 * ((p * r) / (p + r))
-    logger.debug(f'{run.name}: {f1_score}')
-
-    config, classes, cfg = get_assets(run, output_name)
-
-    _ = release_notes(run, f1_score=f1_score, output_name=output_name, cfg=cfg)
-
-    files = [f'releases/{output_name}/*{x}' for x in ['.json', '.gz', '.txt']]
-    logger.info(f'gh release create {args.release_version} -d -F '
-                f'"releases/{output_name}/{output_name}-notes.md" --title '
-                f'"{args.release_version}" --repo '
-                f'{args.repo} {" ".join(files)}')
-    upload_logs(logs_file)
-    return
-
-
 if __name__ == '__main__':
     load_dotenv()
     args = opts()
-    main()
+    gr = GenerateRelease(run_path=args.run_path,
+                         version=args.version,
+                         repo=args.repo,
+                         overwrite=args.overwrite,
+                         dataset=args.dataset,
+                         encrypt=args.encrypt)
+    gr.generate()

@@ -9,6 +9,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import gnupg
 import requests
 from dotenv import load_dotenv
 from loguru import logger
@@ -94,6 +95,17 @@ def opts() -> argparse.Namespace:
                         help='Comma-separated list of project ids to exclude',
                         type=str)
     return parser.parse_args()
+
+
+def encrypt_file(file: str) -> str:
+    gpg = gnupg.GPG()
+    key_fp = [
+        k for k in gpg.list_keys() if k['keyid'] == os.environ['GPG_KEY_ID']
+    ][0]['fingerprint']
+    output_file = Path(file).with_suffix(f'{Path(file).suffix}.gpg')
+    with open(file, 'rb') as f:
+        _ = gpg.encrypt_file(f, recipients=key_fp, output=output_file)
+    return output_file
 
 
 if __name__ == '__main__':

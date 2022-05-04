@@ -25,7 +25,6 @@ jobs:
         pip install -r requirements.txt
     - name: Run json2yolov5.py
       env: 
-        PROJECTS_ID: ${{ secrets.PROJECTS_ID }}
         TOKEN: ${{ secrets.TOKEN }}
         LS_HOST: ${{ secrets.LS_HOST }}
         DB_NAME: ${{ secrets.DB_NAME }}
@@ -36,4 +35,4 @@ jobs:
         MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         MINIO_REGION: ${{ secrets.MINIO_REGION }}
       run: |
-        python json2yolov5.py --only-tar-file --enable-s3 --filter-underrepresented-classes
+        python json2yolov5.py --only-tar-file --enable-s3

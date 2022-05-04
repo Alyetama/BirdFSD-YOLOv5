@@ -54,7 +54,7 @@ def get_tasks_from_mongodb(project_id: Union[int, str],
     Parameters
     ----------
     project_id : Union[int, str]
-        The ID of the project to get tasks from.
+        The id of the project to get tasks from.
     dump : bool
         Whether to dump the data to a JSON file.
     json_min : bool
@@ -81,5 +81,5 @@ def get_tasks_from_mongodb(project_id: Union[int, str],
 if __name__ == '__main__':
     load_dotenv()
     if len(sys.argv) == 1:
-        raise SystemExit('Missing project ID!')
+        raise SystemExit('Missing project id!')
     get_tasks_from_mongodb(sys.argv[1])

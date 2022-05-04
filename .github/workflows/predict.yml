@@ -25,7 +25,6 @@ jobs:
         pip install -r requirements.txt
     - name: Run auto_prediction_schedule.py
       env: 
-        PROJECTS_ID: ${{ secrets.PROJECTS_ID }}
         TOKEN: ${{ secrets.TOKEN }}
         LS_HOST: ${{ secrets.LS_HOST }}
         DB_NAME: ${{ secrets.DB_NAME }}

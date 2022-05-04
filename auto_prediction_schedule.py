@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -15,6 +14,7 @@ from loguru import logger
 from model_utils.download_weights import DownloadModelWeights
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.utils import add_logger, upload_logs
+from model_utils.utils import get_project_ids
 from predict import Predict
 
 
@@ -63,7 +63,7 @@ def main() -> None:
         print(json.dumps(CONFIG, indent=4))
         sys.exit(0)
 
-    pids = os.environ['PROJECTS_ID'].split(',')
+    pids = get_project_ids().split(',')
 
     for pid in pids:
         logger.info(f'\nCurrent project id: {pid}\n')
