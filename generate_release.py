@@ -51,10 +51,15 @@ class GenerateRelease:
         try:
             files = [x for x in list(run.files()) if fname in x.name]  # noqa
         except IndexError:
+            logger.error(f'Could not find `{fname}`!')
             return
+        if not files:
+            return None, None
         urls = []
         for file in files:
-            file.download()
+            file.download(replace=True)
+            if fname == 'hist.jpg':
+                dest = f'{Path(fname).stem}-{self.version}{Path(fname).suffix}'
             url = MinIO().upload('public', file.name, public=True)
             if fname != 'Validation':
                 return file, url
@@ -207,9 +212,11 @@ class GenerateRelease:
                         '\n```\n')
 
             hist_file, hist_url = self.find_file(run, 'hist.jpg')
-            f.write(f'\n<img src="{hist_url}" alt="classes-hist">'
-                    '\n</details>\n')
-            Path(hist_file.name).unlink()
+            if (hist_file, hist_url) != (None, None):
+                f.write(f'\n<img src="{hist_url}" alt="classes-hist">')
+                Path(hist_file.name).unlink()
+
+            f.write('\n</details>\n')
 
             try:
                 urls = self.find_file(run, 'Validation')
@@ -293,17 +300,22 @@ class GenerateRelease:
         shutil.rmtree('artifacts')
 
         if self.dataset_folder:
-            dataset_file = glob(f'{self.dataset_folder}/dataset-YOLO*.tar')[0]
-            shutil.copy2(dataset_file, f'{self.release_folder}')
+            dataset_file = glob(f'{self.dataset_folder}/*.tar')
+            if dataset_file:
+                shutil.copy2(dataset_file[0], f'{self.release_folder}')
+                dataset_file_name = Path(dataset_file[0]).name
+            else:
+                dataset_file_name = None
 
             print(f'{"-" * 40}\n')
             for file in [
                     f'{self.version}-best_weights.pt',
-                    f'{self.version}-tasks.json',
-                    Path(dataset_file).name
+                    f'{self.version}-tasks.json', dataset_file_name
             ]:
-                print(f'FILE="{self.release_folder}/{file}"; gpg '
-                      '--pinentry-mode loopback -c "$FILE" && rm "$FILE"\n')
+                if file:
+                    print(
+                        f'FILE="{self.release_folder}/{file}"; gpg '
+                        '--pinentry-mode loopback -c "$FILE" && rm "$FILE"\n')
             print(f'{"-" * 40}')
 
         upload_logs(logs_file)
