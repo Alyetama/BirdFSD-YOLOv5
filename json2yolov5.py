@@ -3,8 +3,8 @@
 
 import argparse
 import collections
-import json
 import imghdr
+import json
 import os
 import random
 import shutil
@@ -59,13 +59,15 @@ class JSON2YOLO:
                  only_tar_file: bool = False,
                  enable_s3: bool = True,
                  copy_data_from: str = None,
-                 filter_underrepresented_classes: bool = False):
+                 filter_underrepresented_cls: bool = False,
+                 filter_cls_with_instances_under: Optional[int] = None):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
         self.enable_s3 = enable_s3
         self.copy_data_from = copy_data_from
-        self.filter_underrepresented_classes = filter_underrepresented_classes
+        self.filter_underrepresented_cls = filter_underrepresented_cls
+        self.filter_cls_with_instances_under = filter_cls_with_instances_under
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -119,8 +121,12 @@ class JSON2YOLO:
 
         unique, counts = np.unique(labels, return_counts=True)
 
-        if self.filter_underrepresented_classes:
-            min_instances = np.median(counts)
+        if (self.filter_underrepresented_cls
+                or self.filter_cls_with_instances_under):
+            if self.filter_underrepresented_cls:
+                min_instances = np.median(counts)
+            else:
+                min_instances = self.filter_cls_with_instances_under
             self.classes = sorted([
                 label for label, count in zip(unique, counts)
                 if label not in excluded_labels and count >= min_instances
@@ -395,10 +401,15 @@ if __name__ == '__main__':
         '(i.e., the local path to the S3 bucket where the data is '
         'stored) instead of downloading it',
         type=str)
-    parser.add_argument('--filter-underrepresented-classes',
+    parser.add_argument('--filter-underrepresented-cls',
                         help='Only include classes with instances equal or '
                         'above the overall median',
                         action="store_true")
+    parser.add_argument(
+        '--filter-cls-with-instances-under',
+        help=
+        'Remove the class from the dataset if the annotation instances is lower than n',
+        type=int)
     args = parser.parse_args()
 
     json2yolo = JSON2YOLO(
@@ -407,5 +418,6 @@ if __name__ == '__main__':
         only_tar_file=args.only_tar_file,
         enable_s3=args.enable_s3,
         copy_data_from=args.copy_data_from,
-        filter_underrepresented_classes=args.filter_underrepresented_classes)
+        filter_underrepresented_cls=args.filter_underrepresented_cls,
+        filter_cls_with_instances_under=args.filter_cls_with_instances_under)
     json2yolo.run()
