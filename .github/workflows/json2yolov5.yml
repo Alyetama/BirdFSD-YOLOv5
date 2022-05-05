@@ -19,10 +19,12 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.8"
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
     - name: Run json2yolov5.py
       env: 
         TOKEN: ${{ secrets.TOKEN }}
@@ -36,3 +38,10 @@ jobs:
         MINIO_REGION: ${{ secrets.MINIO_REGION }}
       run: |
         python json2yolov5.py --only-tar-file --enable-s3
+
+    - name: 'Upload Artifact'
+      uses: actions/upload-artifact@v3
+      with:
+        name: dataset-YOLO
+        path: dataset-YOLO*.tar
+        retention-days: 90
