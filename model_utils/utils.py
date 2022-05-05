@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import argparse
 import functools
 import json
 import os
 import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
-import gnupg
+import ray
 import requests
+import zstandard
 from dotenv import load_dotenv
 from loguru import logger
 from minio.error import S3Error
@@ -18,10 +19,11 @@ from requests.structures import CaseInsensitiveDict
 from tqdm.auto import tqdm
 
 try:
-    from . import handlers, minio_helper
+    from . import handlers, minio_helper, mongodb_helper
 except ImportError:
     import handlers
     import minio_helper
+    import mongodb_helper
 
 
 def add_logger(current_file: str) -> str:
@@ -86,30 +88,41 @@ def get_project_ids(exclude_ids: str = None) -> str:
     return ','.join(project_ids)
 
 
-def opts() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--get-project-ids',
-                        help='Get all project ids',
-                        action='store_true')
-    parser.add_argument('--exclude-ids',
-                        help='Comma-separated list of project ids to exclude',
-                        type=str)
-    return parser.parse_args()
+
+def get_data(json_min):
+    @ray.remote
+    def iter_db(project_id, json_min):
+        return mongodb_helper.get_tasks_from_mongodb(project_id,
+                                                     dump=False,
+                                                     json_min=json_min)
+    project_ids = get_project_ids().split(',')
+    futures = []
+    for project_id in project_ids:
+        futures.append(iter_db.remote(project_id, json_min))
+    results = []
+    for future in tqdm(futures):
+        results.append(ray.get(future))
+    return results
 
 
-def encrypt_file(file: str) -> str:
-    gpg = gnupg.GPG()
-    key_fp = [
-        k for k in gpg.list_keys() if k['keyid'] == os.environ['GPG_KEY_ID']
-    ][0]['fingerprint']
-    output_file = Path(file).with_suffix(f'{Path(file).suffix}.gpg')
-    with open(file, 'rb') as f:
-        _ = gpg.encrypt_file(f, recipients=key_fp, output=output_file)
-    return output_file
+def compress_data(output_dir):
+    cctx = zstandard.ZstdCompressor(level=22)
+    ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
+
+    with tempfile.TemporaryFile() as f:
+        f.write(json.dumps(get_data(False)).encode('utf-8'))
+        f.seek(0)
+        with open(f'{output_dir}/tasks_{ts}.json.tzst', 'wb') as fw:
+            cctx.copy_stream(f, fw)
+    return
 
 
-if __name__ == '__main__':
-    args = opts()
-    load_dotenv()
-    if args.get_project_ids:
-        print(get_project_ids(exclude_ids=args.exclude_ids))
+def get_labels_count():
+    data = get_data(True)
+    for x in data:
+        for label in x['label']:
+            labels.append(label['rectanglelabels'])
+    unique, counts = np.unique(labels, return_counts=True)
+    labels_freq = {k: int(v) for k, v in np.asarray((unique, counts)).T}
+    return labels_freq
+

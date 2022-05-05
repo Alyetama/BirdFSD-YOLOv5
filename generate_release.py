@@ -17,19 +17,19 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from model_utils.minio_helper import MinIO
-from model_utils.utils import add_logger, upload_logs, encrypt_file
+from model_utils.utils import (
+    add_logger, upload_logs, compress_data, get_labels_count)
 
 
 class GenerateRelease:
     def __init__(self, run_path: str, version: str, repo: Optional[str],
-                 overwrite: bool = False, dataset: str = None, encrypt: bool = False) -> \
+                 overwrite: bool = False, dataset: str = None) -> \
             None:
         self.run_path = run_path
         self.version = version
         self.repo = repo
         self.overwrite = overwrite
         self.dataset = dataset
-        self.encrypt = encrypt
 
     @staticmethod
     def find_file(run, fname: str) -> \
@@ -280,23 +280,17 @@ class GenerateRelease:
         _ = artifact.download('artifacts')
         shutil.move(f'artifacts/best.pt', f'releases/{self.version}')
         shutil.rmtree('artifacts')
-        if self.encrypt:
-            encrypt_file(f'releases/{self.version}/best.pt')
 
         upload_logs(logs_file)
 
         if self.repo:
             files = [
                 f'releases/{self.version}/*{x}'
-                for x in ['.json', '.gz', '.txt', '.gpg']
+                for x in ['.json', '.gz', '.txt']
             ]
 
             if self.dataset:
-                if self.encrypt:
-                    encrypt_file(self.dataset)
-                    files = files + [f'{self.dataset}.gpg']
-                else:
-                    files = files + [self.dataset]
+                files = files + [self.dataset]
 
             gh_cli_cmd = f'gh release create {self.version} -d -F ' \
             f'"releases/{self.version}/{self.version}-notes.md" --title ' \
@@ -345,11 +339,6 @@ def opts() -> argparse.Namespace:
                         help='Path to the dataset used in the run '
                         '(.tar.gpg file)',
                         type=str)
-    parser.add_argument(
-        '-e',
-        '--encrypt',
-        action='store_true',
-        help='Encrypt the dataset and weights file before upload')
     parser.add_argument('--overwrite',
                         help='Overwrite if the release already exists on '
                         'the local disk',
@@ -365,6 +354,5 @@ if __name__ == '__main__':
                          version=args.version,
                          repo=args.repo,
                          overwrite=args.overwrite,
-                         dataset=args.dataset,
-                         encrypt=args.encrypt)
+                         dataset=args.dataset)
     gr.generate()

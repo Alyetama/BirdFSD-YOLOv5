@@ -27,7 +27,7 @@ from tqdm import tqdm
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.minio_helper import BucketDoesNotExist, MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb
-from model_utils.utils import get_project_ids
+from model_utils.utils import compress_data, get_labels_count, get_project_ids
 
 
 class JSON2YOLO:
@@ -254,6 +254,7 @@ class JSON2YOLO:
 
         data_count = dict(collections.Counter(results))
         df = pd.DataFrame(data_count.items(), columns=['label', 'count'])
+
         df = df.groupby('label').sum().reset_index()
 
         ax = sns.barplot(data=df,
@@ -315,6 +316,11 @@ class JSON2YOLO:
         with open(f'{self.output_dir}/dataset_config.yml', 'w') as f:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
+
+        compress_data(output_dir=f'{self.output_dir}/{self.version}')
+
+        with open(f'{self.output_dir}/{self.version}/classes.json', 'w') as f:
+            json.dump(get_labels_count(), indent=4)
 
         folder_name = Path(self.output_dir).name
         with tarfile.open(f'{folder_name}.tar', 'w') as tar:
