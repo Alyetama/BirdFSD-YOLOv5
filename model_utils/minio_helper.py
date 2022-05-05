@@ -29,17 +29,20 @@ class MinIO:
                             secret_key=os.environ['MINIO_SECRET_KEY'],
                             region=os.environ['MINIO_REGION'])
 
-    def upload(self, bucket_name, file_path, public=False, scheme='https'):
+    def upload(self, bucket_name, file_path, public=False, scheme='https',
+               dest=None):
         file = Path(file_path)
+        if not dest:
+            dest = file.name
         content_type = mimetypes.guess_type(file_path)
         if content_type[0]:
             content_type = content_type[0]
         else:
             content_type = 'application/octet-stream'
-        res = self.client.fput_object(bucket_name,
-                                       file.name,
-                                       file,
-                                       content_type=content_type)
+        res = self.client.fput_object(bucket_name=bucket_name,
+                                      object_name=dest,
+                                      file_path=file,
+                                      content_type=content_type)
         if public:
             domain = f'{scheme}://{os.environ["MINIO_ENDPOINT"]}'
             return f'{domain}/{bucket_name}/{file.name}'

@@ -296,25 +296,25 @@ class GenerateRelease:
             dataset_file = glob(f'{self.dataset_folder}/dataset-YOLO*.tar')[0]
             shutil.copy2(dataset_file, f'{self.release_folder}')
 
-        print(f'{"-" * 40}\n')
-        for file in [
-                f'{self.version}-best_weights.pt',
-                f'{self.version}-tasks.json',
-                Path(dataset_file).name
-        ]:
-            print(f'FILE="{self.release_folder}/{file}"; gpg --pinentry-mode '
-                  f'loopback -c "$FILE" && rm "$FILE"\n')
-        print(f'{"-" * 40}')
+            print(f'{"-" * 40}\n')
+            for file in [
+                    f'{self.version}-best_weights.pt',
+                    f'{self.version}-tasks.json',
+                    Path(dataset_file).name
+            ]:
+                print(f'FILE="{self.release_folder}/{file}"; gpg '
+                      '--pinentry-mode loopback -c "$FILE" && rm "$FILE"\n')
+            print(f'{"-" * 40}')
 
         upload_logs(logs_file)
 
         if self.repo:
             print(f'{"-" * 40}\n')
             gh_cli_cmd = f'gh release create {self.version} -d -F ' \
-            f'"{self.release_folder}/{self.version}-notes.md" --title ' \
-            f'"{self.version}" --repo ' \
-            f'{self.repo} {self.release_folder}/*.gpg ' \
-            f'{self.release_folder}/*.tgz'
+                f'"{self.release_folder}/{self.version}-notes.md" --title ' \
+                f'"{self.version}" --repo ' \
+                f'{self.repo} {self.release_folder}/*.gpg ' \
+                f'{self.release_folder}/*.tgz'
 
             print(gh_cli_cmd)
         return
