@@ -5,14 +5,12 @@ import functools
 import json
 import os
 import shutil
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import ray
 import requests
-import zstandard
 from loguru import logger
 from minio.error import S3Error
 from requests.structures import CaseInsensitiveDict
@@ -106,13 +104,9 @@ def get_data(json_min):
     return sum(tasks, [])
 
 
-def compress_data(output_path):
-    cctx = zstandard.ZstdCompressor(level=22)
-    with tempfile.TemporaryFile() as f:
-        f.write(json.dumps(get_data(False)).encode('utf-8'))
-        f.seek(0)
-        with open(output_path, 'wb') as fw:
-            cctx.copy_stream(f, fw)
+def tasks_data(output_path):
+    with open(output_path, 'w') as j:
+        json.dump(get_data(False), j)
     return
 
 

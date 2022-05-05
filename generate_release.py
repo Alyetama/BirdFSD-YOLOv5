@@ -9,7 +9,6 @@ import textwrap
 import time
 from glob import glob
 from pathlib import Path
-from platform import platform
 from typing import Union, Optional
 
 import wandb
@@ -22,13 +21,14 @@ from model_utils.utils import add_logger, upload_logs
 
 class GenerateRelease:
     def __init__(self, run_path: str, version: str, repo: Optional[str],
-                 overwrite: bool = False, dataset: str = None) -> \
+                 overwrite: bool = False, dataset_folder: str = None) -> \
             None:
         self.run_path = run_path
         self.version = version
         self.repo = repo
         self.overwrite = overwrite
-        self.dataset = dataset
+        self.dataset_folder = dataset_folder
+        self.release_folder = f'releases/{self.version}'
 
     @staticmethod
     def find_file(run, fname: str) -> \
@@ -76,7 +76,6 @@ class GenerateRelease:
             files.
         """
         logger.debug(run)
-        config_fname = f'{self.version}/{self.version}-config.json'
 
         for k in [('val', -3), ('train', -3), ('path', -2)]:
             relative_path = '/'.join(
@@ -85,29 +84,32 @@ class GenerateRelease:
 
         logger.debug(run.config)
         print()
-        with open(config_fname, 'w') as j:
+        with open(f'{self.release_folder}/{self.version}-config.json',
+                  'w') as j:
             json.dump(run.config, j, indent=4)
 
-        classes_fname = f'{self.version}/{self.version}-classes.txt'
         classes = run.config['data_dict']['names']
 
-        with open(classes_fname, 'w') as f:
+        with open(f'{self.release_folder}/{self.version}-classes.txt',
+                  'w') as f:
             f.writelines([f'{x}\n' for x in classes])
 
-        Path('releases').mkdir(exist_ok=True)
+        if self.dataset_folder:
+            shutil.copy2(f'{self.dataset_folder}/classes.json',
+                         f'{self.release_folder}/{self.version}-classes.json')
 
-        with tarfile.open(f'{self.version}.tar.gz', 'w:gz') as tar:
-            tar.add(self.version, self.version)
+        with tarfile.open(f'{self.release_folder}/{self.version}-meta.tgz',
+                          'w:gz') as tar:
+            tar.add(f'{self.release_folder}', arcname=self.version)
 
-        if Path(f'releases/{self.version}').exists() and self.overwrite:
-            shutil.rmtree(f'releases/{self.version}', ignore_errors=True)
-        shutil.move(self.version, 'releases')
-        shutil.move(f'{self.version}.tar.gz', 'releases')
+        for file in glob(f'{self.release_folder}/*'):
+            if Path(file).suffix != '.tgz':
+                Path(file).unlink()
 
-        files_to_move = [x for x in glob('releases/*') if not Path(x).is_dir()]
-        Path(f'releases/{self.version}').mkdir(exist_ok=True)
-        _ = [shutil.move(x, f'releases/{self.version}') for x in files_to_move]
-        return config_fname, classes_fname
+        if self.dataset_folder:
+            shutil.copy2(f'{self.dataset_folder}/tasks.json',
+                         f'{self.release_folder}/{self.version}-tasks.json')
+        return
 
     def release_notes(self, run, f1_score: float) -> str:
         """Creates a release notes file.
@@ -145,8 +147,7 @@ class GenerateRelease:
         if run.config.get('dataset_name'):
             _run.update({'Dataset name': run.config['dataset_name']})
 
-        with open(f'releases/{self.version}/{self.version}-notes.md',
-                  'w') as f:
+        with open(f'{self.release_folder}/{self.version}-notes.md', 'w') as f:
 
             for k, v in _run.items():
                 if k == 'W&B run URL' or v == '':
@@ -194,9 +195,16 @@ class GenerateRelease:
                 </details>''')
                 f.write(base_ml_framework_section)
 
-            f.write('\n<details>\n<summary>Classes</summary>\n\n```YAML'
-                    '\n- ' + '\n- '.join(run.config['data_dict']['names']) +
-                    '\n```\n')
+            if self.dataset_folder:
+                with open(f'{self.dataset_folder}/classes.json') as j:
+                    f.write(
+                        '\n<details>\n<summary>Classes</summary>\n\n```JSON\n'
+                        f'{json.dumps(json.load(j), indent=4)}\n```\n')
+            else:
+                f.write('\n<details>\n<summary>Classes</summary>\n\n```YAML'
+                        '\n- ' +
+                        '\n- '.join(run.config['data_dict']['names']) +
+                        '\n```\n')
 
             hist_file, hist_url = self.find_file(run, 'hist.jpg')
             f.write(f'\n<img src="{hist_url}" alt="classes-hist">'
@@ -242,7 +250,7 @@ class GenerateRelease:
                 [f'   <td>{round(x, 4)}'
                  for x in val_results.values()]) + '</table>\n')
 
-        with open(f'releases/{self.version}/{self.version}-notes.md') as f:
+        with open(f'{self.release_folder}/{self.version}-notes.md') as f:
             content = f.read()
         return content
 
@@ -264,39 +272,50 @@ class GenerateRelease:
         api = wandb.Api()
         run = api.from_path(self.run_path)
 
-        Path(self.version).mkdir(exist_ok=True)
+        if Path(f'{self.release_folder}').exists() and self.overwrite:
+            shutil.rmtree(f'{self.release_folder}', ignore_errors=True)
+
+        Path(f'{self.release_folder}').mkdir(exist_ok=True, parents=True)
 
         p = run.summary['best/precision']
         r = run.summary['best/recall']
         f1_score = 2 * ((p * r) / (p + r))
         logger.debug(f'{run.name}: {f1_score}')
 
-        _ = self.get_assets(run)
+        self.get_assets(run)
         _ = self.release_notes(run=run, f1_score=f1_score)
 
         artifact = api.artifact(f'{Path(self.run_path).parent}/'
                                 f'run_{Path(self.run_path).name}_model:best')
         _ = artifact.download('artifacts')
-        shutil.move(f'artifacts/best.pt', f'releases/{self.version}')
+        shutil.move(f'artifacts/best.pt',
+                    f'{self.release_folder}/{self.version}-best_weights.pt')
         shutil.rmtree('artifacts')
+
+        if self.dataset_folder:
+            dataset_file = glob(f'{self.dataset_folder}/dataset-YOLO*.tar')[0]
+            shutil.copy2(dataset_file, f'{self.release_folder}')
+
+        print(f'{"-" * 40}\n')
+        for file in [
+                f'{self.version}-best_weights.pt',
+                f'{self.version}-tasks.json',
+                Path(dataset_file).name
+        ]:
+            print(f'FILE="{self.release_folder}/{file}"; gpg --pinentry-mode '
+                  f'loopback -c "$FILE" && rm "$FILE"\n')
+        print(f'{"-" * 40}')
 
         upload_logs(logs_file)
 
         if self.repo:
-            files = [
-                f'releases/{self.version}/*{x}'
-                for x in ['.json', '.gz', '.txt']
-            ]
-
-            if self.dataset:
-                files = files + [self.dataset]
-
+            print(f'{"-" * 40}\n')
             gh_cli_cmd = f'gh release create {self.version} -d -F ' \
-            f'"releases/{self.version}/{self.version}-notes.md" --title ' \
+            f'"{self.release_folder}/{self.version}-notes.md" --title ' \
             f'"{self.version}" --repo ' \
-            f'{self.repo} {" ".join(files)}'
-            if 'macOS' in platform():
-                gh_cli_cmd = gh_cli_cmd + ' | xargs open'
+            f'{self.repo} {self.release_folder}/*.gpg ' \
+            f'{self.release_folder}/*.tgz'
+
             print(gh_cli_cmd)
         return
 
@@ -333,15 +352,14 @@ def opts() -> argparse.Namespace:
                         '--repo',
                         help='URL to the repository (i.e., [...].git)',
                         type=str)
-    parser.add_argument('-d',
-                        '--dataset',
-                        help='Path to the dataset used in the run '
-                        '(.tar.gpg file)',
-                        type=str)
     parser.add_argument('--overwrite',
                         help='Overwrite if the release already exists on '
                         'the local disk',
                         action='store_true')
+    parser.add_argument('-D',
+                        '--dataset-folder',
+                        help='Path to the dataset/artifacts folder',
+                        type=str)
 
     return parser.parse_args()
 
@@ -353,5 +371,5 @@ if __name__ == '__main__':
                          version=args.version,
                          repo=args.repo,
                          overwrite=args.overwrite,
-                         dataset=args.dataset)
+                         dataset_folder=args.dataset_folder)
     gr.generate()

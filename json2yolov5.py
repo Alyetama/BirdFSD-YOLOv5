@@ -28,7 +28,7 @@ from tqdm import tqdm
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.minio_helper import BucketDoesNotExist, MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb
-from model_utils.utils import compress_data, get_labels_count, get_project_ids
+from model_utils.utils import tasks_data, get_labels_count, get_project_ids
 
 
 class JSON2YOLO:
@@ -318,13 +318,16 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        compress_data(f'tasks.json.tzst')
+        tasks_data(f'tasks.json')
 
         with open('classes.json', 'w') as f:
             json.dump(get_labels_count(), f, indent=4)
 
         folder_name = Path(self.output_dir).name
-        with tarfile.open(f'{folder_name}.tar', 'w') as tar:
+        ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
+        dataset_name = f'{folder_name}-{ts}.tar'
+
+        with tarfile.open(dataset_name, 'w') as tar:
             tar.add(self.output_dir, folder_name)
 
         if self.only_tar_file:
@@ -347,8 +350,6 @@ class JSON2YOLO:
             else:
                 upload_dataset = True
             if upload_dataset:
-                ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
-                dataset_name = f'{folder_name}-{ts}.tar'
                 if self.copy_data_from and os.geteuid() != 0:
                     logger.error(
                         'Cannot run a local copy. Current user has no root '

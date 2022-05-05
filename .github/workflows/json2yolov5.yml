@@ -44,7 +44,7 @@ jobs:
       with:
         name: artifacts
         path: |
-          tasks.json.tzst
+          tasks.json
           classes.json
           dataset-YOLO*.tar
         retention-days: 90
