@@ -9,10 +9,10 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import ray
 import requests
 import zstandard
-from dotenv import load_dotenv
 from loguru import logger
 from minio.error import S3Error
 from requests.structures import CaseInsensitiveDict
@@ -88,41 +88,40 @@ def get_project_ids(exclude_ids: str = None) -> str:
     return ','.join(project_ids)
 
 
-
 def get_data(json_min):
+
     @ray.remote
-    def iter_db(project_id, json_min):
-        return mongodb_helper.get_tasks_from_mongodb(project_id,
+    def iter_db(proj_id, j_min):
+        return mongodb_helper.get_tasks_from_mongodb(proj_id,
                                                      dump=False,
-                                                     json_min=json_min)
+                                                     json_min=j_min)
+
     project_ids = get_project_ids().split(',')
     futures = []
     for project_id in project_ids:
         futures.append(iter_db.remote(project_id, json_min))
-    results = []
+    tasks = []
     for future in tqdm(futures):
-        results.append(ray.get(future))
-    return results
+        tasks.append(ray.get(future))
+    return sum(tasks, [])
 
 
-def compress_data(output_dir):
+def compress_data(output_path):
     cctx = zstandard.ZstdCompressor(level=22)
-    ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
-
     with tempfile.TemporaryFile() as f:
         f.write(json.dumps(get_data(False)).encode('utf-8'))
         f.seek(0)
-        with open(f'{output_dir}/tasks_{ts}.json.tzst', 'wb') as fw:
+        with open(output_path, 'wb') as fw:
             cctx.copy_stream(f, fw)
     return
 
 
 def get_labels_count():
-    data = get_data(True)
-    for x in data:
-        for label in x['label']:
+    tasks = get_data(True)
+    labels = []
+    for d in tasks:
+        for label in d['label']:
             labels.append(label['rectanglelabels'])
     unique, counts = np.unique(labels, return_counts=True)
     labels_freq = {k: int(v) for k, v in np.asarray((unique, counts)).T}
     return labels_freq
-

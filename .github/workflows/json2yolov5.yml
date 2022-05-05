@@ -42,6 +42,9 @@ jobs:
     - name: 'Upload Artifact'
       uses: actions/upload-artifact@v3
       with:
-        name: dataset-YOLO
-        path: dataset-YOLO*.tar
+        name: artifacts
+        path: |
+          tasks.json.tzst
+          classes.json
+          dataset-YOLO*.tar
         retention-days: 90

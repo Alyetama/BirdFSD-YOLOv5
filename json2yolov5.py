@@ -3,6 +3,7 @@
 
 import argparse
 import collections
+import json
 import imghdr
 import os
 import random
@@ -317,10 +318,10 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        compress_data(output_dir=f'{self.output_dir}/{self.version}')
+        compress_data(f'tasks.json.tzst')
 
-        with open(f'{self.output_dir}/{self.version}/classes.json', 'w') as f:
-            json.dump(get_labels_count(), indent=4)
+        with open('classes.json', 'w') as f:
+            json.dump(get_labels_count(), f, indent=4)
 
         folder_name = Path(self.output_dir).name
         with tarfile.open(f'{folder_name}.tar', 'w') as tar:

@@ -17,8 +17,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from model_utils.minio_helper import MinIO
-from model_utils.utils import (
-    add_logger, upload_logs, compress_data, get_labels_count)
+from model_utils.utils import add_logger, upload_logs
 
 
 class GenerateRelease:
