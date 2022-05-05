@@ -2,8 +2,14 @@
 # coding: utf-8
 
 import argparse
+import multiprocessing
 import os
+import platform
+from pathlib import Path
 
+import pynvml as nv  # noqa
+import torch
+import torchvision
 import wandb
 
 
@@ -17,55 +23,44 @@ def main() -> None:
     run.upload_file('hist.jpg')
     os.chdir(cwd)
 
-    # torch_version = torch.__version__
-    # torchvision_version = torchvision.__version__
-    # python_version = platform.python_version()
-    # cuda_version = os.popen('nvcc --version | grep release').read().split(
-    #     ', ')[1].split('release ')[1]
-
-    # version = {
-    #     'Python': python_version,
-    #     'CUDA': cuda_version,
-    #     'Torch': torch_version,
-    #     'Torchvision': torchvision_version
-    # }
-
-    # try:
-    #     nv.nvmlInit()
-    #     gpu_count = nv.nvmlDeviceGetCount()
-    #     gpu_type = [
-    #         nv.nvmlDeviceGetName(nv.nvmlDeviceGetHandleByIndex(i))
-    #         for i in range(gpu_count)
-    #     ]
-
-    #     system_hardware = {
-    #         'cpu_count': multiprocessing.cpu_count(),
-    #         'gpu_count': gpu_count,
-    #         'gpu_type': ', '.join(gpu_type),
-    #         'nvidia_driver_version': nv.nvmlSystemGetDriverVersion()
-    #     }
-    # except nv.NVMLError:
-    #     system_hardware = {'cpu_count': multiprocessing.cpu_count()}
-
-    system_hardware = {
-        'cpu_count': 40,
-        'gpu_count': 1,
-        'gpu_type': ', '.join(['Tesla V100-PCIE-32GB']),
-        'nvidia_driver_version': '470.103.01'
-    }
+    torch_version = torch.__version__
+    torchvision_version = torchvision.__version__
+    python_version = platform.python_version()
+    cuda_version = os.popen('nvcc --version | grep release').read().split(
+        ', ')[1].split('release ')[1]
 
     version = {
-        'Python': '3.8.13',
-        'CUDA': '10.2',
-        'Torch': '1.11.0',
-        'Torchvision': '0.12.0'
+        'Python': python_version,
+        'CUDA': cuda_version,
+        'Torch': torch_version,
+        'Torchvision': torchvision_version
     }
 
-    run.config.update({
-        'dataset_name': args.dataset_name,
+    try:
+        nv.nvmlInit()
+        gpu_count = nv.nvmlDeviceGetCount()
+        gpu_type = [
+            nv.nvmlDeviceGetName(nv.nvmlDeviceGetHandleByIndex(i))
+            for i in range(gpu_count)
+        ]
+
+        system_hardware = {
+            'cpu_count': multiprocessing.cpu_count(),
+            'gpu_count': gpu_count,
+            'gpu_type': ', '.join(gpu_type),
+            'nvidia_driver_version': nv.nvmlSystemGetDriverVersion()
+        }
+    except nv.NVMLError:
+        system_hardware = {'cpu_count': multiprocessing.cpu_count()}
+
+    dict_to_add = {
+        'dataset_name': Path(args.dataset_name).name,
         'base_ml_framework': version,
         'system_hardware': system_hardware
-    })
+    }
+
+    run.config.update(dict_to_add)
+    print(dict_to_add)
 
     run.update()
     return
