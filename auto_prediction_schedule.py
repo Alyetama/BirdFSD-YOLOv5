@@ -37,6 +37,7 @@ def main() -> None:
 
     CONFIG = {
         'weights': '',
+        'project_ids': get_project_ids(),
         'tasks_range': None,
         'predict_all': True,
         'one_task': None,
@@ -63,13 +64,9 @@ def main() -> None:
         print(json.dumps(CONFIG, indent=4))
         sys.exit(0)
 
-    pids = get_project_ids().split(',')
-
-    for pid in pids:
-        logger.info(f'\nCurrent project id: {pid}\n')
-        CONFIG.update({'project_id': pid})
-        predict = Predict(**CONFIG)
-        predict.apply_predictions()
+    pids = 
+    predict = Predict(**CONFIG)
+    predict.apply_predictions()
 
     try:
         Path('best.pt').unlink()
