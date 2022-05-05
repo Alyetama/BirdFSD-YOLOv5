@@ -64,7 +64,6 @@ def main() -> None:
         print(json.dumps(CONFIG, indent=4))
         sys.exit(0)
 
-    pids = 
     predict = Predict(**CONFIG)
     predict.apply_predictions()
 
