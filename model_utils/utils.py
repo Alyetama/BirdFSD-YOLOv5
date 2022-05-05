@@ -120,8 +120,9 @@ def get_labels_count():
     tasks = get_data(True)
     labels = []
     for d in tasks:
-        for label in d['label']:
-            labels.append(label['rectanglelabels'])
+        if d.get('label'):
+            for label in d['label']:
+                labels.append(label['rectanglelabels'])
     unique, counts = np.unique(labels, return_counts=True)
     labels_freq = {k: int(v) for k, v in np.asarray((unique, counts)).T}
     return labels_freq
