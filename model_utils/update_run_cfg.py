@@ -40,7 +40,7 @@ def main() -> None:
         nv.nvmlInit()
         gpu_count = nv.nvmlDeviceGetCount()
         gpu_type = [
-            nv.nvmlDeviceGetName(nv.nvmlDeviceGetHandleByIndex(i))
+            nv.nvmlDeviceGetName(nv.nvmlDeviceGetHandleByIndex(i)).decode()
             for i in range(gpu_count)
         ]
 
@@ -48,7 +48,7 @@ def main() -> None:
             'cpu_count': multiprocessing.cpu_count(),
             'gpu_count': gpu_count,
             'gpu_type': ', '.join(gpu_type),
-            'nvidia_driver_version': nv.nvmlSystemGetDriverVersion()
+            'nvidia_driver_version': nv.nvmlSystemGetDriverVersion().decode()
         }
     except nv.NVMLError:
         system_hardware = {'cpu_count': multiprocessing.cpu_count()}
