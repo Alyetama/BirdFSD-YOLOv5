@@ -6,6 +6,7 @@ import copy
 import datetime
 import json
 import re
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -80,10 +81,10 @@ class SyncModel:
         db = mongodb_db()
 
         minio = MinIO()
+        weights_dst = Path(self.weights_file).name.replace('-best_weights', '')
         minio_resp = minio.upload(bucket_name='model',
                                   file_path=self.weights_file,
-                                  dest=self.weights_file.replace(
-                                      '-best_weights', ''))
+                                  dest=weights_dst)
         print(f'Uploaded object name: {minio_resp.object_name}')
 
         with open(self.classes_file) as j:
