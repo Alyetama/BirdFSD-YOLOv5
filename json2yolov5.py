@@ -157,7 +157,7 @@ class JSON2YOLO:
         logger.debug(f'Number of classes: {len(self.classes)}')
         logger.debug(f'Classes: {self.classes}')
 
-        Path('dataset-YOLO').mkdir(exist_ok=True)
+        Path(self.output_dir).mkdir(exist_ok=True)
         with open(f'{self.output_dir}/classes.txt', 'w') as f:
             for class_ in self.classes:
                 f.write(f'{class_}\n')
@@ -369,8 +369,7 @@ class JSON2YOLO:
                     [o.last_modified for o in objs if o.last_modified])
                 latest_obj = [o for o in objs
                               if o.last_modified == latest_ts][0]
-                if latest_obj.size != Path(
-                        f'{folder_name}.tar').stat().st_size:
+                if latest_obj.size != Path(dataset_name).stat().st_size:
                     upload_dataset = True
             else:
                 upload_dataset = True
@@ -383,12 +382,11 @@ class JSON2YOLO:
                 if self.copy_data_from and os.geteuid() == 0:
                     logger.debug('Copying the dataset to the bucket...')
                     ds_path = f'{Path(self.copy_data_from).parent}/dataset'
-                    shutil.copy(f'{folder_name}.tar',
-                                f'{ds_path}/{dataset_name}')
+                    shutil.copy(dataset_name, f'{ds_path}/{dataset_name}')
                 else:
                     logger.info('Uploading the dataset...')
                     s3_client.fput_object('dataset', dataset_name,
-                                          f'{folder_name}.tar')
+                                          dataset_name)
         return
 
 
