@@ -23,11 +23,12 @@ import requests
 import seaborn as sns
 from dotenv import load_dotenv
 from loguru import logger
+from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
 from model_utils.handlers import catch_keyboard_interrupt
-from model_utils.minio_helper import BucketDoesNotExist, MinIO
 from model_utils.mongodb_helper import get_tasks_from_mongodb
+from model_utils.s3_helper import BucketDoesNotExist, S3
 from model_utils.utils import tasks_data, get_labels_count, get_project_ids
 
 
@@ -37,14 +38,14 @@ class JSON2YOLO:
     The output is a folder with the following structure:
 
     dataset-YOLO
-    ├── classes.txt
-    ├── dataset_config.yml
-    ├── images
-    │   ├── train
-    │   └── val
-    └── labels
-        ├── train
-        └── val
+    ‚îú‚îÄ‚îÄ classes.txt
+    ‚îú‚îÄ‚îÄ dataset_config.yml
+    ‚îú‚îÄ‚îÄ images
+    ‚îÇ   ‚îú‚îÄ‚îÄ train
+    ‚îÇ   ‚îî‚îÄ‚îÄ val
+    ‚îî‚îÄ‚îÄ labels
+        ‚îú‚îÄ‚îÄ train
+        ‚îî‚îÄ‚îÄ val
 
     The output will also be stored in a tarball with the same name as the
      output folder.
@@ -60,7 +61,8 @@ class JSON2YOLO:
                  enable_s3: bool = True,
                  copy_data_from: str = None,
                  filter_underrepresented_cls: bool = False,
-                 filter_cls_with_instances_under: Optional[int] = None):
+                 filter_cls_with_instances_under: Optional[int] = None,
+                 get_tasks_with_api: bool = False):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
@@ -68,6 +70,7 @@ class JSON2YOLO:
         self.copy_data_from = copy_data_from
         self.filter_underrepresented_cls = filter_underrepresented_cls
         self.filter_cls_with_instances_under = filter_cls_with_instances_under
+        self.get_tasks_with_api = get_tasks_with_api
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -88,6 +91,19 @@ class JSON2YOLO:
         def iter_projects(proj_id):
             return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)
 
+        @ray.remote
+        def iter_projects_api(proj_id):
+            headers = CaseInsensitiveDict()
+            headers['Content-type'] = 'application/json'
+            headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
+            ls_host = os.environ["LS_HOST"]
+            q = 'exportType=JSON&download_all_tasks=true'
+            proj_tasks = []
+            url = f'{ls_host}/api/projects/{proj_id}/export?{q}'
+            resp = requests.get(url, headers=headers)
+            proj_tasks.append(resp.json())
+            return proj_tasks
+
         if self.projects:
             project_ids = self.projects.split(',')
         else:
@@ -95,7 +111,10 @@ class JSON2YOLO:
 
         futures = []
         for project_id in project_ids:
-            futures.append(iter_projects.remote(project_id))
+            if self.get_tasks_with_api:
+                futures.append(iter_projects_api.remote(project_id))
+            else:
+                futures.append(iter_projects.remote(project_id))
 
         data = []
         for future in tqdm(futures, desc='Projects'):
@@ -162,7 +181,7 @@ class JSON2YOLO:
             shutil.copy(f'{self.copy_data_from}/{object_name}', cur_img_path)
         else:
             if self.enable_s3:
-                img_url = MinIO().client.presigned_get_object(
+                img_url = S3().client.presigned_get_object(
                     'data', object_name, expires=timedelta(hours=6))
             else:
                 img_url = task['image']
@@ -281,7 +300,7 @@ class JSON2YOLO:
         def iter_convert_to_yolo(t):
             return self.convert_to_yolo(t)
 
-        minio_client = MinIO().client
+        s3_client = S3().client
         catch_keyboard_interrupt()
         random.seed(8)
 
@@ -340,11 +359,11 @@ class JSON2YOLO:
             shutil.rmtree(self.output_dir, ignore_errors=True)
 
         if self.enable_s3:
-            if not minio_client.bucket_exists('dataset'):
+            if not s3_client.bucket_exists('dataset'):
                 raise BucketDoesNotExist('Bucket `dataset` does not exist!')
 
             upload_dataset = False
-            objs = list(minio_client.list_objects('dataset'))
+            objs = list(s3_client.list_objects('dataset'))
             if objs:
                 latest_ts = max(
                     [o.last_modified for o in objs if o.last_modified])
@@ -368,8 +387,8 @@ class JSON2YOLO:
                                 f'{ds_path}/{dataset_name}')
                 else:
                     logger.info('Uploading the dataset...')
-                    minio_client.fput_object('dataset', dataset_name,
-                                             f'{folder_name}.tar')
+                    s3_client.fput_object('dataset', dataset_name,
+                                          f'{folder_name}.tar')
         return
 
 
@@ -407,9 +426,12 @@ if __name__ == '__main__':
                         action="store_true")
     parser.add_argument(
         '--filter-cls-with-instances-under',
-        help=
-        'Remove the class from the dataset if the annotation instances is lower than n',
+        help='Remove the class from the dataset if the annotation instances '
+        'is lower than n',
         type=int)
+    parser.add_argument('--get-tasks-with-api',
+                        help='Use label-studio API to get tasks data',
+                        action="store_true")
     args = parser.parse_args()
 
     json2yolo = JSON2YOLO(
@@ -419,5 +441,6 @@ if __name__ == '__main__':
         enable_s3=args.enable_s3,
         copy_data_from=args.copy_data_from,
         filter_underrepresented_cls=args.filter_underrepresented_cls,
-        filter_cls_with_instances_under=args.filter_cls_with_instances_under)
+        filter_cls_with_instances_under=args.filter_cls_with_instances_under,
+        get_tasks_with_api=args.get_tasks_with_api)
     json2yolo.run()

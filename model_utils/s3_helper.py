@@ -21,13 +21,13 @@ class BucketDoesNotExist(Exception):
     pass
 
 
-class MinIO:
+class S3:
 
     def __init__(self):
-        self.client = Minio(os.environ['MINIO_ENDPOINT'],
-                            access_key=os.environ['MINIO_ACCESS_KEY'],
-                            secret_key=os.environ['MINIO_SECRET_KEY'],
-                            region=os.environ['MINIO_REGION'])
+        self.client = Minio(os.environ['S3_ENDPOINT'],
+                            access_key=os.environ['S3_ACCESS_KEY'],
+                            secret_key=os.environ['S3_SECRET_KEY'],
+                            region=os.environ['S3_REGION'])
 
     def upload(self, bucket_name, file_path, public=False, scheme='https',
                dest=None):
@@ -44,7 +44,7 @@ class MinIO:
                                       file_path=file,
                                       content_type=content_type)
         if public:
-            domain = f'{scheme}://{os.environ["MINIO_ENDPOINT"]}'
+            domain = f'{scheme}://{os.environ["S3_ENDPOINT"]}'
             return f'{domain}/{bucket_name}/{file.name}'
         else:
             return res
@@ -94,4 +94,4 @@ if __name__ == '__main__':
         print(message)
     if '--download-dataset' in sys.argv:
         load_dotenv()
-        _ = MinIO().get_dataset()
+        _ = S3().get_dataset()

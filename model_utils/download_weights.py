@@ -9,10 +9,10 @@ from dotenv import load_dotenv
 from loguru import logger
 
 try:
-    from . import mongodb_helper, minio_helper, handlers, utils
+    from . import mongodb_helper, s3_helper, handlers, utils
 except ImportError:
     import mongodb_helper
-    import minio_helper
+    import s3_helper
     import handlers
     import utils
 
@@ -31,7 +31,7 @@ class DownloadModelWeights:
         handlers.catch_keyboard_interrupt()
 
         db = mongodb_helper.mongodb_db()
-        minio = minio_helper.MinIO()
+        s3 = s3_helper.S3()
 
         if self.model_version == 'latest':
             latest_model_ts = max(db.model.find().distinct('added_on'))
@@ -45,7 +45,7 @@ class DownloadModelWeights:
                 f'\nAvailable models: {json.dumps(avail_models, indent=4)}')
         model_object_name = f'{model_document["version"]}.pt'
 
-        weights_url = minio.client.presigned_get_object(
+        weights_url = s3.client.presigned_get_object(
             'model', model_object_name, expires=timedelta(hours=6))
 
         if skip_download:

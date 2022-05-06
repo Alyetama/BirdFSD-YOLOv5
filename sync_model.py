@@ -12,7 +12,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
-from model_utils.minio_helper import MinIO
+from model_utils.s3_helper import S3
 from model_utils.mongodb_helper import mongodb_db
 from model_utils.utils import get_project_ids
 
@@ -80,12 +80,12 @@ class SyncModel:
 
         db = mongodb_db()
 
-        minio = MinIO()
+        s3 = S3()
         weights_dst = Path(self.weights_file).name.replace('-best_weights', '')
-        minio_resp = minio.upload(bucket_name='model',
-                                  file_path=self.weights_file,
-                                  dest=weights_dst)
-        print(f'Uploaded object name: {minio_resp.object_name}')
+        s3_resp = s3.upload(bucket_name='model',
+                            file_path=self.weights_file,
+                            dest=weights_dst)
+        print(f'Uploaded object name: {s3_resp.object_name}')
 
         with open(self.classes_file) as j:
             labels_freq = json.load(j)

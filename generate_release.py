@@ -15,7 +15,7 @@ import wandb
 from dotenv import load_dotenv
 from loguru import logger
 
-from model_utils.minio_helper import MinIO
+from model_utils.s3_helper import S3
 from model_utils.utils import add_logger, upload_logs
 
 
@@ -30,8 +30,7 @@ class GenerateRelease:
         self.dataset_folder = dataset_folder
         self.release_folder = f'releases/{self.version}'
 
-    @staticmethod
-    def find_file(run, fname: str) -> \
+    def find_file(self, run, fname: str) -> \
             Union[tuple, list, None]:
         # noqa
         """Finds a file in a run and uploads it to imgbb.
@@ -60,7 +59,9 @@ class GenerateRelease:
             file.download(replace=True)
             if fname == 'hist.jpg':
                 dest = f'{Path(fname).stem}-{self.version}{Path(fname).suffix}'
-            url = MinIO().upload('public', file.name, public=True)
+                url = S3().upload('public', file.name, public=True, dest=dest)
+            else:
+                url = S3().upload('public', file.name, public=True)
             if fname != 'Validation':
                 return file, url
             else:

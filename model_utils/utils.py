@@ -17,10 +17,10 @@ from requests.structures import CaseInsensitiveDict
 from tqdm.auto import tqdm
 
 try:
-    from . import handlers, minio_helper, mongodb_helper
+    from . import handlers, s3_helper, mongodb_helper
 except ImportError:
     import handlers
-    import minio_helper
+    import s3_helper
     import mongodb_helper
 
 
@@ -33,10 +33,10 @@ def add_logger(current_file: str) -> str:
 
 
 def upload_logs(logs_file: str) -> None:
-    minio = minio_helper.MinIO()
+    s3 = s3_helper.S3()
     try:
         logger.debug('Uploading logs...')
-        resp = minio.upload('logs', logs_file)
+        resp = s3.upload('logs', logs_file)
         logger.debug(f'Uploaded log file: `{resp.object_name}`')
     except S3Error as e:
         logger.error('Could not upload logs file!')
