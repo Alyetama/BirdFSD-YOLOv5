@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name='BirdFSD-YOLOv5-train'
 #SBATCH --partition='gpu'
 #SBATCH --gres=gpu
@@ -11,6 +11,9 @@
 
 #-------------------------------------
 export WANDB_CACHE_DIR="$WORK/.cache"
+export WANDB_RUN_ID=$(python -c "import secrets; print(secrets.token_hex(1000)[-8:])")
+export DATASET_NAME= # <<<<<<<<<<<<<<<<<<<< @required
+export GITHUB_ACTIONS_RUN_ID= # <<<<<<<<<<<<<<<<<<<< @required
 #-------------------------------------
 module unload python
 module load anaconda
@@ -20,16 +23,29 @@ module load cuda/10.2
 nvidia-smi
 #-------------------------------------
 rm -rf dataset-YOLO dataset-YOLO*.tar dataset_config.yml best.pt
-python model_utils/minio_helper.py --download-dataset
-tar -xf dataset-YOLO-*.tar
+rm -rf yolov5/runs wandb
+#-------------------------------------
+gh run download $GITHUB_ACTIONS_RUN_ID
+tar -xf artifacts/dataset-YOLO-*.tar
+mv artifacts/dataset-YOLO .
 mv dataset-YOLO/dataset_config.yml .
 python model_utils/relative_to_abs.py
+#-------------------------------------
 python model_utils/download_weights.py --model-version latest
 #-------------------------------------
-BATCH_SIZE=32
-EPOCHS=100
+BATCH_SIZE=-1
+EPOCHS=300
 PRETRAINED_WEIGHTS='best.pt'
+IMAGE_SIZE=768
 #-------------------------------------
-python yolov5/train.py --img-size 768 --batch $BATCH_SIZE --epochs $EPOCHS \
-   --data 'dataset_config.yml' --weights $PRETRAINED_WEIGHTS --device 0
+python yolov5/train.py \
+   --img-size $IMAGE_SIZE \
+   --batch $BATCH_SIZE \
+   --epochs $EPOCHS \
+   --data 'dataset_config.yml' \
+   --weights $PRETRAINED_WEIGHTS \
+   --device 0
 #-------------------------------------
+python model_utils/update_run_cfg.py \
+   --run-path "biodiv/train/$WANDB_RUN_ID" \
+   --dataset-name
