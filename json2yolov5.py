@@ -38,14 +38,14 @@ class JSON2YOLO:
     The output is a folder with the following structure:
 
     dataset-YOLO
-    ‚îú‚îÄ‚îÄ classes.txt
-    ‚îú‚îÄ‚îÄ dataset_config.yml
-    ‚îú‚îÄ‚îÄ images
-    ‚îÇ   ‚îú‚îÄ‚îÄ train
-    ‚îÇ   ‚îî‚îÄ‚îÄ val
-    ‚îî‚îÄ‚îÄ labels
-        ‚îú‚îÄ‚îÄ train
-        ‚îî‚îÄ‚îÄ val
+    ├── classes.txt
+    ├── dataset_config.yml
+    ├── images
+    │   ├── train
+    │   └── val
+    └── labels
+        ├── train
+        └── val
 
     The output will also be stored in a tarball with the same name as the
      output folder.
