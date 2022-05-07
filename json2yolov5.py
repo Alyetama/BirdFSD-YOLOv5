@@ -346,7 +346,12 @@ class JSON2YOLO:
         tasks_data(f'tasks.json')
 
         with open('classes.json', 'w') as f:
-            json.dump(get_labels_count(), f, indent=4)
+            classes_json = {
+                k: v
+                for k, v in get_labels_count().items()
+                if k not in os.getenv('EXCLUDE_LABELS')
+            }
+            json.dump(classes_json, f, indent=4)
 
         folder_name = Path(self.output_dir).name
         ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
