@@ -75,7 +75,7 @@ def api_request(url: str, method: str = 'get', data: dict = None) -> dict:
     return resp.json()  # noqa
 
 
-def get_project_ids(exclude_ids: str = None) -> str:
+def get_project_ids_str(exclude_ids: str = None) -> str:
     projects = api_request(
         f'{os.environ["LS_HOST"]}/api/projects?page_size=10000')
     project_ids = sorted([project['id'] for project in projects['results']])
@@ -94,7 +94,7 @@ def get_data(json_min):
                                                      dump=False,
                                                      json_min=j_min)
 
-    project_ids = get_project_ids().split(',')
+    project_ids = get_project_ids_str().split(',')
     futures = []
     for project_id in project_ids:
         futures.append(iter_db.remote(project_id, json_min))

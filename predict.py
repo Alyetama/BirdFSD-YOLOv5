@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-from model_utils.utils import add_logger, upload_logs, get_project_ids
+from model_utils.utils import add_logger, upload_logs, get_project_ids_str
 
 
 class _Headers:
@@ -550,7 +550,7 @@ class Predict(LoadModel, _Headers):
         if self.project_ids:
             project_ids = self.project_ids.split(',')
         else:
-            project_ids = get_project_ids().split(',')
+            project_ids = get_project_ids_str().split(',')
 
         if self.one_task:
             tasks = self.single_task(self.one_task)

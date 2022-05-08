@@ -14,7 +14,7 @@ from pymongo.errors import DuplicateKeyError
 
 from model_utils.s3_helper import S3
 from model_utils.mongodb_helper import mongodb_db
-from model_utils.utils import get_project_ids
+from model_utils.utils import get_project_ids_str
 
 
 class ModelVersionFormatError(Exception):
@@ -93,7 +93,7 @@ class SyncModel:
         if self.project_ids:
             project_ids = self.project_ids
         else:
-            project_ids = get_project_ids()
+            project_ids = get_project_ids_str()
 
         with open(self.config_file) as j:
             train_config = json.load(j)

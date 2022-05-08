@@ -14,7 +14,7 @@ from loguru import logger
 from model_utils.download_weights import DownloadModelWeights
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.utils import add_logger, upload_logs
-from model_utils.utils import get_project_ids
+from model_utils.utils import get_project_ids_str
 from predict import Predict
 
 
@@ -37,7 +37,7 @@ def main() -> None:
 
     CONFIG = {
         'weights': '',
-        'project_ids': get_project_ids(),
+        'project_ids': get_project_ids_str(),
         'tasks_range': None,
         'predict_all': True,
         'one_task': None,
