@@ -177,3 +177,5 @@ debugging.py
 .idea/
 dataset-YOLO-*.tar
 wandb/
+.mongodb-config.yml
+backup_mongodb.sh

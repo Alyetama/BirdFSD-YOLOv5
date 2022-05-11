@@ -7,27 +7,7 @@ import sys
 from typing import Union
 
 import pymongo
-import requests
 from dotenv import load_dotenv
-
-
-def api_request(url: str) -> dict:
-    """Make a GET request to the given url.
-    
-    Parameters
-    ----------
-    url : str
-        The url to make the request to.
-    
-    Returns
-    -------
-    dict
-        The JSON response as a dictionary.
-    """
-    headers = requests.structures.CaseInsensitiveDict()  # noqa
-    headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
-    resp = requests.get(url, headers=headers)
-    return resp.json()
 
 
 def mongodb_db() -> pymongo.database.Database:  # noqa
