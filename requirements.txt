@@ -7,7 +7,7 @@ Pillow
 matplotlib
 seaborn
 pandas
-wandb>=0.12.15
+wandb
 schedule>=1.1.0
 minio>=7.1.7
 pymongo[srv]>=4.0.2
