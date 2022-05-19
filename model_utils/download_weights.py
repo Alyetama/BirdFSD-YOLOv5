@@ -43,7 +43,8 @@ class DownloadModelWeights:
             raise ModelVersionDoesNotExist(
                 f'The model `{self.model_version}` does not exist! '
                 f'\nAvailable models: {json.dumps(avail_models, indent=4)}')
-        model_object_name = f'{model_document["version"]}.pt'
+        model_version = model_document["version"]
+        model_object_name = f'{model_document["name"]}-v{model_version}.pt'
 
         weights_url = s3.client.presigned_get_object(
             'model', model_object_name, expires=timedelta(hours=6))
@@ -55,10 +56,10 @@ class DownloadModelWeights:
 
         utils.requests_download(weights_url, self.output)
 
-        logger.debug(f'\n\nModel version: {model_document["version"]}')
+        logger.debug(f'\n\nModel version: {model_version}')
         logger.debug(f'Model weights file: {self.output}')
 
-        return self.output, weights_url, model_document["version"]
+        return self.output, weights_url, model_version
 
 
 if __name__ == '__main__':
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-v',
                         '--model-version',
-                        help='Model version',
+                        help='Model version [x.y.z*]',
                         type=str,
                         required=True)
     parser.add_argument('-o',

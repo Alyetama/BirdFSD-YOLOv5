@@ -12,8 +12,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
-from model_utils.s3_helper import S3
 from model_utils.mongodb_helper import mongodb_db
+from model_utils.s3_helper import S3
 from model_utils.utils import get_project_ids_str
 
 

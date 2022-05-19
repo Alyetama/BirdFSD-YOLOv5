@@ -84,7 +84,7 @@ class Predict(LoadModel, _Headers):
     ----------
     weights : str
         Path to the weights file.
-    project_ids : str
+    project_ids : Optional[str]
         Comma-seperated project ids. If empty, it will select all projects.
     tasks_range : str, optional
         Range of tasks to predict.
@@ -630,6 +630,7 @@ def opts():
     parser.add_argument(
         '-p',
         '--project-ids',
+        default=None,
         help='Comma-seperated project ids. If empty, it will select all '
         'projects',
         type=str)

@@ -4,26 +4,24 @@
 import argparse
 import json
 import sys
-import time
 from pathlib import Path
 
-import schedule
 from dotenv import load_dotenv
 from loguru import logger
 
 from model_utils.download_weights import DownloadModelWeights
 from model_utils.handlers import catch_keyboard_interrupt
 from model_utils.utils import add_logger, upload_logs
-from model_utils.utils import get_project_ids_str
 from predict import Predict
 
 
 def opts() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o',
-                        '--once',
-                        action='store_true',
-                        help='Run once then exit')
+    parser.add_argument('-v',
+                        '--model-version-number',
+                        default='latest',
+                        help='Model version number (default: latest)',
+                        type=str)
     parser.add_argument(
         '--show-config',
         action='store_true',
@@ -37,11 +35,11 @@ def main() -> None:
 
     CONFIG = {
         'weights': '',
-        'project_ids': get_project_ids_str(),
+        'project_ids': None,  # all projects
         'tasks_range': None,
         'predict_all': True,
         'one_task': None,
-        'model_version': 'latest',
+        'model_version': args.model_version_number,
         'multithreading': True,
         'delete_if_no_predictions': False,
         'if_empty_apply_label': 'no animal',
@@ -71,7 +69,6 @@ def main() -> None:
         Path('best.pt').unlink()
     except FileNotFoundError:
         pass
-
     upload_logs(logs_file)
     return
 
@@ -79,14 +76,4 @@ def main() -> None:
 if __name__ == '__main__':
     load_dotenv()
     args = opts()
-
-    if args.once or args.show_config:
-        main()
-        sys.exit(0)
-
-    logger.debug('Scheduled to run every day at 08:00...')
-    schedule.every().day.at('08:00').do(main)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    main()

@@ -394,7 +394,8 @@ def opts() -> argparse.Namespace:
                         action='store_true')
     parser.add_argument('-D',
                         '--dataset-folder',
-                        help='Path to the dataset/artifacts folder',
+                        help='Path to the artifacts folder that contains the '
+                        'dataset TAR file',
                         type=str)
 
     return parser.parse_args()

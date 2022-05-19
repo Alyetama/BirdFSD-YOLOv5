@@ -35,4 +35,4 @@ jobs:
         S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
         S3_REGION: ${{ secrets.S3_REGION }}
       run: |
-        python auto_prediction_schedule.py --once
+        python auto_prediction_schedule.py

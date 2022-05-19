@@ -29,7 +29,11 @@ class S3:
                             secret_key=os.environ['S3_SECRET_KEY'],
                             region=os.environ['S3_REGION'])
 
-    def upload(self, bucket_name, file_path, public=False, scheme='https',
+    def upload(self,
+               bucket_name,
+               file_path,
+               public=False,
+               scheme='https',
                dest=None):
         file = Path(file_path)
         if not dest:
