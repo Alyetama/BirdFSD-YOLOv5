@@ -66,7 +66,8 @@ class JSON2YOLO:
                  copy_data_from: str = None,
                  filter_underrepresented_cls: bool = False,
                  filter_cls_with_instances_under: Optional[int] = None,
-                 get_tasks_with_api: bool = False):
+                 get_tasks_with_api: bool = False,
+                 force_update: bool = False):
         self.projects = projects
         self.output_dir = output_dir
         self.only_tar_file = only_tar_file
@@ -75,6 +76,7 @@ class JSON2YOLO:
         self.filter_underrepresented_cls = filter_underrepresented_cls
         self.filter_cls_with_instances_under = filter_cls_with_instances_under
         self.get_tasks_with_api = get_tasks_with_api
+        self.force_update = force_update
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -394,7 +396,8 @@ class JSON2YOLO:
                     [o.last_modified for o in objs if o.last_modified])
                 latest_obj = [o for o in objs
                               if o.last_modified == latest_ts][0]
-                if latest_obj.size != Path(dataset_name).stat().st_size:
+                if latest_obj.size != Path(
+                        dataset_name).stat().st_size or self.force_update:
                     upload_dataset = True
             else:
                 upload_dataset = True
@@ -450,6 +453,11 @@ if __name__ == '__main__':
     parser.add_argument('--get-tasks-with-api',
                         help='Use label-studio API to get tasks data',
                         action="store_true")
+    parser.add_argument(
+        '--force-update',
+        help='Update the dataset even when it appears to be identical to the '
+        'latest dataset',
+        action="store_true")
     args = parser.parse_args()
 
     json2yolo = JSON2YOLO(
@@ -460,5 +468,6 @@ if __name__ == '__main__':
         copy_data_from=args.copy_data_from,
         filter_underrepresented_cls=args.filter_underrepresented_cls,
         filter_cls_with_instances_under=args.filter_cls_with_instances_under,
-        get_tasks_with_api=args.get_tasks_with_api)
+        get_tasks_with_api=args.get_tasks_with_api,
+        force_update=args.force_update)
     json2yolo.run()
