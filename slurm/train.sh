@@ -11,8 +11,7 @@
 
 #-------------------------------------
 export WANDB_CACHE_DIR="$WORK/.cache"
-export WANDB_RUN_ID=$(python -c "import secrets; print(secrets.token_hex(1000)[-8:])")
-export DATASET_NAME= # <<<<<<<<<<<<<<<<<<<< @required
+export WANDB_RUN_ID=$(python -c "import wandb; print(wandb.util.generate_id())")
 export GITHUB_ACTIONS_RUN_ID= # <<<<<<<<<<<<<<<<<<<< @required
 #-------------------------------------
 module unload python
@@ -27,16 +26,15 @@ rm -rf yolov5/runs wandb
 #-------------------------------------
 gh run download $GITHUB_ACTIONS_RUN_ID
 tar -xf artifacts/dataset-YOLO-*.tar
-mv artifacts/dataset-YOLO .
 mv dataset-YOLO/dataset_config.yml .
 python model_utils/relative_to_abs.py
 #-------------------------------------
 python model_utils/download_weights.py --model-version latest
 #-------------------------------------
-BATCH_SIZE=-1
+BATCH_SIZE=64
 EPOCHS=300
 PRETRAINED_WEIGHTS='best.pt'
-IMAGE_SIZE=768
+IMAGE_SIZE=640
 #-------------------------------------
 python yolov5/train.py \
    --img-size $IMAGE_SIZE \
@@ -46,6 +44,9 @@ python yolov5/train.py \
    --weights $PRETRAINED_WEIGHTS \
    --device 0
 #-------------------------------------
+WANDB_PATH_PARENT="biodiv/train"
+DATASET_NAME=$(ls dataset-YOLO-*)
+
 python model_utils/update_run_cfg.py \
-   --run-path "biodiv/train/$WANDB_RUN_ID" \
-   --dataset-name
+   --run-path "$WANDB_PATH_PARENT/$WANDB_RUN_ID" \
+   --dataset-name "$DATASET_NAME"
