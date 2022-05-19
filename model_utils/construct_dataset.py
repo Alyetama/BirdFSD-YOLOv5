@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import hashlib
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -70,7 +71,15 @@ def main():
     tasks = get_all_tasks_from_mongodb()
 
     futures = [simplify.remote(task) for task in tasks]
-    results = [ray.get(future) for future in tqdm(futures)]
+    results = []
+    for future in tqdm(futures):
+        try:
+            results.append(ray.get(future))
+        except ConnectionResetError as e:
+            print(task, 'FAILED!')
+            print('ERROR:', e)
+            futures.append(future)
+            time.sleep(10)
 
     d = {k: v for k, v in enumerate(results) if v}
 
