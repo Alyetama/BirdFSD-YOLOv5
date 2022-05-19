@@ -45,7 +45,10 @@ class S3:
                                       content_type=content_type)
         if public:
             domain = f'{scheme}://{os.environ["S3_ENDPOINT"]}'
-            return f'{domain}/{bucket_name}/{file.name}'
+            if dest:
+                return f'{domain}/{bucket_name}/{dest}'
+            else:
+                return f'{domain}/{bucket_name}/{file.name}'
         else:
             return res
 

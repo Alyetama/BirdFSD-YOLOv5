@@ -102,8 +102,8 @@ class SyncModel:
 
         model = {
             '_id': self.model_version,
-            'version': self.model_version,
-            'version_number': model_version_number,
+            'name': self.model_version.split('-v')[0],
+            'version': self.model_version.split('-v')[1],
             'projects': project_ids,
             'labels': labels_freq,
             'added_on': datetime.datetime.today(),

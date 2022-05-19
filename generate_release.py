@@ -4,6 +4,7 @@
 import argparse
 import json
 import shutil
+import sys
 import tarfile
 import textwrap
 import time
@@ -32,7 +33,6 @@ class GenerateRelease:
 
     def find_file(self, run, fname: str) -> \
             Union[tuple, list, None]:
-        # noqa
         """Finds a file in a run and uploads it to imgbb.
 
         Parameters
@@ -47,6 +47,9 @@ class GenerateRelease:
         tuple
             A tuple of the file object and the url of the uploaded image.
         """
+
+        s3 = S3()
+
         try:
             files = [x for x in list(run.files()) if fname in x.name]  # noqa
         except IndexError:
@@ -59,9 +62,9 @@ class GenerateRelease:
             file.download(replace=True)
             if fname == 'hist.jpg':
                 dest = f'{Path(fname).stem}-{self.version}{Path(fname).suffix}'
-                url = S3().upload('public', file.name, public=True, dest=dest)
+                url = s3.upload('public', file.name, public=True, dest=dest)
             else:
-                url = S3().upload('public', file.name, public=True)
+                url = s3.upload('public', file.name, public=True)
             if fname != 'Validation':
                 return file, url
             else:
@@ -90,6 +93,7 @@ class GenerateRelease:
 
         logger.debug(run.config)
         print()
+
         with open(f'{self.release_folder}/{self.version}-config.json',
                   'w') as j:
             json.dump(run.config, j, indent=4)
@@ -99,6 +103,16 @@ class GenerateRelease:
         with open(f'{self.release_folder}/{self.version}-classes.txt',
                   'w') as f:
             f.writelines([f'{x}\n' for x in classes])
+
+        summary = {
+            k: v
+            for k, v in run.summary.__dict__.items()
+            if k not in ['_client', '_run', '_root', '_locked_keys']
+        }
+
+        with open(f'{self.release_folder}/{self.version}-summary.json',
+                  'w') as j:
+            json.dump(summary, j, indent=4)
 
         if self.dataset_folder:
             shutil.copy2(f'{self.dataset_folder}/classes.json',
@@ -309,15 +323,21 @@ class GenerateRelease:
                 dataset_file_name = None
 
             print(f'{"-" * 40}\n')
+            gpg_cmds = []
             for file in [
                     f'{self.version}-best_weights.pt',
                     f'{self.version}-tasks.json', dataset_file_name
             ]:
                 if file:
-                    print(
+                    gpg_cmds.append(
                         f'FILE="{self.release_folder}/{file}"; gpg '
-                        '--pinentry-mode loopback -c "$FILE" && rm "$FILE"\n')
-            print(f'{"-" * 40}')
+                        '--pinentry-mode loopback -c "$FILE" && rm "$FILE"')
+
+            full_gpg_cmd = ' && '.join(gpg_cmds)
+            if sys.stdout.isatty():
+                print(f'\033[31m{full_gpg_cmd}\033[39m')
+            else:
+                print(full_gpg_cmd)
 
         upload_logs(logs_file)
 
@@ -329,7 +349,10 @@ class GenerateRelease:
                 f'{self.repo} {self.release_folder}/*.gpg ' \
                 f'{self.release_folder}/*.tgz'
 
-            print(gh_cli_cmd)
+            if sys.stdout.isatty():
+                print(f'\033[31m{gh_cli_cmd}\033[39m')
+            else:
+                print(gh_cli_cmd)
         return
 
 

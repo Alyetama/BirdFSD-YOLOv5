@@ -351,6 +351,12 @@ class JSON2YOLO:
                 for k, v in get_labels_count().items()
                 if k not in os.getenv('EXCLUDE_LABELS')
             }
+            if self.filter_cls_with_instances_under:
+                classes_json = {
+                    k: v
+                    for k, v in classes_json
+                    if v > self.filter_cls_with_instances_under
+                }
             json.dump(classes_json, f, indent=4)
 
         folder_name = Path(self.output_dir).name
