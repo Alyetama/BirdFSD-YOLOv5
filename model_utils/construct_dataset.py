@@ -76,7 +76,7 @@ def main():
     for future in tqdm(futures):
         try:
             results.append(ray.get(future))
-        except ConnectionResetError as e:
+        except (ConnectionResetError, ray.exceptions.RayTaskError) as e:
             print('ERROR:', e)
             futures.append(future)
             time.sleep(10)
