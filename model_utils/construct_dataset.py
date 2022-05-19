@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import ray
 from dotenv import load_dotenv
 from tqdm import tqdm
@@ -76,7 +77,6 @@ def main():
         try:
             results.append(ray.get(future))
         except ConnectionResetError as e:
-            print(task, 'FAILED!')
             print('ERROR:', e)
             futures.append(future)
             time.sleep(10)
