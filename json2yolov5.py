@@ -354,7 +354,7 @@ class JSON2YOLO:
             if self.filter_cls_with_instances_under:
                 classes_json = {
                     k: v
-                    for k, v in classes_json
+                    for k, v in classes_json.items()
                     if v > self.filter_cls_with_instances_under
                 }
             json.dump(classes_json, f, indent=4)
