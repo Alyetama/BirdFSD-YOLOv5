@@ -180,3 +180,4 @@ wandb/
 .mongodb-config.yml
 backup_mongodb.sh
 train_opts.json
+mongodb_backups/
