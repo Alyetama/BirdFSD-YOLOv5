@@ -32,6 +32,10 @@ from model_utils.s3_helper import BucketDoesNotExist, S3
 from model_utils.utils import tasks_data, get_labels_count, get_project_ids_str
 
 
+class FailedToParseImageURL(Exception):
+    pass
+
+
 class JSON2YOLO:
     """Converts the output of a Label-studio project to a YOLO dataset.
 
@@ -165,7 +169,14 @@ class JSON2YOLO:
 
     def convert_to_yolo(self, task: dict) -> Optional[str]:
         if self.copy_data_from or self.enable_s3:
-            object_name = task['image'].split('s3://data/')[-1]
+            img = task['image']
+            if img.startswith('s3://'):
+                object_name = img.split('s3://data/')[-1]
+            elif img.startswith('http'):
+                object_url = img.split('?')[0]
+                object_name = '/'.join(Path(object_url).parts[-2:])
+            else:
+                raise FailedToParseImageURL(img)
             cur_img_name = Path(object_name).name
         else:
             if 's3://' in task['image'] and not self.enable_s3:
@@ -346,6 +357,9 @@ class JSON2YOLO:
         tasks_data(f'tasks.json')
 
         with open('classes.json', 'w') as f:
+            if not os.getenv('EXCLUDE_LABELS'):
+                os.environ['EXCLUDE_LABELS'] = []
+
             classes_json = {
                 k: v
                 for k, v in get_labels_count().items()
@@ -385,12 +399,7 @@ class JSON2YOLO:
             else:
                 upload_dataset = True
             if upload_dataset:
-                if self.copy_data_from and os.geteuid() != 0:
-                    logger.error(
-                        'Cannot run a local copy. Current user has no root '
-                        'access. Using a remote upload operation instead...')
-
-                if self.copy_data_from and os.geteuid() == 0:
+                if self.copy_data_from:
                     logger.debug('Copying the dataset to the bucket...')
                     ds_path = f'{Path(self.copy_data_from).parent}/dataset'
                     shutil.copy(dataset_name, f'{ds_path}/{dataset_name}')
