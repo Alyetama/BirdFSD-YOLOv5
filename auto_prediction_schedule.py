@@ -17,11 +17,6 @@ from predict import Predict
 
 def opts() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v',
-                        '--model-version-number',
-                        default='latest',
-                        help='Model version number (default: latest)',
-                        type=str)
     parser.add_argument(
         '--show-config',
         action='store_true',
@@ -39,7 +34,7 @@ def main() -> None:
         'tasks_range': None,
         'predict_all': True,
         'one_task': None,
-        'model_version': args.model_version_number,
+        'model_version': 'latest',
         'multithreading': True,
         'delete_if_no_predictions': False,
         'if_empty_apply_label': 'no animal',
@@ -48,8 +43,11 @@ def main() -> None:
 
     if not CONFIG['weights'] and CONFIG['model_version'] == 'latest':
         dmw = DownloadModelWeights(CONFIG['model_version'])
+        skip_download = False
+        if args.show_config:
+            skip_download = True
         weights, weights_url, weights_model_ver = dmw.get_weights(
-            skip_download=False)
+            skip_download=skip_download)
         logger.info(f'Downloaded weights to {weights}')
         CONFIG['weights'] = weights
         CONFIG['model_version'] = weights_model_ver

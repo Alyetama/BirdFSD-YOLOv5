@@ -4,6 +4,7 @@
 import argparse
 import json
 from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -51,7 +52,7 @@ class DownloadModelWeights:
 
         if skip_download:
             logger.debug(f'Download URL: {weights_url}')
-            return self.output, weights_url
+            return self.output, weights_url, Path(model_object_name).stem
         logger.debug(f'Downloading {model_object_name}...')
 
         utils.requests_download(weights_url, self.output)
@@ -59,7 +60,7 @@ class DownloadModelWeights:
         logger.debug(f'\n\nModel version: {model_version}')
         logger.debug(f'Model weights file: {self.output}')
 
-        return self.output, weights_url, model_version
+        return self.output, weights_url, Path(model_object_name).stem
 
 
 if __name__ == '__main__':

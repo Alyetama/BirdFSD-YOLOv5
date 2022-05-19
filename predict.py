@@ -624,7 +624,7 @@ def opts():
                         type=str)
     parser.add_argument('-v',
                         '--model-version',
-                        help='Name of the model version',
+                        help='Model version including its name [*-vX.Y.Z*]',
                         type=str,
                         required=True)
     parser.add_argument(
