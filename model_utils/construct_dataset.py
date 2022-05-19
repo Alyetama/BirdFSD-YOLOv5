@@ -46,7 +46,7 @@ def simplify(task):
         image_width = entry['original_width']
         image_height = entry['original_height']
         labels.append({
-            n: {
+            str(n): {
                 'class': label,
                 'xywh': xywh,
                 'image_width': image_width,
@@ -81,9 +81,9 @@ def main():
             futures.append(future)
             time.sleep(10)
 
-    d = {k: v for k, v in enumerate(results) if v}
+    d = {str(k): v for k, v in enumerate(results) if v}
 
-    df = pd.DataFrame.from_dict(d)
+    df = pd.DataFrame.from_dict(d).T
     ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
     ds_name = f'{ts}.parquet'
     df.to_parquet(ds_name)
