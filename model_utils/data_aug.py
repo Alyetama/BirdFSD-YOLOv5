@@ -34,7 +34,8 @@ def create_batch(images_dir, labels_dir):
 
         bboxes_per_img = []
         for line in lines:
-            xywh = list(map(float, line.rstrip().split(' ')[1:]))
+            nxywh = list(map(float, line.rstrip().split(' ')))
+            xywh = nxywh[1:]
             bbox = xywh_to_xyxy(*xywh, img.shape[1], img.shape[0])
             bboxes_per_img.append(BoundingBox(*bbox))
         bbs.append(bboxes_per_img)

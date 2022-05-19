@@ -56,10 +56,3 @@ def get_tasks_from_mongodb(project_id: Union[int, str],
         with open('tasks.json', 'w') as j:
             json.dump(tasks, j, indent=4)
     return tasks
-
-
-if __name__ == '__main__':
-    load_dotenv()
-    if len(sys.argv) == 1:
-        raise SystemExit('Missing project id!')
-    get_tasks_from_mongodb(sys.argv[1])
