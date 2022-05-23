@@ -28,7 +28,7 @@ class DownloadModelWeights:
         self.model_version = model_version
         self.output = output
 
-    def get_weights(self, skip_download=False):
+    def get_weights(self, skip_download=False, object_name_only=False):
         handlers.catch_keyboard_interrupt()
 
         db = mongodb_helper.mongodb_db()
@@ -46,6 +46,9 @@ class DownloadModelWeights:
                 f'\nAvailable models: {json.dumps(avail_models, indent=4)}')
         model_version = model_document["version"]
         model_object_name = f'{model_document["name"]}-v{model_version}.pt'
+        if object_name_only:
+            print(model_object_name)
+            return model_object_name
 
         weights_url = s3.client.presigned_get_object(
             'model', model_object_name, expires=timedelta(hours=6))
@@ -81,8 +84,13 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Return the download URL without downloading '
                         'the file')
+    parser.add_argument('-n',
+                        '--object-name-only',
+                        action='store_true',
+                        help='Return the weights objects name then exit')
     args = parser.parse_args()
 
     dmw = DownloadModelWeights(model_version=args.model_version,
                                output=args.output)
-    dmw.get_weights(args.skip_download)
+    dmw.get_weights(skip_download=args.skip_download,
+                    object_name_only=args.object_name_only)
