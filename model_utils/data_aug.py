@@ -4,7 +4,9 @@
 import argparse
 import random
 import shutil
+import tarfile
 import uuid
+from datetime import datetime
 from glob import glob
 from pathlib import Path
 
@@ -54,6 +56,7 @@ def export_augs_as_files(image_aug, bbs_aug, output_dir, SKIPPED):
                                                  image_height=im_shape[1])
                 except ValueError:
                     SKIP = True
+                    continue
 
                 line = ' '.join(
                     [str(_x) for _x in [int(bbox.label), *yolo_bbox]])
@@ -232,6 +235,12 @@ def run_aug_pipeline(datase_path, batch_size=128):
             f2.write(
                 lines.replace(f'path: {dataset_name}',
                               f'path: {aug_dataset_name}'))
+
+    ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
+    dataset_name = f'{output_dir}-{ts}.tar'
+
+    with tarfile.open(dataset_name, 'w') as tar:
+        tar.add(output_dir, Path(output_dir).name)
     return
 
 
