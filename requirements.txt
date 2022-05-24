@@ -1,6 +1,6 @@
-requests>=2.27.1
-python-dotenv>=0.19.2
-loguru>=0.5.3
+requests==2.27.1
+python-dotenv==0.20.0
+loguru==0.6.0
 ray
 tqdm
 Pillow
@@ -8,19 +8,19 @@ matplotlib
 seaborn
 pandas
 wandb
-schedule>=1.1.0
-minio>=7.1.7
-pymongo[srv]>=4.0.2
+schedule==1.1.0
+minio==7.1.8
+pymongo[srv]==4.1.1
 numpy
-nvidia-ml-py3>=7.352.0
-zstandard>=0.17.0
+nvidia-ml-py3==7.352.0
+zstandard==0.17.0
 
 # yolov5 requirements
-opencv-python>=4.1.2
-PyYAML>=5.3.1
-scipy>=1.4.1
-torch>=1.7.0
-torchvision>=0.8.1
-tensorboard>=1.15
-pyarrow~=7.0.0
-fastparquet~=0.8.1
+opencv-python==4.5.5.64
+PyYAML==6.0
+scipy==1.8.1
+torch==1.11.0
+torchvision==0.12.0
+tensorboard==2.9.0
+pyarrow==7.0.0
+fastparquet==0.8.1
