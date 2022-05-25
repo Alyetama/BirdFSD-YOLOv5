@@ -26,10 +26,18 @@ from loguru import logger
 from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
-from model_utils.handlers import catch_keyboard_interrupt
-from model_utils.mongodb_helper import get_tasks_from_mongodb
-from model_utils.s3_helper import BucketDoesNotExist, S3
-from model_utils.utils import tasks_data, get_labels_count, get_project_ids_str
+try:
+    from .model_utils.handlers import catch_keyboard_interrupt
+    from .model_utils.mongodb_helper import get_tasks_from_mongodb
+    from .model_utils.s3_helper import BucketDoesNotExist, S3
+    from .model_utils.utils import (tasks_data, get_labels_count,
+                                    get_project_ids_str)
+except ImportError:
+    from model_utils.handlers import catch_keyboard_interrupt
+    from model_utils.mongodb_helper import get_tasks_from_mongodb
+    from model_utils.s3_helper import BucketDoesNotExist, S3
+    from model_utils.utils import (tasks_data, get_labels_count,
+                                   get_project_ids_str)
 
 
 class FailedToParseImageURL(Exception):

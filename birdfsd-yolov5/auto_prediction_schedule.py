@@ -9,10 +9,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 
-from model_utils.download_weights import DownloadModelWeights
-from model_utils.handlers import catch_keyboard_interrupt
-from model_utils.utils import add_logger, upload_logs
-from predict import Predict
+try:
+    from .model_utils.download_weights import DownloadModelWeights
+    from .model_utils.handlers import catch_keyboard_interrupt
+    from .model_utils.utils import add_logger, upload_logs
+    from .predict import Predict
+except ImportError:
+    from model_utils.download_weights import DownloadModelWeights
+    from model_utils.handlers import catch_keyboard_interrupt
+    from model_utils.utils import add_logger, upload_logs
+    from predict import Predict
 
 
 def opts() -> argparse.Namespace:

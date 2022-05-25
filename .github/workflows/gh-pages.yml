@@ -30,8 +30,8 @@ jobs:
       - name: Build
         run: |
           mkdir -p docs/docs
-          pdoc --html ./BirdFSD-YOLOv5 --output-dir docs/docs
-          mv docs/docs/BirdFSD-YOLOv5/* docs/docs
+          pdoc --html ./birdfsd-yolov5 --output-dir docs/docs
+          mv docs/docs/birdfsd-yolov5/* docs/docs
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

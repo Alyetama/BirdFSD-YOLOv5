@@ -20,9 +20,14 @@ from loguru import logger
 from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
-from model_utils.handlers import catch_keyboard_interrupt
-from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-from model_utils.utils import add_logger, upload_logs, get_project_ids_str
+try:
+    from .model_utils.handlers import catch_keyboard_interrupt
+    from .model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
+    from .model_utils.utils import add_logger, upload_logs, get_project_ids_str
+except ImportError:
+    from model_utils.handlers import catch_keyboard_interrupt
+    from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
+    from model_utils.utils import add_logger, upload_logs, get_project_ids_str
 
 
 class _Headers:

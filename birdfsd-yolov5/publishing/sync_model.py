@@ -6,15 +6,23 @@ import copy
 import datetime
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
-from model_utils.mongodb_helper import mongodb_db
-from model_utils.s3_helper import S3
-from model_utils.utils import get_project_ids_str
+sys.path.append('../model_utils')
+
+try:
+    from ..model_utils.mongodb_helper import mongodb_db
+    from ..model_utils.s3_helper import S3
+    from ..model_utils.utils import get_project_ids_str
+except ImportError:
+    from model_utils.mongodb_helper import mongodb_db
+    from model_utils.s3_helper import S3
+    from model_utils.utils import get_project_ids_str
 
 
 class ModelVersionFormatError(Exception):

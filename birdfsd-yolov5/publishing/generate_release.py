@@ -16,8 +16,14 @@ import wandb
 from dotenv import load_dotenv
 from loguru import logger
 
-from model_utils.s3_helper import S3
-from model_utils.utils import add_logger, upload_logs
+sys.path.insert(0, '..')
+
+try:
+    from ..model_utils.s3_helper import S3
+    from ..model_utils.utils import add_logger, upload_logs
+except ImportError:
+    from model_utils.s3_helper import S3
+    from model_utils.utils import add_logger, upload_logs
 
 
 class GenerateRelease:

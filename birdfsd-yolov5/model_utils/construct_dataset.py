@@ -11,9 +11,15 @@ import ray
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from mongodb_helper import get_tasks_from_mongodb
-from s3_helper import S3
-from utils import get_project_ids_str
+try:
+    from .mongodb_helper import get_tasks_from_mongodb
+    from .s3_helper import S3
+    from .utils import get_project_ids_str
+except ImportError:
+    from mongodb_helper import get_tasks_from_mongodb
+    from s3_helper import S3
+    from utils import get_project_ids_str
+
 
 
 def get_all_tasks_from_mongodb():
