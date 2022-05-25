@@ -38,20 +38,15 @@ class SyncModel:
     def check_version_number_format(self) -> str:
         """Check the format of the model version.
 
-        Returns
-        -------
-        re.Match
-            The match object if the version is valid, None otherwise.
+        Notes:
+            The version number should be in the format of 'vX.Y.Z' or
+            'vX.Y.Z-alpha.N'.
 
-        Raises
-        ------
-        ModelVersionFormatError
-            If the version is not valid.
+        Returns:
+            re.Match: The match object if the version is valid, None otherwise.
 
-        Notes
-        -----
-        The version number should be in the format of 'vX.Y.Z' or
-        'vX.Y.Z-alpha.N'.
+        Raises:
+            ModelVersionFormatError: If the version is not valid.
         """
         model_version_number = 'v' + self.model_version.split(
             self.model_name)[1].split('-v')[1]
@@ -70,10 +65,8 @@ class SyncModel:
         dataset. It first gets the labels from the database, then adds the new
         version of the model to the `model` collection in the database.
 
-        Returns
-        -------
-        model : dict
-            The model that was added to the database.
+        Returns:
+            model (dict): The model that was added to the database.
         """
 
         model_version_number = self.check_version_number_format()

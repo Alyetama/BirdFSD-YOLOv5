@@ -85,6 +85,19 @@ class JSON2YOLO:
     @staticmethod
     def bbox_ls_to_yolo(x: float, y: float, width: float,
                         height: float) -> tuple:
+        """Converts a bounding box from the format used by the labelme tool to
+        the format used by the yolo tool.
+
+        Args:
+            x: The x coordinate of the top left corner of the bounding box.
+            y: The y coordinate of the top left corner of the bounding box.
+            width: The width of the bounding box.
+            height: The height of the bounding box.
+
+        Returns:
+            A tuple containing the x, y, width and height of the bounding box in
+            the format used by the yolo tool.
+        """
         x = (x + width / 2) / 100
         y = (y + height / 2) / 100
         w = width / 100
@@ -92,6 +105,14 @@ class JSON2YOLO:
         return x, y, w, h
 
     def get_data(self) -> list:
+        """This function is used to get data from the database.
+
+        Args:
+            self (object): The object of the class.
+
+        Returns:
+            list: A list of data.
+        """
 
         @ray.remote
         def iter_projects(proj_id):
@@ -170,6 +191,19 @@ class JSON2YOLO:
         return data
 
     def convert_to_yolo(self, task: dict) -> Optional[str]:
+        """Converts the bounding box coordinates from Label Studio to YOLO
+        format.
+        Args:
+            x (int): The x coordinate of the top left corner of the bounding
+                box.
+            y (int): The y coordinate of the top left corner of the bounding
+                box.
+            width (int): The width of the bounding box.
+            height (int): The height of the bounding box.
+
+        Returns:
+            tuple: The converted bounding box coordinates in YOLO format.
+        """
         if self.copy_data_from or self.enable_s3:
             img = task['image']
             if img.startswith('s3://'):
@@ -254,6 +288,14 @@ class JSON2YOLO:
 
     @staticmethod
     def split_data(_output_dir: str) -> None:
+        """Split the data into train and validation sets.
+
+        Args:
+            _output_dir: The directory where the data is stored.
+
+        Returns:
+            None
+        """
         for subdir in [
                 'images/train', 'labels/train', 'images/val', 'labels/val'
         ]:
@@ -282,6 +324,14 @@ class JSON2YOLO:
         return
 
     def plot_results(self, results: list) -> None:
+        """Plots the results of the classification.
+
+        Args:
+            results (list): The results of the classification.
+
+        Returns:
+            None
+        """
         matplotlib.use('Agg')
         plt.subplots(figsize=(12, 8), dpi=300)
         plt.xticks(rotation=90)
@@ -307,7 +357,16 @@ class JSON2YOLO:
         plt.savefig(f'{self.output_dir}/hist.jpg', bbox_inches='tight')
         return
 
-    def run(self):
+    def run(self) -> None:
+        """This method is used to run main preprocessing pipeline and convert
+        the data to the yolov5 format.
+
+        Returns:
+            None
+
+        Raises:
+            BucketDoesNotExist: If the dataset S3 bucket does not exist.
+        """
 
         @ray.remote
         def iter_convert_to_yolo(t):

@@ -16,11 +16,15 @@ from predict import Predict
 
 
 def opts() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Returns:
+        argparse.Namespace: Namespace object containing the parsed arguments.
+    """
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--opts-file',
-        type=str,
-        help='JSON file with predict.py options')
+    parser.add_argument('--opts-file',
+                        type=str,
+                        help='JSON file with predict.py options')
     parser.add_argument(
         '--show-opts',
         action='store_true',
@@ -29,6 +33,12 @@ def opts() -> argparse.Namespace:
 
 
 def main() -> None:
+    """A pipeline to run the prediction module. Intended to be used as systemctl
+    service or inside a GitHub action.
+
+    Returns:
+        None
+    """
     logs_file = add_logger(__file__)
     catch_keyboard_interrupt()
 

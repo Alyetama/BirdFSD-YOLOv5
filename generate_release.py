@@ -21,6 +21,7 @@ from model_utils.utils import add_logger, upload_logs
 
 
 class GenerateRelease:
+
     def __init__(self, run_path: str, version: str, repo: Optional[str],
                  overwrite: bool = False, dataset_folder: str = None) -> \
             None:
@@ -35,17 +36,12 @@ class GenerateRelease:
             Union[tuple, list, None]:
         """Finds a file in a run and uploads it to imgbb.
 
-        Parameters
-        ----------
-        run:
-            The W&B run to use for the release.
-        fname: str
-            A string, the name of the file to be found.
+        Args:
+            run: The W&B run to use for the release.
+            fname(str): A string, the name of the file to be found.
 
-        Returns
-        -------
-        tuple
-            A tuple of the file object and the url of the uploaded image.
+        Returns:
+            None
         """
 
         s3 = S3()
@@ -76,13 +72,11 @@ class GenerateRelease:
         extracts the model's configuration, & classes and saves them
         to a file.
 
-        Returns
-        -------
-        run:
-            The W&B run to use for the release.
-        tuple
-            The config dictionary and the paths to the config and classes
-            files.
+        Args:
+            run: The W&B run to use for the release.
+
+        Returns:
+            None
         """
         logger.debug(run)
 
@@ -134,17 +128,12 @@ class GenerateRelease:
     def release_notes(self, run, f1_score: float) -> str:
         """Creates a release notes file.
 
-        Parameters
-        ----------
-        run:
-            The W&B run to use for the release.
-        f1_score: float
-            The F1 score of the current run.
+        Args:
+            run: The W&B run to use for the release.
+            f1_score(float): The F1 score of the current run.
 
-        Returns
-        -------
-        str
-            The content of the generated release notes file.
+        Returns:
+            str: The content of the release notes file.
         """
 
         _run = {
@@ -285,9 +274,8 @@ class GenerateRelease:
             4. Creates the release notes
             5. Generates a command to create the release
 
-        Returns
-        -------
-        None
+        Returns:
+            None
         """
         logs_file = add_logger(__file__)
 
@@ -357,19 +345,10 @@ class GenerateRelease:
 
 
 def opts() -> argparse.Namespace:
-    """This is a function to parse command line arguments.
+    """Parse command line arguments.
 
-    Parameters
-    ----------
-    -n (--release-name): Release base name (e.g., BirdFSD-YOLOv5)
-    -v (--release-version): Release version (e.g., v1.0.0-alpha.1.3)
-    --repo: Link to the repository
-    --overwrite: Overwrites the release folder if it already exists
-
-    Returns
-    -------
-    args:
-        A namespace containing the parsed command line arguments
+    Returns:
+        argparse.Namespace: Namespace object containing the parsed arguments.
     """
     parser = argparse.ArgumentParser(
         epilog=f'Basic usage: python {Path(__file__).name} '

@@ -3,11 +3,9 @@
 
 import json
 import os
-import sys
 from typing import Union
 
 import pymongo
-from dotenv import load_dotenv
 
 
 def mongodb_db() -> pymongo.database.Database:  # noqa

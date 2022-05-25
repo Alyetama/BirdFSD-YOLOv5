@@ -76,7 +76,7 @@ def requests_download(url: str, filename: str) -> None:
     Raises:
         RuntimeError: If the returned status code is not 200.
     """
-    
+
     handlers.catch_keyboard_interrupt()
     r = requests.get(url, stream=True, allow_redirects=True)
     if r.status_code != 200:
@@ -144,6 +144,7 @@ def get_data(json_min: bool) -> list:
     Returns:
         A list of all tasks.
     """
+
     @ray.remote
     def iter_db(proj_id: str, j_min: bool):
         return mongodb_helper.get_tasks_from_mongodb(proj_id,

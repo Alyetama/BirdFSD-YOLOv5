@@ -24,6 +24,7 @@ def get_all_tasks_from_mongodb():
     Returns:
         list: A list of all the tasks in the database.
     """
+
     @ray.remote
     def _get_all_tasks_from_mongodb(proj_id):
         return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)

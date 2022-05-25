@@ -40,7 +40,8 @@ class _Headers:
         """Make headers for the request.
 
         Returns:
-            headers (dict): A dictionary of headers.
+            CaseInsensitiveDict: A dictionary of headers.
+
         """
         load_dotenv()
         headers = CaseInsensitiveDict()
@@ -68,7 +69,8 @@ class LoadModel:
         """Loads a pretrained YOLOv5 model for a given dataset.
 
         Returns:
-            (torch.nn.Module): a YOLOv5 model.
+            torch.nn.Module: a YOLOv5 model.
+
         """
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
@@ -76,92 +78,30 @@ class LoadModel:
 
 
 class Predict(LoadModel, _Headers):
-    """This class is used to predict bounding boxes for images in a given
-    project. It uses the YOLOv5 model to predict bounding boxes and then posts
-    the predictions to the Label Studio server.
+    """Prediction and preprocessing class.
 
-    Parameters
-    ----------
-    weights : str
-        Path to the weights file.
-    project_ids : Optional[str]
-        Comma-seperated project ids. If empty, it will select all projects.
-    tasks_range : str, optional
-        Range of tasks to predict.
-        Example: '1,10' will predict tasks 1 to 10.
-        Default: ''
-    predict_all : bool, optional
-        Predict all tasks in the project(s).
-        Default: False
-    one_task : Union[None, int], optional
-        Predict a single task.
-        Default: None
-    model_version : Union[None, str], optional
-        Model version to use.
-        Default: None
-    multithreading : bool, optional
-        Use multithreading.
-        Default: True
-    delete_if_no_predictions : bool, optional
-        Delete tasks that have no predictions.
-        Default: True
-    if_empty_apply_label : str, optional
-        Apply a label to tasks that have no predictions.
-        Default: None
+    This class is used to predict bounding boxes and classes for images in
+    a given project. It uses the YOLOv5 model to predict bounding boxes and then
+    posts the predictions to the Label Studio server.
 
-    Attributes
-    ----------
-    headers : dict
-        Headers for the requests.
-    model : torch.nn.Module
-        YOLOv5 model.
-    model_version : str
-        Model version to use.
-    project_ids : Optional[str]
-        Ids of the projects to predict.
-    tasks_range : Optional[str]
-        Range of tasks to predict.
-    predict_all : bool
-        Predict all tasks in the project(s).
-    one_task : Optional[int]
-        Predict a single task.
-    multithreading : bool
-        Use multithreading.
-    delete_if_no_predictions : bool
-        Delete tasks that have no predictions.
-    if_empty_apply_label : str
-        Apply a label to tasks that have no predictions.
-    get_tasks_with_api : bool
-        Get tasks with label-studio API instead of MongoDB.
-    db : pymongo.database.Database
-        An instance of mongoDB client (if connection string exists in .env).
-    flush : list
-        Used to flush temp files written to disk during prediction.
-
-    Methods
-    -------
-    get_task(task_id)
-        Get a task from the Label Studio server.
-    download_image(img_url)
-        Download an image from the Label Studio server.
-    yolo_to_ls(x, y, width, height, score, n)
-        Convert YOLOv5 predictions to Label Studio format.
-    get_all_tasks()
-        Get all tasks from the Label Studio server.
-    selected_tasks(tasks, start, end)
-        Select a range of tasks.
-    single_task(task_id)
-        Get a single task from the Label Studio server.
-    pred_result(x, y, w, h, score, label)
-        Create a prediction result.
-    pred_post(results, scores, task_id)
-        Create a prediction post.
-    pred_exists(task)
-        Check if a prediction with the current model exists in the task.
-    post_prediction(task)
-        Post a prediction to the Label Studio server.
-    apply_predictions()
-        Apply predictions to the Label Studio server.
+    Attributes:
+        headers (dict): Headers for the requests.
+        model (torch.nn.Module): YOLOv5 model.
+        model_version (str): Model version to use.
+        project_ids (Optional[str]): Ids of the projects to predict.
+        tasks_range (Optional[str]): Range of tasks to predict.
+        predict_all (bool): Predict all tasks in the project(s).
+        one_task (Optional[int]): Predict a single task.
+        multithreading (bool): Use multithreading.
+        delete_if_no_predictions (bool): Delete tasks that have no predictions.
+        if_empty_apply_label (str): Apply a label to tasks that have no
+            predictions.
+        get_tasks_with_api (bool): Get tasks with label-studio API instead of
+            MongoDB.
+        db (pymongo.database.Database): An instance of mongoDB client (if
+            connection string exists in .env).
+        flush (list): Used to flush temp files written to disk during
+            prediction.
     """
 
     def __init__(self,
@@ -193,16 +133,14 @@ class Predict(LoadModel, _Headers):
 
     def download_image(self, img_url: str) -> str:
         """Download an image from a URL and save it to a local file.
+
+        Args:
+          img_url(str): The URL of the image to download.
+
+        Returns:
+            str: Path to the temporary image file.
+
         
-        Parameters
-        ----------
-        img_url : str
-            The URL of the image to download.
-        
-        Returns
-        -------
-        img_local_path : str
-            The path to the local file containing the downloaded image.
         """
         cur_img_name = Path(img_url.split('?')[0]).name
         r = requests.get(img_url)
@@ -218,26 +156,16 @@ class Predict(LoadModel, _Headers):
         """Converts YOLOv5 output to a tuple of the form:
         [x, y, width, height, score, label]
 
-        Parameters
-        ----------
-        x : float
-            The x coordinate of the center of the bounding box.
-        y : float
-            The y coordinate of the center of the bounding box.
-        width : float
-            The width of the bounding box.
-        height : float
-            The height of the bounding box.
-        score : float
-            The confidence score of the bounding box.
-        n : int
-            The index of the class label.
+        Args:
+            x (float): The x coordinate of the center of the bounding box.
+            y (float): The y coordinate of the center of the bounding box.
+            width (float): The width of the bounding box.
+            height (float): The height of the bounding box.
+            score (float): The confidence score of the bounding box.
+            n (int): The index of the class label.
 
-        Returns
-        -------
-        list
-            A tuple of the form:
-            [x, y, width, height, score, label]
+        Returns:
+            tuple: (x, y, width, height, score, label)
         """
         x = (x - width / 2) * 100
         y = (y - height / 2) * 100
@@ -252,16 +180,12 @@ class Predict(LoadModel, _Headers):
 
     def get_task(self, _task_id: int) -> dict:
         """This function returns a single task from a project.
-        
-        Parameters
-        ----------
-        _task_id : int
-            The id of the task to be returned.
-        
-        Returns
-        -------
-        dict
-            A dictionary containing the task data.
+
+        Args:
+            _task_id (int): The id of the task to be returned.
+
+        Returns:
+            dict: A dictionary containing the task data.
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -271,18 +195,16 @@ class Predict(LoadModel, _Headers):
 
     def get_all_tasks(self, project_ids: List[str]) -> list:
         """Fetch all tasks from the project.
-
+        
         This function fetches all tasks from the project.
 
-        Parameters
-        ----------
-        project_ids : str
-            Comma-seperated string of project ids.
+        Args:
+          project_ids(str): Comma-seperated string of project ids.
+          project_ids: List[str]: 
 
-        Returns
-        -------
-        list
-            A list of tasks.
+        Returns:
+            list: A list of tasks.
+        
         """
         logger.debug('Fetching all tasks. This might take few minutes...')
         q = 'exportType=JSON&download_all_tasks=true'
@@ -297,15 +219,16 @@ class Predict(LoadModel, _Headers):
         return sum(all_tasks, [])
 
     @staticmethod
-    def get_all_tasks_from_mongodb(project_ids):
+    def _get_all_tasks_from_mongodb(project_ids: List[str]):
 
         @ray.remote
-        def _get_all_tasks_from_mongodb(proj_id):
+        def _get_all_tasks_from_mongodb_remote(proj_id: str):
             return get_tasks_from_mongodb(proj_id, dump=False, json_min=False)
 
         futures = []
         for project_id in project_ids:
-            futures.append(_get_all_tasks_from_mongodb.remote(project_id))
+            futures.append(
+                _get_all_tasks_from_mongodb_remote.remote(project_id))
         tasks = []
         for future in tqdm(futures, desc='Projects'):
             tasks.append(ray.get(future))
@@ -316,34 +239,24 @@ class Predict(LoadModel, _Headers):
         """Returns a list of tasks from the given list of tasks,
         whose id is in the range [start, end].
 
-        Parameters
-        ----------
-        tasks : list
-            A list of tasks id.
-        start : int
-            The start of the range.
-        end : int
-            The end of the range.
+        Args:
+            tasks (list): A list of tasks id.
+            start (int): The start of the range.
+            end (int): The end of the range.
 
-        Returns
-        -------
-        list
-            A list of tasks.
+        Returns:
+            list: A list of tasks.
         """
         return [t for t in tasks if t['id'] in range(start, end + 1)]
 
     def single_task(self, task_id: int) -> list:
         """Get a single task by id.
 
-        Parameters
-        ----------
-        task_id : int
-            The id of the task to get.
+        Args:
+            task_id (int): The id of the task to get.
 
-        Returns
-        -------
-        list
-            A list containing the task data.
+        Returns:
+            list: A list containing the task data.
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -356,25 +269,16 @@ class Predict(LoadModel, _Headers):
         a prediction and returns a dictionary with the prediction's
         information.
 
-        Parameters
-        ----------
-        x : float
-            The x coordinate of the prediction.
-        y : float
-            The y coordinate of the prediction.
-        w : float
-            The width of the prediction.
-        h : float
-            The height of the prediction.
-        score : float
-            The confidence score of the prediction.
-        label : str
-            The label of the prediction.
+        Args:
+            x (float): The x coordinate of the prediction.
+            y (float): The y coordinate of the prediction.
+            w (float): The width of the prediction.
+            h (float): The height of the prediction.
+            score (float): The confidence score of the prediction.
+            label (str): The label of the prediction.
 
-        Returns
-        -------
-        dict
-            A dictionary with the prediction's information.
+        Returns:
+            dict: A dictionary with the prediction's data.
         """
         return {
             "type": "rectanglelabels",
@@ -394,19 +298,14 @@ class Predict(LoadModel, _Headers):
         """This function is used to create an API POST request of a single
         prediction results.
 
-        Parameters
-        ----------
-        results: list
-            the results of the model for all predictions in a single image.
-        scores: list
-            the scores of all detections predicted by the model.
-        task_id: int
-            the task id.
+        Args:
+            results (list): the results of the model for all predictions in a
+                single image.
+            scores (list): the scores of all detections predicted by the model.
+            task_id (int): the task id.
 
-        Returns
-        -------
-        dict
-            The prediction results.
+        Returns:
+            dict: The prediction results.        
         """
         return {
             'model_version': self.model_version,
@@ -419,6 +318,14 @@ class Predict(LoadModel, _Headers):
         }
 
     def pred_exists(self, task: dict) -> Optional[bool]:
+        """Check if a prediction already exists with the current model version.
+        Args:
+            task: A dictionary with the prediction's data.
+
+        Returns:
+            Optional[bool]: True if a prediction with the current model version
+                exists. Otherwise, None.
+        """
         if not os.getenv('DB_CONNECTION_STRING'):
             logger.warning('Not connected to a MongoDB database! '
                            'Skipping `pred_exists` check...')
@@ -438,29 +345,30 @@ class Predict(LoadModel, _Headers):
     def post_prediction(self, task: dict) -> Optional[Union[str, dict]]:
         """This function is called by the `predict` method. It takes a task as
         an argument and performs the following steps:
-
+        
         1. It downloads the image from the task's `data` field.
         2. It runs the image through the model and gets the predictions.
         3. It converts the predictions to the format required by Label Studio.
         4. It posts the predictions to Label Studio.
-
+        
         If the task has no data, it skips the task.
-
+        
         If the task has no predictions, it deletes the task if
         `delete_if_no_predictions` is set to `True`.
-
+        
         If `if_empty_apply_label` is set to a label, it applies the string of
         `if_empty_apply_label` if not set to `None`.
 
-        Parameters
-        ----------
-        task: dict
-            The label-studio API response of a single task.
+        Args:
+            task (dict): A dictionary with the task data.
 
-        Returns
-        -------
-        dict
-            A dictionary with the prediction's information.
+        Returns:
+            Optional[Union[str, dict]]: SKIPPED or task dictionary.
+
+        Raises:
+            UnidentifiedImageError: If image is not identified.
+            OSError: If image is not downloaded.
+            Exception: If any other exception occurs.
         """
         task_id = task['id']
         if not self.delete_if_no_predictions and not self.if_empty_apply_label:
@@ -533,10 +441,8 @@ class Predict(LoadModel, _Headers):
     def apply_predictions(self) -> None:
         """This function applies predictions to tasks.
 
-        Returns
-        -------
-        list
-            A list of tasks with predictions applied.
+        Returns:
+            None
         """
         start = time.time()
         logs_file = add_logger(__file__)
@@ -560,7 +466,7 @@ class Predict(LoadModel, _Headers):
                 tasks = self.get_all_tasks(project_ids)
             else:
                 logger.info('Getting tasks from MongoDB...')
-                tasks = self.get_all_tasks_from_mongodb(project_ids)
+                tasks = self._get_all_tasks_from_mongodb(project_ids)
 
             if not self.predict_all and not self.tasks_range:
                 logger.debug('Predicting tasks with no predictions...')
@@ -616,7 +522,12 @@ class Predict(LoadModel, _Headers):
         return
 
 
-def opts():
+def opts() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Returns:
+        argparse.Namespace: Namespace object containing the parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-w',
                         '--weights',

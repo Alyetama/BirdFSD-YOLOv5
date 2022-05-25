@@ -279,9 +279,6 @@ def check_classes_preserved(classes_file: str, output_dir: str) -> None:
 def opts() -> argparse.Namespace:
     """Parse command line arguments.
 
-    Args:
-        None
-
     Returns:
         argparse.Namespace: Namespace object containing the parsed arguments.
     """
