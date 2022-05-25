@@ -16,10 +16,25 @@ import numpy as np
 import pybboxes as pbx
 from PIL import Image
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
-from tqdm.contrib import tqdm
+from tqdm import tqdm
 
 
-def xywh_to_xyxy(x, y, w, h, image_width, image_height):
+def xywh_to_xyxy(x: float, y: float, w: float, h: float, image_width: float,
+                 image_height: float) -> tuple:
+    """Converts a bounding box from xywh format to xyxy format.
+
+    Args:
+        x (float): The x coordinate of the center of the bounding box.
+        y (float): The y coordinate of the center of the bounding box.
+        w (float): The width of the bounding box.
+        h (float): The height of the bounding box.
+        image_width (float): The width of the image.
+        image_height (float): The height of the image.
+
+    Returns:
+        tuple: A tuple containing the x1, y1, x2, and y2 coordinates of the
+            bounding box.
+    """
     x1 = (x - w / 2) * image_width
     y1 = (y - h / 2) * image_height
     x2 = x1 + (w * image_width)
@@ -27,7 +42,19 @@ def xywh_to_xyxy(x, y, w, h, image_width, image_height):
     return (x1, y1, x2, y2)
 
 
-def export_augs_as_files(image_aug, bbs_aug, output_dir, SKIPPED):
+def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
+                         SKIPPED: list) -> None:
+    """Exports augmented images and bounding boxes to a directory.
+
+    Args:
+        image_aug (list): List of augmented images.
+        bbs_aug (list): List of augmented bounding boxes.
+        output_dir (str): Path to the output directory.
+        SKIPPED (list): List of skipped images.
+
+    Returns:
+        None
+    """
     Path(f'{output_dir}/_labels').mkdir(exist_ok=True, parents=True)
     Path(f'{output_dir}/_images').mkdir(exist_ok=True, parents=True)
 
@@ -69,8 +96,23 @@ def export_augs_as_files(image_aug, bbs_aug, output_dir, SKIPPED):
         im.save(f'{output_dir}/_images/{fname}.jpg', 'JPEG')
 
 
-def aug_pipelines():
-    """https://imgaug.readthedocs.io/en/latest/source/examples_basics.html"""
+def aug_pipelines() -> iaa.Sequential:
+    """This function returns a sequence of augmentations to be applied to the
+    images. The augmentations are:
+        1. Flipping the image horizontally with a probability of 0.5
+        2. Random cropping of the image with a probability of 0.1
+        3. Blurring the image with a probability of 0.5
+        4. Changing the contrast of the image with a probability of 1
+        5. Adding gaussian noise to the image with a probability of 0.5
+        6. Changing the brightness of the image with a probability of 0.2
+        7. Applying affine transformations to the image with a probability of 1
+
+    Notes:
+        https://imgaug.readthedocs.io/en/latest/source/examples_basics.html
+
+    Returns
+        iaa.Sequential: A sequence of augmentations to be applied to the images.
+    """
     ia.seed(1)
 
     seq = iaa.Sequential(
@@ -110,7 +152,22 @@ def aug_pipelines():
     return seq
 
 
-def create_batch(images_dir, labels_dir, output_dir, batch_size=128):
+def create_batch(images_dir: str,
+                 labels_dir: str,
+                 output_dir: str,
+                 batch_size: int = 128) -> list:
+    """Creates batches of images and labels from the given directories.
+
+    Args:
+        images_dir (str): The directory containing the images.
+        labels_dir (str): The directory containing the labels.
+        output_dir (str): The directory to save the augmented images and
+            labels.
+        batch_size (int): The number of images to be augmented in a single
+            batch.
+    Returns:
+        SKIPPED (list): A list of images that were skipped due to errors.
+    """
     SKIPPED = []
     img_files = sorted(glob(f'{images_dir}/**/*'))
     label_files = sorted(glob(f'{labels_dir}/**/*'))
@@ -157,7 +214,17 @@ def create_batch(images_dir, labels_dir, output_dir, batch_size=128):
     return SKIPPED
 
 
-def split_data(images_dir, labels_dir, _output_dir: str) -> None:
+def split_data(images_dir: str, labels_dir: str, _output_dir: str) -> None:
+    """Split the data into train and validation sets.
+
+    Args:
+        images_dir (str): The path to the directory containing the images.
+        labels_dir (str): The path to the directory containing the labels.
+        _output_dir (str): The path to the output directory.
+
+    Returns:
+        None
+    """
     random.seed(1)
 
     for subdir in ['images/train', 'labels/train', 'images/val', 'labels/val']:
@@ -184,7 +251,16 @@ def split_data(images_dir, labels_dir, _output_dir: str) -> None:
     return
 
 
-def check_classes_preserved(classes_file, output_dir):
+def check_classes_preserved(classes_file: str, output_dir: str) -> None:
+    """Checks if the classes in the classes file are preserved after 
+    augmentation.
+
+    Args:
+        classes_file: The path to the classes file.
+        output_dir: The path to the output directory.
+    Returns:
+        None
+    """
     with open(classes_file) as f:
         classes = f.read().splitlines()
         classes_len = len(classes)
@@ -200,7 +276,15 @@ def check_classes_preserved(classes_file, output_dir):
     print('Classes were preserved.')
 
 
-def opts():
+def opts() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Args:
+        None
+
+    Returns:
+        argparse.Namespace: Namespace object containing the parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-d',
                         '--dataset-path',
@@ -210,7 +294,17 @@ def opts():
     return parser.parse_args()
 
 
-def run_aug_pipeline(datase_path, batch_size=128):
+def run_aug_pipeline(datase_path: str, batch_size: int = 128) -> None:
+    """This function takes a dataset path and augments the dataset by applying
+    random transformations to the images and labels.
+
+    Args:
+        datase_path (str): The path to the dataset.
+        batch_size (int): The number of images to process at once.
+
+    Returns:
+        None
+    """
     output_dir = f'{datase_path}-aug'
     imgs_source = f'{datase_path}/images'
     labels_source = f'{datase_path}/labels'

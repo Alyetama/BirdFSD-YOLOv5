@@ -17,7 +17,13 @@ from utils import get_project_ids_str
 
 
 def get_all_tasks_from_mongodb():
+    """This function is used to get all the tasks from mongodb.
 
+    Args:
+        None
+    Returns:
+        list: A list of all the tasks in the database.
+    """
     @ray.remote
     def _get_all_tasks_from_mongodb(proj_id):
         return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)
@@ -35,6 +41,15 @@ def get_all_tasks_from_mongodb():
 
 @ray.remote
 def simplify(task):
+    """This function takes a task from the original dataset and simplifies it
+    to a format that is easier to work with.
+
+    Args:
+        task (dict): A task from the original dataset.
+
+    Returns:
+        dict: A simplified task.
+    """
     labels = []
     label_val = task.get('label')
     if not label_val:
@@ -69,6 +84,13 @@ def simplify(task):
 
 
 def main():
+    """This function is the main function of the program. It gets all the tasks
+    from mongodb, and then sends them to the ray cluster for processing. It
+    then waits for the results to come back, and saves them to a parquet file.
+
+    Returns:
+        None
+    """
     tasks = get_all_tasks_from_mongodb()
 
     futures = [simplify.remote(task) for task in tasks]

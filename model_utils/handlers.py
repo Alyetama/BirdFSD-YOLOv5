@@ -10,18 +10,17 @@ import ray
 from loguru import logger
 
 
-def keyboard_interrupt_handler(sig: int, _) -> None:
+def keyboard_interrupt_handler(sig: int, _: object) -> None:
     """This function handles the KeyboardInterrupt (CTRL+C) signal.
     It's a handler for the signal, which means it's called when the OS sends
     the signal. The signal is sent when the user presses CTRL+C.
 
-    Parameters
-    ----------
-    The function takes two arguments:
-    sig:
-        The id of the signal that was sent.
-    _:
-        The current stack frame.
+    Args:
+        sig (int): The id of the signal that was sent.
+        _ (object): The current stack frame.
+
+    Returns:
+        None
     """
     logger.warning(f'KeyboardInterrupt (id: {sig}) has been caught...')
     logger.info('Terminating the session gracefully...')
@@ -37,5 +36,9 @@ def keyboard_interrupt_handler(sig: int, _) -> None:
 
 
 def catch_keyboard_interrupt():
-    """This function catches the keyboard interrupt handler."""
+    """This function catches the keyboard interrupt handler.
+
+    Returns:
+        signal.signal(signal.SIGINT, keyboard_interrupt_handler)
+    """
     return signal.signal(signal.SIGINT, keyboard_interrupt_handler)

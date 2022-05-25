@@ -25,10 +25,29 @@ class ModelVersionDoesNotExist(Exception):
 class DownloadModelWeights:
 
     def __init__(self, model_version, output='best.pt'):
+        """Method to initialize the class.
+        Args:
+            model_version (str): The version of the model to be saved.
+            output (str): The name of the file to save the model to.
+        """
         self.model_version = model_version
         self.output = output
 
     def get_weights(self, skip_download=False, object_name_only=False):
+        """Get the weights for a given model version.
+
+        Args:
+            skip_download (bool): If True, the function will return the 
+                download URL instead of downloading the weights file.
+            object_name_only (bool): If True, the function will return the
+                object name of the weights file instead of downloading the
+                weights file.
+
+        Returns:
+            str: The path to the weights file.
+            str: The download URL for the weights file.
+            str: The model version.
+        """
         handlers.catch_keyboard_interrupt()
 
         db = mongodb_helper.mongodb_db()

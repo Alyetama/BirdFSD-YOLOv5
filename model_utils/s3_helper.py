@@ -7,9 +7,12 @@ import sys
 import textwrap
 from datetime import timedelta
 from pathlib import Path
+from typing import Union
 
 from dotenv import load_dotenv
 from minio import Minio
+from minio.datatypes import Object
+from minio.helpers import ObjectWriteResult
 
 try:
     from . import utils
@@ -18,23 +21,42 @@ except ImportError:
 
 
 class BucketDoesNotExist(Exception):
-    pass
+    """Raised when the request bucket does not exist."""
 
 
 class S3:
+    """S3 client that uses MinIO as a backend."""
 
     def __init__(self):
+        """Initialize the Minio client.
+
+        Returns:
+            None
+        """
         self.client = Minio(os.environ['S3_ENDPOINT'],
                             access_key=os.environ['S3_ACCESS_KEY'],
                             secret_key=os.environ['S3_SECRET_KEY'],
                             region=os.environ['S3_REGION'])
 
     def upload(self,
-               bucket_name,
-               file_path,
-               public=False,
-               scheme='https',
-               dest=None):
+               bucket_name: str,
+               file_path: str,
+               public: bool = False,
+               scheme: str = 'https',
+               dest: bool = None) -> Union[ObjectWriteResult, str]:
+        """Uploads a file to an S3 bucket.
+
+        Args:
+            bucket_name (str): The name of the bucket to upload to.
+            file_path (str): The path to the file to upload.
+            public (bool): Whether or not the file should be publicly
+                accessible.
+            scheme (str): The scheme to use for the URL.
+            dest (str): The destination path for the file.
+
+        Returns:
+            str: The URL of the uploaded file.
+        """
         file = Path(file_path)
         if not dest:
             dest = file.name
@@ -56,12 +78,36 @@ class S3:
         else:
             return res
 
-    def download(self, bucket_name, object_name, dest=None):
+    def download(self,
+                 bucket_name: str,
+                 object_name: str,
+                 dest: str = None) -> Object:
+        """Downloads an object from the bucket.
+
+        Args:
+            bucket_name (str): The name of the bucket.
+            object_name (str): The name of the object.
+            dest (str): The destination path to download the object.
+
+        Returns:
+            str: The destination path where the object was downloaded.
+        """
         if not dest:
             dest = object_name
         return self.client.fget_object(bucket_name, object_name, dest)
 
     def get_model_weights(self, model_version: str = 'latest') -> str:
+        """Get the model weights from the model bucket.
+
+        Args:
+            model_version: The version of the model to get.
+                If 'latest', the latest version is returned.
+                If a string, the model with that version is returned.
+                If None, the latest version is returned.
+
+        Returns:
+            The name of the model object in the model bucket.
+        """
         objects = list(self.client.list_objects('model'))
         if model_version == 'latest':
             latest_ts = max([obj.last_modified for obj in objects])
@@ -74,7 +120,16 @@ class S3:
                 if obj.object_name.endswith(model_version):
                     return obj.object_name
 
-    def get_dataset(self, object_name=None):
+    def get_dataset(self, object_name: str = None) -> str:
+        """Retrieves the latest dataset from the S3 bucket.
+
+        Args:
+            object_name (str): The name of the object to retrieve. If not
+                provided, the latest object will be retrieved.
+
+        Returns:
+            str: The name of the object retrieved.
+        """
         if not object_name:
             objs = list(self.client.list_objects('dataset'))
             latest_ts = max([o.last_modified for o in objs if o.last_modified])
