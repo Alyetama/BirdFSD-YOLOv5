@@ -12,6 +12,7 @@ python:
     - method: setuptools
       path: .
     - requirements: requirements.txt
+  system_packages: true
 
 build:
   os: ubuntu-20.04
@@ -20,4 +21,4 @@ build:
 
 sphinx:
   configuration: docs/conf.py
-  fail_on_warning: false
+  fail_on_warning: true
