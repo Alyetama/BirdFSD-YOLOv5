@@ -26,7 +26,7 @@ cd ..
 sphinx-apidoc -f -o docs "$PACKAGE_FOLDER_NAME"
 cd docs
 
-rm conf.py && cp ../conf_copy.py conf.py
+rm conf.py && cp ../conf.py.example conf.py
 awk -i inplace 'NR==13{print "   modules.rst"}1' index.rst
 
 make html

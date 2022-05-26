@@ -6,7 +6,9 @@ version: 2
 python:
   install:
     - method: pip
-      path: birdfsd_yolov5
+      path: .
+      extra_requirements:
+        - birdfsd_yolov5
     - method: setuptools
       path: .
     - requirements: requirements.txt
