@@ -31,5 +31,3 @@ torch>=1.7.0
 torchvision>=0.8.1
 tensorboard>=1.15
 pyarrow~=7.0.0
-
-
