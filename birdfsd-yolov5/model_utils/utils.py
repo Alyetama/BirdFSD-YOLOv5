@@ -5,6 +5,7 @@ import functools
 import json
 import os
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -15,6 +16,9 @@ from loguru import logger
 from minio.error import S3Error
 from requests.structures import CaseInsensitiveDict
 from tqdm.auto import tqdm
+
+sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
 
 try:
     from . import handlers, s3_helper, mongodb_helper
