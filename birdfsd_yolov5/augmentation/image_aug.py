@@ -2,10 +2,8 @@
 # coding: utf-8
 
 import argparse
-import os
 import random
 import shutil
-import sys
 import tarfile
 import uuid
 from datetime import datetime
@@ -19,8 +17,6 @@ import pybboxes as pbx
 from PIL import Image
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from tqdm import tqdm
-
-sys.path.insert(0, os.path.abspath('.'))
 
 
 def xywh_to_xyxy(x: float, y: float, w: float, h: float, image_width: float,
@@ -38,11 +34,13 @@ def xywh_to_xyxy(x: float, y: float, w: float, h: float, image_width: float,
     Returns:
         tuple: A tuple containing the x1, y1, x2, and y2 coordinates of the
             bounding box.
+
     """
     x1 = (x - w / 2) * image_width
     y1 = (y - h / 2) * image_height
     x2 = x1 + (w * image_width)
     y2 = y1 + (h * image_height)
+
     return x1, y1, x2, y2
 
 
@@ -58,6 +56,7 @@ def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
 
     Returns:
         None
+
     """
     Path(f'{output_dir}/_labels').mkdir(exist_ok=True, parents=True)
     Path(f'{output_dir}/_images').mkdir(exist_ok=True, parents=True)
@@ -101,8 +100,11 @@ def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
 
 
 def aug_pipelines() -> iaa.Sequential:
-    """This function returns a sequence of augmentations to be applied to the
+    """A simple and common augmentation sequence
+
+    This function returns a sequence of augmentations to be applied to the
     images. The augmentations are:
+
     1. Flipping the image horizontally with a probability of 0.5
     2. Random cropping of the image with a probability of 0.1
     3. Blurring the image with a probability of 0.5
@@ -112,11 +114,12 @@ def aug_pipelines() -> iaa.Sequential:
     7. Applying affine transformations to the image with a probability of 1
 
     Notes:
-        https://imgaug.readthedocs.io/en/latest/source/examples_basics.html
+        Ref: https://imgaug.readthedocs.io/en/latest/source/examples_basics.html
 
     Returns
         iaa.Sequential: A sequence of augmentations to be applied to the
             images.
+
     """
     ia.seed(1)
 
@@ -172,6 +175,7 @@ def create_batch(images_dir: str,
             batch.
     Returns:
         _skipped (list): A list of images that were skipped due to errors.
+
     """
     SKIPPED = []
     img_files = sorted(glob(f'{images_dir}/**/*'))
@@ -230,6 +234,7 @@ def split_data(images_dir: str, labels_dir: str, _output_dir: str) -> None:
 
     Returns:
         None
+
     """
     random.seed(1)
 
@@ -258,14 +263,15 @@ def split_data(images_dir: str, labels_dir: str, _output_dir: str) -> None:
 
 
 def check_classes_preserved(classes_file: str, output_dir: str) -> None:
-    """Checks if the classes in the classes file are preserved after 
-    augmentation.
+    """Checks if the dataset classes were preserved after augmentation.
 
     Args:
         classes_file: The path to the classes file.
         output_dir: The path to the output directory.
+
     Returns:
         None
+
     """
     with open(classes_file) as f:
         classes = f.read().splitlines()
@@ -287,6 +293,7 @@ def opts() -> argparse.Namespace:
 
     Returns:
         argparse.Namespace: Namespace object containing the parsed arguments.
+
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-d',
@@ -298,7 +305,9 @@ def opts() -> argparse.Namespace:
 
 
 def run_aug_pipeline(dataset_path: str, batch_size: int = 128) -> None:
-    """This function takes a dataset path and augments the dataset by applying
+    """Runs the images augmentation pipeline 
+
+    This function takes a dataset path and augments the dataset by applying
     random transformations to the images and labels.
 
     Args:
@@ -307,6 +316,7 @@ def run_aug_pipeline(dataset_path: str, batch_size: int = 128) -> None:
 
     Returns:
         None
+
     """
     output_dir = f'{dataset_path}-aug'
     imgs_source = f'{dataset_path}/images'
