@@ -26,18 +26,8 @@ from loguru import logger
 from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
-try:
-    from .model_utils.handlers import catch_keyboard_interrupt
-    from .model_utils.mongodb_helper import get_tasks_from_mongodb
-    from .model_utils.s3_helper import BucketDoesNotExist, S3
-    from .model_utils.utils import (tasks_data, get_labels_count,
-                                    get_project_ids_str)
-except ImportError:
-    from model_utils.handlers import catch_keyboard_interrupt
-    from model_utils.mongodb_helper import get_tasks_from_mongodb
-    from model_utils.s3_helper import BucketDoesNotExist, S3
-    from model_utils.utils import (tasks_data, get_labels_count,
-                                   get_project_ids_str)
+from birdfsd_yolov5.model_utils import (handlers, mongodb_helper, s3_helper,
+                                        utils)
 
 
 class FailedToParseImageURL(Exception):
@@ -103,8 +93,8 @@ class JSON2YOLO:
             height: The height of the bounding box.
 
         Returns:
-            A tuple containing the x, y, width and height of the bounding box in
-            the format used by the yolo tool.
+            A tuple containing the x, y, width and height of the bounding box
+            in the format used by the yolo tool.
         """
         x = (x + width / 2) / 100
         y = (y + height / 2) / 100
@@ -112,11 +102,8 @@ class JSON2YOLO:
         h = height / 100
         return x, y, w, h
 
-    def get_data(self) -> list:
+    def get_data(self, excluded_labels) -> list:
         """This function is used to get data from the database.
-
-        Args:
-            self (object): The object of the class.
 
         Returns:
             list: A list of data.
@@ -124,7 +111,9 @@ class JSON2YOLO:
 
         @ray.remote
         def iter_projects(proj_id):
-            return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)
+            return mongodb_helper.get_tasks_from_mongodb(proj_id,
+                                                         dump=False,
+                                                         json_min=True)
 
         @ray.remote
         def iter_projects_api(proj_id):
@@ -142,7 +131,7 @@ class JSON2YOLO:
         if self.projects:
             project_ids = self.projects.split(',')
         else:
-            project_ids = get_project_ids_str().split(',')
+            project_ids = utils.get_project_ids_str().split(',')
 
         futures = []
         for project_id in project_ids:
@@ -156,12 +145,6 @@ class JSON2YOLO:
             data.append(ray.get(future))
 
         data = sum(data, [])
-
-        excluded_labels = os.getenv('EXCLUDE_LABELS')
-        if excluded_labels:
-            excluded_labels = excluded_labels.split(',')
-        else:
-            excluded_labels = []
 
         labels = []
         for entry in data:
@@ -198,20 +181,18 @@ class JSON2YOLO:
                 f.write(f'{class_}\n')
         return data
 
-    def convert_to_yolo(self, task: dict) -> Optional[str]:
-        """Converts the bounding box coordinates from Label Studio to YOLO
-        format.
+    def convert_to_yolo(self, task: dict) -> Optional[list]:
+        """Convert the task to YOLO format.
 
         Args:
-            x (int): The x coordinate of the top left corner of the bounding
-                box.
-            y (int): The y coordinate of the top left corner of the bounding
-                box.
-            width (int): The width of the bounding box.
-            height (int): The height of the bounding box.
+            task (dict): The task to be converted.
 
         Returns:
-            tuple: The converted bounding box coordinates in YOLO format.
+            The label of the task.
+
+        Raises:
+            FailedToParseImageURL: If the image URL is not valid.
+            TypeError: If the image URL is not valid.
         """
         if self.copy_data_from or self.enable_s3:
             img = task['image']
@@ -237,7 +218,7 @@ class JSON2YOLO:
             shutil.copy(f'{self.copy_data_from}/{object_name}', cur_img_path)
         else:
             if self.enable_s3:
-                img_url = S3().client.presigned_get_object(
+                img_url = s3_helper.S3().client.presigned_get_object(
                     'data', object_name, expires=timedelta(hours=6))
             else:
                 img_url = task['image']
@@ -262,6 +243,8 @@ class JSON2YOLO:
                 'Skipping...')
             return
 
+        label_names = []
+
         with open(cur_label_path, 'w') as f:
             try:
                 labels = task['label']
@@ -279,6 +262,8 @@ class JSON2YOLO:
                     Path(cur_label_path).unlink()
                     Path(cur_img_path).unlink()
                     return
+                label_names.append(label['rectanglelabels'][0])
+
                 x, y, width, height = [
                     v for k, v in label.items()
                     if k in ['x', 'y', 'width', 'height']
@@ -293,7 +278,7 @@ class JSON2YOLO:
 
                 f.write(f'{label_idx} {x} {y} {width} {height}')
                 f.write('\n')
-        return label['rectanglelabels'][0]  # to create a count table
+        return label_names
 
     @staticmethod
     def split_data(_output_dir: str) -> None:
@@ -381,11 +366,17 @@ class JSON2YOLO:
         def iter_convert_to_yolo(t):
             return self.convert_to_yolo(t)
 
-        s3_client = S3().client
-        catch_keyboard_interrupt()
+        s3_client = s3_helper.S3().client
+        handlers.catch_keyboard_interrupt()
         random.seed(8)
 
-        tasks = self.get_data()
+        excluded_labels = os.getenv('EXCLUDE_LABELS')
+        if excluded_labels:
+            excluded_labels = excluded_labels.split(',')
+        else:
+            excluded_labels = []
+
+        tasks = self.get_data(excluded_labels)
 
         Path(self.imgs_dir).mkdir(parents=True, exist_ok=True)
         Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
@@ -398,6 +389,7 @@ class JSON2YOLO:
             results.append(ray.get(future))
 
         if results:
+            results = sum(results, [])
             self.plot_results(results)
 
         if self.tasks_not_exported:
@@ -424,16 +416,14 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        tasks_data(f'tasks.json')
+        utils.tasks_data(f'tasks.json')
 
         with open('classes.json', 'w') as f:
-            if not os.getenv('EXCLUDE_LABELS'):
-                os.environ['EXCLUDE_LABELS'] = []
 
             classes_json = {
                 k: v
-                for k, v in get_labels_count().items()
-                if k not in os.getenv('EXCLUDE_LABELS')
+                for k, v in utils.get_labels_count().items()
+                if k not in excluded_labels
             }
             if self.filter_cls_with_instances_under:
                 classes_json = {
@@ -455,7 +445,8 @@ class JSON2YOLO:
 
         if self.enable_s3:
             if not s3_client.bucket_exists('dataset'):
-                raise BucketDoesNotExist('Bucket `dataset` does not exist!')
+                raise s3_helper.BucketDoesNotExist(
+                    'Bucket `dataset` does not exist!')
 
             upload_dataset = False
             objs = list(s3_client.list_objects('dataset'))

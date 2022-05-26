@@ -5,26 +5,14 @@ import argparse
 import copy
 import datetime
 import json
-import os
 import re
-import sys
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
-sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, '../model_utils')
-
-try:
-    from .model_utils.mongodb_helper import mongodb_db
-    from .model_utils.s3_helper import S3
-    from .model_utils.utils import get_project_ids_str
-except ImportError:
-    from model_utils.mongodb_helper import mongodb_db
-    from model_utils.s3_helper import S3
-    from model_utils.utils import get_project_ids_str
+from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
 
 
 class ModelVersionFormatError(Exception):
@@ -79,11 +67,11 @@ class SyncModel:
             model (dict): The model that was added to the database.
         """
 
-        model_version_number = self.check_version_number_format()
+        _ = self.check_version_number_format()
 
-        db = mongodb_db()
+        db = mongodb_helper.mongodb_db()
 
-        s3 = S3()
+        s3 = s3_helper.S3()
         weights_dst = Path(self.weights_file).name.replace('-best_weights', '')
         s3_resp = s3.upload(bucket_name='model',
                             file_path=self.weights_file,
@@ -96,7 +84,7 @@ class SyncModel:
         if self.project_ids:
             project_ids = self.project_ids
         else:
-            project_ids = get_project_ids_str()
+            project_ids = utils.get_project_ids_str()
 
         with open(self.config_file) as j:
             train_config = json.load(j)

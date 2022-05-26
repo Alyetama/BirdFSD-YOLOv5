@@ -9,16 +9,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 
-try:
-    from .model_utils.download_weights import DownloadModelWeights
-    from .model_utils.handlers import catch_keyboard_interrupt
-    from .model_utils.utils import add_logger, upload_logs
-    from .predict import Predict
-except ImportError:
-    from model_utils.download_weights import DownloadModelWeights
-    from model_utils.handlers import catch_keyboard_interrupt
-    from model_utils.utils import add_logger, upload_logs
-    from predict import Predict
+from birdfsd_yolov5.model_utils import download_weights, handlers, utils
+from birdfsd_yolov5.prediction import predict
 
 
 def opts() -> argparse.Namespace:
@@ -39,14 +31,14 @@ def opts() -> argparse.Namespace:
 
 
 def main() -> None:
-    """A pipeline to run the prediction module. Intended to be used as systemctl
-    service or inside a GitHub action.
+    """A pipeline to run the prediction module. Intended to be used as
+    systemctl service or inside a GitHub action.
 
     Returns:
         None
     """
-    logs_file = add_logger(__file__)
-    catch_keyboard_interrupt()
+    logs_file = utils.add_logger(__file__)
+    handlers.catch_keyboard_interrupt()
 
     if args.opts_file:
         logger.debug(f'Loading options from file: `{args.opts_file}`...')
@@ -56,7 +48,7 @@ def main() -> None:
         logger.debug('Using default options...')
         OPTS = {
             'weights': '',
-            'project_ids': None,  # all projects
+            'project_ids': None,  # None will return all projects
             'tasks_range': None,
             'predict_all': True,
             'one_task': None,
@@ -70,7 +62,7 @@ def main() -> None:
     logger.debug(f'OPTS: {OPTS}')
 
     if not OPTS['weights'] and OPTS['model_version'] == 'latest':
-        dmw = DownloadModelWeights(OPTS['model_version'])
+        dmw = download_weights.DownloadModelWeights(OPTS['model_version'])
         skip_download = False
         if args.show_config:
             skip_download = True
@@ -88,14 +80,14 @@ def main() -> None:
         print(json.dumps(OPTS, indent=4))
         sys.exit(0)
 
-    predict = Predict(**OPTS)
-    predict.apply_predictions()
+    p = predict.Predict(**OPTS)
+    p.apply_predictions()
 
     try:
         Path('best.pt').unlink()
     except FileNotFoundError:
         pass
-    upload_logs(logs_file)
+    utils.upload_logs(logs_file)
     return
 
 

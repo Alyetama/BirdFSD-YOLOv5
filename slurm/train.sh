@@ -2,8 +2,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --job-name='BirdFSD-YOLOv5-train'
 #SBATCH --partition='gpu'
-#SBATCH --gres=gpu
-#SBATCH --constraint=gpu_32gb&gpu_v100
+#SBATCH --gres=gpu:2
 #SBATCH --mem=32gb
 #SBATCH --mail-type=ALL
 #SBATCH --error=%J.err
@@ -13,7 +12,7 @@
 export WANDB_CACHE_DIR="$WORK/.cache"
 export WANDB_RUN_ID=$(python -c "import wandb; print(wandb.util.generate_id())")
 export GITHUB_ACTIONS_RUN_ID=  # <<<<<<<<<<<<<<<<<<<< @required
-WANDB_PATH_PARENT=  # <<<<<<<<<<<<<<<<<<<< @required
+export WANDB_PATH_PARENT=  # <<<<<<<<<<<<<<<<<<<< @required
 #-------------------------------------
 if [[ $GITHUB_ACTIONS_RUN_ID == '' ]] || [[ $WANDB_PATH_PARENT == '' ]]; then
     echo 'Missing GITHUB_ACTIONS_RUN_ID/WANDB_PATH_PARENT value!'
@@ -22,21 +21,20 @@ fi
 #-------------------------------------
 module unload python
 module load anaconda
-conda activate torch-gpu
+conda activate yolov5
 module load cuda/10.2
 #-------------------------------------
 nvidia-smi
 #-------------------------------------
-rm -rf dataset-YOLO dataset-YOLO*.tar dataset_config.yml best.pt
-rm -rf yolov5/runs wandb
+rm -rf dataset-YOLO dataset-YOLO*.tar dataset_config.yml *.pt yolov5/runs wandb
 #-------------------------------------
 gh run download $GITHUB_ACTIONS_RUN_ID
 tar -xf artifacts/dataset-YOLO-*.tar
 mv dataset-YOLO/dataset_config.yml .
-python model_utils/relative_to_abs.py
+python birdfsd_yolov5/model_utils/relative_to_abs.py
 #-------------------------------------
-WEIGHTS_FILE=$(python model_utils/download_weights.py -v latest -n)
-python model_utils/download_weights.py --model-version latest -o "$WEIGHTS_FILE"
+WEIGHTS_FILE=$(python birdfsd_yolov5/model_utils/download_weights.py -v latest -n)
+python birdfsd_yolov5/model_utils/download_weights.py --model-version latest -o "$WEIGHTS_FILE"
 #-------------------------------------
 IMAGE_SIZE=640
 BATCH_SIZE=64
@@ -49,7 +47,7 @@ python yolov5/train.py \
     --epochs $EPOCHS \
     --data 'dataset_config.yml' \
     --weights "$PRETRAINED_WEIGHTS" \
-    --device 0
+    --device 0,1
 #-------------------------------------
 # python -m torch.distributed.launch \
 #     --nproc_per_node 2 \
@@ -62,6 +60,6 @@ python yolov5/train.py \
 #     --device 0,1
 #-------------------------------------
 DATASET_NAME=$(ls dataset-YOLO-*)
-python model_utils/update_run_cfg.py \
+python birdfsd_yolov5/model_utils/update_run_cfg.py \
     --run-path "$WANDB_PATH_PARENT/$WANDB_RUN_ID" \
     --dataset-name "$DATASET_NAME"

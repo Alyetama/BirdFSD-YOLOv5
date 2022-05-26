@@ -43,18 +43,18 @@ def xywh_to_xyxy(x: float, y: float, w: float, h: float, image_width: float,
     y1 = (y - h / 2) * image_height
     x2 = x1 + (w * image_width)
     y2 = y1 + (h * image_height)
-    return (x1, y1, x2, y2)
+    return x1, y1, x2, y2
 
 
 def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
-                         SKIPPED: list) -> None:
+                         _skipped: list) -> None:
     """Exports augmented images and bounding boxes to a directory.
 
     Args:
         image_aug (list): List of augmented images.
         bbs_aug (list): List of augmented bounding boxes.
         output_dir (str): Path to the output directory.
-        SKIPPED (list): List of skipped images.
+        _skipped (list): List of skipped images.
 
     Returns:
         None
@@ -65,7 +65,7 @@ def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
     for im, bbs in zip(image_aug, bbs_aug):
         SKIP = False
         if bbs[0].is_out_of_image(im):
-            SKIPPED.append(1)
+            _skipped.append(1)
             continue
 
         bbs = BoundingBoxesOnImage(bbs, im.shape[:-1])
@@ -94,7 +94,7 @@ def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
                 f.write(line + '\n')
         if SKIP:
             Path(f'{output_dir}/_labels/{fname}.txt').unlink()
-            SKIPPED.append(1)
+            _skipped.append(1)
             continue
 
         im.save(f'{output_dir}/_images/{fname}.jpg', 'JPEG')
@@ -115,7 +115,8 @@ def aug_pipelines() -> iaa.Sequential:
         https://imgaug.readthedocs.io/en/latest/source/examples_basics.html
 
     Returns
-        iaa.Sequential: A sequence of augmentations to be applied to the images.
+        iaa.Sequential: A sequence of augmentations to be applied to the
+            images.
     """
     ia.seed(1)
 
@@ -130,9 +131,9 @@ def aug_pipelines() -> iaa.Sequential:
             iaa.LinearContrast((0.75, 1.5)),
             # Add gaussian noise.
             # For 50% of all images, we sample the noise once per pixel.
-            # For the other 50% of all images, we sample the noise per pixel AND
-            # channel. This can change the color (not only brightness) of the
-            # pixels.
+            # For the other 50% of all images, we sample the noise per pixel
+            # AND channel. This can change the color (not only brightness)
+            # of the pixels.
             iaa.AdditiveGaussianNoise(
                 loc=0, scale=(0.0, 0.05 * 255), per_channel=0.5),
             # Make some images brighter and some darker.
@@ -170,7 +171,7 @@ def create_batch(images_dir: str,
         batch_size (int): The number of images to be augmented in a single
             batch.
     Returns:
-        SKIPPED (list): A list of images that were skipped due to errors.
+        _skipped (list): A list of images that were skipped due to errors.
     """
     SKIPPED = []
     img_files = sorted(glob(f'{images_dir}/**/*'))
@@ -189,8 +190,9 @@ def create_batch(images_dir: str,
     for labels_batch, images_batch in zip(label_batches, image_batches):
 
         images_batch_resized_arrs = [
-            np.array(Image.open(img).resize((640, 640), resample=2),
-                     dtype=np.uint8) for img in tqdm(images_batch)
+            np.array(
+                Image.open(img).resize((640, 640), resample=2),  # noqa
+                dtype=np.uint8) for img in tqdm(images_batch)
         ]
 
         images_batch_arrs = np.asarray(images_batch_resized_arrs,
@@ -295,22 +297,22 @@ def opts() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def run_aug_pipeline(datase_path: str, batch_size: int = 128) -> None:
+def run_aug_pipeline(dataset_path: str, batch_size: int = 128) -> None:
     """This function takes a dataset path and augments the dataset by applying
     random transformations to the images and labels.
 
     Args:
-        datase_path (str): The path to the dataset.
+        dataset_path (str): The path to the dataset.
         batch_size (int): The number of images to process at once.
 
     Returns:
         None
     """
-    output_dir = f'{datase_path}-aug'
-    imgs_source = f'{datase_path}/images'
-    labels_source = f'{datase_path}/labels'
-    classes_file = f'{datase_path}/classes.txt'
-    dataset_config = f'{datase_path}/dataset_config.yml'
+    output_dir = f'{dataset_path}-aug'
+    imgs_source = f'{dataset_path}/images'
+    labels_source = f'{dataset_path}/labels'
+    classes_file = f'{dataset_path}/classes.txt'
+    dataset_config = f'{dataset_path}/dataset_config.yml'
 
     SKIPPED = create_batch(imgs_source, labels_source, output_dir, batch_size)
     print('Skipped', len(SKIPPED), 'images.')
@@ -325,7 +327,7 @@ def run_aug_pipeline(datase_path: str, batch_size: int = 128) -> None:
     with open(dataset_config) as f1:
         lines = f1.read()
         with open(f'{output_dir}/dataset_config.yml', 'w') as f2:
-            dataset_name = Path(datase_path).name
+            dataset_name = Path(dataset_path).name
             aug_dataset_name = Path(output_dir).name
             f2.write(
                 lines.replace(f'path: {dataset_name}',
@@ -341,4 +343,4 @@ def run_aug_pipeline(datase_path: str, batch_size: int = 128) -> None:
 
 if __name__ == '__main__':
     args = opts()
-    run_aug_pipeline(datase_path=args.dataset_path)
+    run_aug_pipeline(dataset_path=args.dataset_path)

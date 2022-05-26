@@ -9,33 +9,26 @@ from pathlib import Path
 import pandas as pd
 import ray
 from dotenv import load_dotenv
+from ray.exceptions import RayTaskError
 from tqdm import tqdm
 
-try:
-    from .mongodb_helper import get_tasks_from_mongodb
-    from .s3_helper import S3
-    from .utils import get_project_ids_str
-except ImportError:
-    from mongodb_helper import get_tasks_from_mongodb
-    from s3_helper import S3
-    from utils import get_project_ids_str
-
+from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
 
 
 def get_all_tasks_from_mongodb():
     """This function is used to get all the tasks from mongodb.
 
-    Args:
-        None
     Returns:
         list: A list of all the tasks in the database.
     """
 
     @ray.remote
     def _get_all_tasks_from_mongodb(proj_id):
-        return get_tasks_from_mongodb(proj_id, dump=False, json_min=True)
+        return mongodb_helper.get_tasks_from_mongodb(proj_id,
+                                                     dump=False,
+                                                     json_min=True)
 
-    project_ids = get_project_ids_str().split(',')
+    project_ids = utils.get_project_ids_str().split(',')
 
     futures = []
     for project_id in project_ids:
@@ -78,7 +71,7 @@ def simplify(task):
 
     object_url = task['data']['image'].split('?')[0]
     object_name = '/'.join(Path(object_url).parts[-2:])
-    img_data = S3().client.get_object('data', object_name).read()
+    img_data = s3_helper.S3().client.get_object('data', object_name).read()
 
     simple_task = {
         'image': {
@@ -105,7 +98,7 @@ def main():
     for future in tqdm(futures):
         try:
             results.append(ray.get(future))
-        except (ConnectionResetError, ray.exceptions.RayTaskError) as e:
+        except (ConnectionResetError, RayTaskError) as e:
             print('ERROR:', e)
             futures.append(future)
             time.sleep(10)

@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import argparse
-import concurrent.futures
 import json
 import os
 import sys
@@ -10,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Optional, List, Union
 
+import concurrent.futures
 import numpy as np
 import ray
 import requests
@@ -20,20 +20,11 @@ from loguru import logger
 from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
-sys.path.insert(0, os.path.abspath('.'))
-
-try:
-    from .model_utils.handlers import catch_keyboard_interrupt
-    from .model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-    from .model_utils.utils import add_logger, upload_logs, get_project_ids_str
-except ImportError:
-    from model_utils.handlers import catch_keyboard_interrupt
-    from model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
-    from model_utils.utils import add_logger, upload_logs, get_project_ids_str
+from birdfsd_yolov5.model_utils import handlers, mongodb_helper, utils
 
 
 class _Headers:
-    """This class is used to make headers for the requests.
+    """This class is used to make headers for requests call.
     It is a static class.
     It has only one method: make_headers()
     It returns a dictionary with the headers.
@@ -87,8 +78,8 @@ class Predict(LoadModel, _Headers):
     """Prediction and preprocessing class.
 
     This class is used to predict bounding boxes and classes for images in
-    a given project. It uses the YOLOv5 model to predict bounding boxes and then
-    posts the predictions to the Label Studio server.
+    a given project. It uses the YOLOv5 model to predict bounding boxes and
+    then posts the predictions to the Label Studio server.
 
     Attributes:
         headers (dict): Headers for the requests.
@@ -134,7 +125,7 @@ class Predict(LoadModel, _Headers):
         self.if_empty_apply_label = if_empty_apply_label
         self.get_tasks_with_api = get_tasks_with_api
         self.verbose = verbose
-        self.db = mongodb_db()
+        self.db = mongodb_helper.mongodb_db()
         self.flush = []
 
     def download_image(self, img_url: str) -> str:
@@ -229,7 +220,9 @@ class Predict(LoadModel, _Headers):
 
         @ray.remote
         def _get_all_tasks_from_mongodb_remote(proj_id: str):
-            return get_tasks_from_mongodb(proj_id, dump=False, json_min=False)
+            return mongodb_helper.get_tasks_from_mongodb(proj_id,
+                                                         dump=False,
+                                                         json_min=False)
 
         futures = []
         for project_id in project_ids:
@@ -369,7 +362,7 @@ class Predict(LoadModel, _Headers):
             task (dict): A dictionary with the task data.
 
         Returns:
-            Optional[Union[str, dict]]: SKIPPED or task dictionary.
+            Optional[Union[str, dict]]: _skipped or task dictionary.
 
         Raises:
             UnidentifiedImageError: If image is not identified.
@@ -385,7 +378,7 @@ class Predict(LoadModel, _Headers):
             sys.exit(1)
         try:
             if self.pred_exists(task):
-                return 'SKIPPED'
+                return '_skipped'
             try:
                 img = self.download_image(
                     self.get_task(task_id)['data']['image'])
@@ -451,8 +444,8 @@ class Predict(LoadModel, _Headers):
             None
         """
         start = time.time()
-        logs_file = add_logger(__file__)
-        catch_keyboard_interrupt()
+        logs_file = utils.add_logger(__file__)
+        handlers.catch_keyboard_interrupt()
 
         if self.delete_if_no_predictions and self.if_empty_apply_label:
             logger.error('Can\'t have both --delete-if-no-predictions and '
@@ -462,7 +455,7 @@ class Predict(LoadModel, _Headers):
         if self.project_ids:
             project_ids = self.project_ids.split(',')
         else:
-            project_ids = get_project_ids_str().split(',')
+            project_ids = utils.get_project_ids_str().split(',')
 
         if self.one_task:
             tasks = self.single_task(self.one_task)
@@ -513,7 +506,7 @@ class Predict(LoadModel, _Headers):
                 continue
 
         num_preds = len([x for x in results + _results if not x])
-        num_skipped = len([x for x in results + _results if x == 'SKIPPED'])
+        num_skipped = len([x for x in results + _results if x == '_skipped'])
         task_with_errors = [x for x in _results if isinstance(x, dict)]
 
         logger.info(f'Made {num_preds} prediction(s)')
@@ -524,7 +517,7 @@ class Predict(LoadModel, _Headers):
                         f'(see logs for details)')
 
         logger.info(f'Took: {round(time.time() - start, 2)}s')
-        upload_logs(logs_file)
+        utils.upload_logs(logs_file)
         return
 
 

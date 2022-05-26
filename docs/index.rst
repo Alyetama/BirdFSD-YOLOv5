@@ -1,16 +1,17 @@
-.. birdfsd-yolov5 documentation master file, created by
-   sphinx-quickstart on Thu May 26 07:03:44 2022.
+.. birdfsd_yolov5 documentation master file, created by
+   sphinx-quickstart on Thu May 26 17:52:34 2022.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to birdfsd-yolov5's documentation!
+Welcome to birdfsd_yolov5's documentation!
 ==========================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   modules
+   modules.rst
+
 
 Indices and tables
 ==================

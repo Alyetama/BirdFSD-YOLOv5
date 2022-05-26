@@ -11,8 +11,8 @@ import pymongo
 def mongodb_db() -> pymongo.database.Database:  # noqa
     """Create a MongoDB client. The database connection string is read from the
     environment variable `DB_CONNECTION_STRING`. The database name is read from
-    the environment variable `DB_NAME`. If either of these environment variables
-    are not set, None is returned.
+    the environment variable `DB_NAME`. If either of these environment
+    variables are not set, None is returned.
 
     Returns:
         pymongo.database.Database: a MongoDB database object.

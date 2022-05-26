@@ -14,10 +14,7 @@ from minio import Minio
 from minio.datatypes import Object
 from minio.helpers import ObjectWriteResult
 
-try:
-    from . import utils
-except ImportError:
-    import utils
+from birdfsd_yolov5.model_utils import utils
 
 
 class BucketDoesNotExist(Exception):
@@ -43,14 +40,14 @@ class S3:
                file_path: str,
                public: bool = False,
                scheme: str = 'https',
-               dest: bool = None) -> Union[ObjectWriteResult, str]:
+               dest: str = None) -> Union[ObjectWriteResult, str]:
         """Uploads a file to an S3 bucket.
 
         Args:
             bucket_name (str): The name of the bucket to upload to.
             file_path (str): The path to the file to upload.
-            public (bool): Whether or not the file should be publicly
-                accessible.
+            public (bool): True if the file is uploaded to a publicly
+                accessible bucket.
             scheme (str): The scheme to use for the URL.
             dest (str): The destination path for the file.
 

@@ -9,13 +9,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 
-try:
-    from . import mongodb_helper, s3_helper, handlers, utils
-except ImportError:
-    import mongodb_helper
-    import s3_helper
-    import handlers
-    import utils
+from birdfsd_yolov5.model_utils import (mongodb_helper, s3_helper, handlers,
+                                        utils)
 
 
 class ModelVersionDoesNotExist(Exception):

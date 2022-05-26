@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import os
 import shutil
 import sys
 import tarfile
@@ -17,14 +16,7 @@ import wandb
 from dotenv import load_dotenv
 from loguru import logger
 
-sys.path.insert(0, os.path.abspath('..'))
-
-try:
-    from .model_utils.s3_helper import S3
-    from .model_utils.utils import add_logger, upload_logs
-except ImportError:
-    from model_utils.s3_helper import S3
-    from model_utils.utils import add_logger, upload_logs
+from birdfsd_yolov5.model_utils import s3_helper, utils
 
 
 class GenerateRelease:
@@ -51,7 +43,7 @@ class GenerateRelease:
             None
         """
 
-        s3 = S3()
+        s3 = s3_helper.S3()
 
         try:
             files = [x for x in list(run.files()) if fname in x.name]  # noqa
@@ -284,7 +276,7 @@ class GenerateRelease:
         Returns:
             None
         """
-        logs_file = add_logger(__file__)
+        logs_file = utils.add_logger(__file__)
 
         api = wandb.Api()
         run = api.from_path(self.run_path)
@@ -334,7 +326,7 @@ class GenerateRelease:
             else:
                 print(full_gpg_cmd)
 
-        upload_logs(logs_file)
+        utils.upload_logs(logs_file)
 
         if self.repo:
             print(f'{"-" * 40}\n')

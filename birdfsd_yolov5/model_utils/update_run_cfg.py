@@ -14,8 +14,8 @@ import wandb
 
 
 def main() -> None:
-    """This function uploads the classes.txt and hist.jpg files to the wandb run
-    specified by args.run_path. It also updates the run's config with the
+    """This function uploads the classes.txt and hist.jpg files to the wandb
+    run specified by args.run_path. It also updates the run's config with the
     dataset name, base ML framework version, and system hardware.
 
     Returns:

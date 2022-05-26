@@ -4,13 +4,13 @@
 import argparse
 import random
 import shutil
+import time
 import uuid
 from glob import glob
 from pathlib import Path
 
 import numpy as np
 import ray
-import requests
 from PIL import Image
 from python_color_transfer.color_transfer import ColorTransfer, Regrain
 from python_color_transfer.utils import Rotations
@@ -44,11 +44,12 @@ class Transfer(ColorTransfer, Regrain, Rotations):
 
     @staticmethod
     def img2arr(file_path):
-        return np.asarray(Image.open(file_path), dtype=np.uint8)
+        return np.asarray(Image.open(file_path), dtype=np.uint8)  # noqa
 
     @staticmethod
     def save(arr, output):
-        im = Image.fromarray(arr.astype('uint8')).resize((640, 640), resample=2)
+        im = Image.fromarray(arr.astype('uint8')).resize((640, 640),
+                                                         resample=2)
         im.save(output, 'JPEG', quality=100, subsampling=0)
         return output
 

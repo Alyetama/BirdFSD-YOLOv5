@@ -174,7 +174,6 @@ config.json
 loki-config.yaml
 promtail-config.yaml
 debugging.py
-.idea/
 dataset-YOLO-*.tar
 wandb/
 .mongodb-config.yml
@@ -183,3 +182,4 @@ train_opts.json
 mongodb_backups/
 *.ckpt
 mongodb_backups/
+conf_copy.py

@@ -12,12 +12,12 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../birdfsd-yolov5'))
+sys.path.insert(0, os.path.abspath('../birdfsd_yolov5'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'birdfsd-yolov5'
+project = 'birdfsd_yolov5'
 copyright = '2022, Mohammad Alyetama'
 author = 'Mohammad Alyetama'
 
