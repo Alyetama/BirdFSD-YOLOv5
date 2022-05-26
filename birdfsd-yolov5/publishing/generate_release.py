@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import tarfile
@@ -16,7 +17,7 @@ import wandb
 from dotenv import load_dotenv
 from loguru import logger
 
-sys.path.insert(0, '..')
+sys.path.insert(0, os.path.abspath('..'))
 
 try:
     from ..model_utils.s3_helper import S3
@@ -274,11 +275,11 @@ class GenerateRelease:
     def generate(self) -> None:
         """This function is the main function of the program.
         It does the following:
-            1. Creates a directory for the release
-            2. Gets the f1-score of the run
-            3. Gets some data assets from the run
-            4. Creates the release notes
-            5. Generates a command to create the release
+        1. Creates a directory for the release
+        2. Gets the f1-score of the run
+        3. Gets some data assets from the run
+        4. Creates the release notes
+        5. Generates a command to create the release
 
         Returns:
             None

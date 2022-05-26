@@ -5,6 +5,7 @@ import argparse
 import copy
 import datetime
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
+sys.path.insert(0, os.path.abspath('..'))
 sys.path.append('../model_utils')
 
 try:

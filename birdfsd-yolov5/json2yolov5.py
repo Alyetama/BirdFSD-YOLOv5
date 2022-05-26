@@ -77,7 +77,7 @@ class JSON2YOLO:
                  get_tasks_with_api: bool = False,
                  force_update: bool = False):
         self.projects = projects
-        self.output_dir = output_dir
+        self.output_dir = str(Path(output_dir).absolute())
         self.only_tar_file = only_tar_file
         self.enable_s3 = enable_s3
         self.copy_data_from = copy_data_from
