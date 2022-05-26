@@ -56,11 +56,11 @@ class JSON2YOLO:
     │   ├── train
     │   └── val
     └── labels
-        ├── train
-        └── val
+    ....├── train
+    ....└── val
 
     The output will also be stored in a tarball with the same name as the
-     output folder.
+    output folder.
 
     The tasks that failed to export for any reason, will be logged at the 
     end of the run.
@@ -201,6 +201,7 @@ class JSON2YOLO:
     def convert_to_yolo(self, task: dict) -> Optional[str]:
         """Converts the bounding box coordinates from Label Studio to YOLO
         format.
+
         Args:
             x (int): The x coordinate of the top left corner of the bounding
                 box.
