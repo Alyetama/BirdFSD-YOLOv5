@@ -20,6 +20,8 @@ from loguru import logger
 from requests.structures import CaseInsensitiveDict
 from tqdm import tqdm
 
+sys.path.insert(0, os.path.abspath('.'))
+
 try:
     from .model_utils.handlers import catch_keyboard_interrupt
     from .model_utils.mongodb_helper import get_tasks_from_mongodb, mongodb_db
