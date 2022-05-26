@@ -2,8 +2,10 @@
 # coding: utf-8
 
 import argparse
+import os
 import random
 import shutil
+import sys
 import tarfile
 import uuid
 from datetime import datetime
@@ -17,6 +19,8 @@ import pybboxes as pbx
 from PIL import Image
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from tqdm import tqdm
+
+sys.path.insert(0, os.path.abspath('.'))
 
 
 def xywh_to_xyxy(x: float, y: float, w: float, h: float, image_width: float,
