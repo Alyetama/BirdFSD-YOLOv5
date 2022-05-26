@@ -18,9 +18,9 @@ sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, '../model_utils')
 
 try:
-    from ..model_utils.mongodb_helper import mongodb_db
-    from ..model_utils.s3_helper import S3
-    from ..model_utils.utils import get_project_ids_str
+    from .model_utils.mongodb_helper import mongodb_db
+    from .model_utils.s3_helper import S3
+    from .model_utils.utils import get_project_ids_str
 except ImportError:
     from model_utils.mongodb_helper import mongodb_db
     from model_utils.s3_helper import S3

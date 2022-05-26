@@ -20,8 +20,8 @@ from loguru import logger
 sys.path.insert(0, os.path.abspath('..'))
 
 try:
-    from ..model_utils.s3_helper import S3
-    from ..model_utils.utils import add_logger, upload_logs
+    from .model_utils.s3_helper import S3
+    from .model_utils.utils import add_logger, upload_logs
 except ImportError:
     from model_utils.s3_helper import S3
     from model_utils.utils import add_logger, upload_logs
