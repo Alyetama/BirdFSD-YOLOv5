@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
 sys.path.insert(0, os.path.abspath('..'))
-sys.path.append('../model_utils')
+sys.path.insert(0, '../model_utils')
 
 try:
     from ..model_utils.mongodb_helper import mongodb_db
