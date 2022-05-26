@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>predict module &mdash; birdfsd-yolov5 0.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="model_utils package" href="model_utils.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> birdfsd-yolov5
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">birdfsd-yolov5</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="auto_prediction_schedule.html">auto_prediction_schedule module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json2yolov5.html">json2yolov5 module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_utils.html">model_utils package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">predict module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">birdfsd-yolov5</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="modules.html">birdfsd-yolov5</a> &raquo;</li>
+      <li>predict module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/predict.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-predict">
+<span id="predict-module"></span><h1>predict module<a class="headerlink" href="#module-predict" title="Permalink to this headline"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="predict.LoadModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">predict.</span></span><span class="sig-name descname"><span class="pre">LoadModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#predict.LoadModel" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This class is used to load a model from a given path.
+The model is a YOLOv5 model.
+The model is loaded using the torch.hub.load function.
+The model is loaded with the following parameters:
+- ultralytics/yolov5
+- custom
+- path=self.weights
+The model is returned by the model method.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.LoadModel.model">
+<span class="sig-name descname"><span class="pre">model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.nn.modules.module.Module</span></span></span><a class="headerlink" href="#predict.LoadModel.model" title="Permalink to this definition"></a></dt>
+<dd><p>Loads a pretrained YOLOv5 model for a given dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a YOLOv5 model.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>torch.nn.Module</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="predict.Predict">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">predict.</span></span><span class="sig-name descname"><span class="pre">Predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tasks_range</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predict_all</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">one_task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multithreading</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delete_if_no_predictions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">if_empty_apply_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_tasks_with_api</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#predict.Predict" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#predict.LoadModel" title="predict.LoadModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">predict.LoadModel</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">predict._Headers</span></code></p>
+<p>Prediction and preprocessing class.</p>
+<p>This class is used to predict bounding boxes and classes for images in
+a given project. It uses the YOLOv5 model to predict bounding boxes and then
+posts the predictions to the Label Studio server.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.headers">
+<span class="sig-name descname"><span class="pre">headers</span></span><a class="headerlink" href="#predict.Predict.headers" title="Permalink to this definition"></a></dt>
+<dd><p>Headers for the requests.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#predict.Predict.model" title="Permalink to this definition"></a></dt>
+<dd><p>YOLOv5 model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>torch.nn.Module</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.model_version">
+<span class="sig-name descname"><span class="pre">model_version</span></span><a class="headerlink" href="#predict.Predict.model_version" title="Permalink to this definition"></a></dt>
+<dd><p>Model version to use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.project_ids">
+<span class="sig-name descname"><span class="pre">project_ids</span></span><a class="headerlink" href="#predict.Predict.project_ids" title="Permalink to this definition"></a></dt>
+<dd><p>Ids of the projects to predict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.tasks_range">
+<span class="sig-name descname"><span class="pre">tasks_range</span></span><a class="headerlink" href="#predict.Predict.tasks_range" title="Permalink to this definition"></a></dt>
+<dd><p>Range of tasks to predict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.predict_all">
+<span class="sig-name descname"><span class="pre">predict_all</span></span><a class="headerlink" href="#predict.Predict.predict_all" title="Permalink to this definition"></a></dt>
+<dd><p>Predict all tasks in the project(s).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.one_task">
+<span class="sig-name descname"><span class="pre">one_task</span></span><a class="headerlink" href="#predict.Predict.one_task" title="Permalink to this definition"></a></dt>
+<dd><p>Predict a single task.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.multithreading">
+<span class="sig-name descname"><span class="pre">multithreading</span></span><a class="headerlink" href="#predict.Predict.multithreading" title="Permalink to this definition"></a></dt>
+<dd><p>Use multithreading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.delete_if_no_predictions">
+<span class="sig-name descname"><span class="pre">delete_if_no_predictions</span></span><a class="headerlink" href="#predict.Predict.delete_if_no_predictions" title="Permalink to this definition"></a></dt>
+<dd><p>Delete tasks that have no predictions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.if_empty_apply_label">
+<span class="sig-name descname"><span class="pre">if_empty_apply_label</span></span><a class="headerlink" href="#predict.Predict.if_empty_apply_label" title="Permalink to this definition"></a></dt>
+<dd><p>Apply a label to tasks that have no
+predictions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.get_tasks_with_api">
+<span class="sig-name descname"><span class="pre">get_tasks_with_api</span></span><a class="headerlink" href="#predict.Predict.get_tasks_with_api" title="Permalink to this definition"></a></dt>
+<dd><p>Get tasks with label-studio API instead of
+MongoDB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.db">
+<span class="sig-name descname"><span class="pre">db</span></span><a class="headerlink" href="#predict.Predict.db" title="Permalink to this definition"></a></dt>
+<dd><p>An instance of mongoDB client (if
+connection string exists in .env).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pymongo.database.Database</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="predict.Predict.flush">
+<span class="sig-name descname"><span class="pre">flush</span></span><a class="headerlink" href="#predict.Predict.flush" title="Permalink to this definition"></a></dt>
+<dd><p>Used to flush temp files written to disk during
+prediction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.apply_predictions">
+<span class="sig-name descname"><span class="pre">apply_predictions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#predict.Predict.apply_predictions" title="Permalink to this definition"></a></dt>
+<dd><p>This function applies predictions to tasks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.download_image">
+<span class="sig-name descname"><span class="pre">download_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#predict.Predict.download_image" title="Permalink to this definition"></a></dt>
+<dd><p>Download an image from a URL and save it to a local file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>img_url</strong> (<em>str</em>) – The URL of the image to download.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Path to the temporary image file.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.get_all_tasks">
+<span class="sig-name descname"><span class="pre">get_all_tasks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#predict.Predict.get_all_tasks" title="Permalink to this definition"></a></dt>
+<dd><p>Fetch all tasks from the project.</p>
+<p>This function fetches all tasks from the project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_ids</strong> (<em>str</em>) – Comma-seperated string of project ids.</p></li>
+<li><p><strong>project_ids</strong> – List[str]:</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of tasks.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.get_task">
+<span class="sig-name descname"><span class="pre">get_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_task_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#predict.Predict.get_task" title="Permalink to this definition"></a></dt>
+<dd><p>This function returns a single task from a project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>_task_id</strong> (<em>int</em>) – The id of the task to be returned.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A dictionary containing the task data.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.post_prediction">
+<span class="sig-name descname"><span class="pre">post_prediction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#predict.Predict.post_prediction" title="Permalink to this definition"></a></dt>
+<dd><p>This function is called by the <cite>predict</cite> method. It takes a task as
+an argument and performs the following steps:</p>
+<ol class="arabic simple">
+<li><p>It downloads the image from the task’s <cite>data</cite> field.</p></li>
+<li><p>It runs the image through the model and gets the predictions.</p></li>
+<li><p>It converts the predictions to the format required by Label Studio.</p></li>
+<li><p>It posts the predictions to Label Studio.</p></li>
+</ol>
+<p>If the task has no data, it skips the task.</p>
+<p>If the task has no predictions, it deletes the task if
+<cite>delete_if_no_predictions</cite> is set to <cite>True</cite>.</p>
+<p>If <cite>if_empty_apply_label</cite> is set to a label, it applies the string of
+<cite>if_empty_apply_label</cite> if not set to <cite>None</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>task</strong> (<em>dict</em>) – A dictionary with the task data.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>SKIPPED or task dictionary.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Optional[Union[str, dict]]</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>UnidentifiedImageError</strong> – If image is not identified.</p></li>
+<li><p><strong>OSError</strong> – If image is not downloaded.</p></li>
+<li><p><strong>Exception</strong> – If any other exception occurs.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.pred_exists">
+<span class="sig-name descname"><span class="pre">pred_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#predict.Predict.pred_exists" title="Permalink to this definition"></a></dt>
+<dd><p>Check if a prediction already exists with the current model version.
+:param task: A dictionary with the prediction’s data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>True if a prediction with the current model version</dt><dd><p>exists. Otherwise, None.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Optional[bool]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.pred_post">
+<span class="sig-name descname"><span class="pre">pred_post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#predict.Predict.pred_post" title="Permalink to this definition"></a></dt>
+<dd><p>This function is used to create an API POST request of a single
+prediction results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>results</strong> (<em>list</em>) – the results of the model for all predictions in a
+single image.</p></li>
+<li><p><strong>scores</strong> (<em>list</em>) – the scores of all detections predicted by the model.</p></li>
+<li><p><strong>task_id</strong> (<em>int</em>) – the task id.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The prediction results.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.pred_result">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">pred_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#predict.Predict.pred_result" title="Permalink to this definition"></a></dt>
+<dd><p>This function takes in the x, y, width, height, score, and label of
+a prediction and returns a dictionary with the prediction’s
+information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>float</em>) – The x coordinate of the prediction.</p></li>
+<li><p><strong>y</strong> (<em>float</em>) – The y coordinate of the prediction.</p></li>
+<li><p><strong>w</strong> (<em>float</em>) – The width of the prediction.</p></li>
+<li><p><strong>h</strong> (<em>float</em>) – The height of the prediction.</p></li>
+<li><p><strong>score</strong> (<em>float</em>) – The confidence score of the prediction.</p></li>
+<li><p><strong>label</strong> (<em>str</em>) – The label of the prediction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A dictionary with the prediction’s data.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.selected_tasks">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">selected_tasks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#predict.Predict.selected_tasks" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a list of tasks from the given list of tasks,
+whose id is in the range [start, end].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tasks</strong> (<em>list</em>) – A list of tasks id.</p></li>
+<li><p><strong>start</strong> (<em>int</em>) – The start of the range.</p></li>
+<li><p><strong>end</strong> (<em>int</em>) – The end of the range.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of tasks.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.single_task">
+<span class="sig-name descname"><span class="pre">single_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#predict.Predict.single_task" title="Permalink to this definition"></a></dt>
+<dd><p>Get a single task by id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>task_id</strong> (<em>int</em>) – The id of the task to get.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list containing the task data.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="predict.Predict.yolo_to_ls">
+<span class="sig-name descname"><span class="pre">yolo_to_ls</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#predict.Predict.yolo_to_ls" title="Permalink to this definition"></a></dt>
+<dd><p>Converts YOLOv5 output to a tuple of the form:
+[x, y, width, height, score, label]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>float</em>) – The x coordinate of the center of the bounding box.</p></li>
+<li><p><strong>y</strong> (<em>float</em>) – The y coordinate of the center of the bounding box.</p></li>
+<li><p><strong>width</strong> (<em>float</em>) – The width of the bounding box.</p></li>
+<li><p><strong>height</strong> (<em>float</em>) – The height of the bounding box.</p></li>
+<li><p><strong>score</strong> (<em>float</em>) – The confidence score of the bounding box.</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The index of the class label.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(x, y, width, height, score, label)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="predict.opts">
+<span class="sig-prename descclassname"><span class="pre">predict.</span></span><span class="sig-name descname"><span class="pre">opts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">argparse.Namespace</span></span></span><a class="headerlink" href="#predict.opts" title="Permalink to this definition"></a></dt>
+<dd><p>Parse command line arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Namespace object containing the parsed arguments.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>argparse.Namespace</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="model_utils.html" class="btn btn-neutral float-left" title="model_utils package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Mohammad Alyetama.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

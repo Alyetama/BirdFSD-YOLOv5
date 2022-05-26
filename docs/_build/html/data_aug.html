@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>data_aug package &mdash; birdfsd-yolov5 0.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> birdfsd-yolov5
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">birdfsd-yolov5</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">birdfsd-yolov5</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>data_aug package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/data_aug.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="data-aug-package">
+<h1>data_aug package<a class="headerlink" href="#data-aug-package" title="Permalink to this headline"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline"></a></h2>
+</section>
+<section id="module-data_aug.image_aug">
+<span id="data-aug-image-aug-module"></span><h2>data_aug.image_aug module<a class="headerlink" href="#module-data_aug.image_aug" title="Permalink to this headline"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.aug_pipelines">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">aug_pipelines</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">imgaug.augmenters.meta.Sequential</span></span></span><a class="headerlink" href="#data_aug.image_aug.aug_pipelines" title="Permalink to this definition"></a></dt>
+<dd><p>This function returns a sequence of augmentations to be applied to the
+images. The augmentations are:
+1. Flipping the image horizontally with a probability of 0.5
+2. Random cropping of the image with a probability of 0.1
+3. Blurring the image with a probability of 0.5
+4. Changing the contrast of the image with a probability of 1
+5. Adding gaussian noise to the image with a probability of 0.5
+6. Changing the brightness of the image with a probability of 0.2
+7. Applying affine transformations to the image with a probability of 1</p>
+<p class="rubric">Notes</p>
+<p><a class="reference external" href="https://imgaug.readthedocs.io/en/latest/source/examples_basics.html">https://imgaug.readthedocs.io/en/latest/source/examples_basics.html</a></p>
+<dl class="simple">
+<dt>Returns</dt><dd><p>iaa.Sequential: A sequence of augmentations to be applied to the images.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.check_classes_preserved">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">check_classes_preserved</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">classes_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#data_aug.image_aug.check_classes_preserved" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if the classes in the classes file are preserved after
+augmentation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>classes_file</strong> – The path to the classes file.</p></li>
+<li><p><strong>output_dir</strong> – The path to the output directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.create_batch">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">create_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">128</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#data_aug.image_aug.create_batch" title="Permalink to this definition"></a></dt>
+<dd><p>Creates batches of images and labels from the given directories.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images_dir</strong> (<em>str</em>) – The directory containing the images.</p></li>
+<li><p><strong>labels_dir</strong> (<em>str</em>) – The directory containing the labels.</p></li>
+<li><p><strong>output_dir</strong> (<em>str</em>) – The directory to save the augmented images and
+labels.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – The number of images to be augmented in a single
+batch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of images that were skipped due to errors.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>SKIPPED (list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.export_augs_as_files">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">export_augs_as_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_aug</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bbs_aug</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SKIPPED</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#data_aug.image_aug.export_augs_as_files" title="Permalink to this definition"></a></dt>
+<dd><p>Exports augmented images and bounding boxes to a directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_aug</strong> (<em>list</em>) – List of augmented images.</p></li>
+<li><p><strong>bbs_aug</strong> (<em>list</em>) – List of augmented bounding boxes.</p></li>
+<li><p><strong>output_dir</strong> (<em>str</em>) – Path to the output directory.</p></li>
+<li><p><strong>SKIPPED</strong> (<em>list</em>) – List of skipped images.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.opts">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">opts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">argparse.Namespace</span></span></span><a class="headerlink" href="#data_aug.image_aug.opts" title="Permalink to this definition"></a></dt>
+<dd><p>Parse command line arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Namespace object containing the parsed arguments.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>argparse.Namespace</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.run_aug_pipeline">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">run_aug_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datase_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">128</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#data_aug.image_aug.run_aug_pipeline" title="Permalink to this definition"></a></dt>
+<dd><p>This function takes a dataset path and augments the dataset by applying
+random transformations to the images and labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datase_path</strong> (<em>str</em>) – The path to the dataset.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – The number of images to process at once.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.split_data">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">split_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#data_aug.image_aug.split_data" title="Permalink to this definition"></a></dt>
+<dd><p>Split the data into train and validation sets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images_dir</strong> (<em>str</em>) – The path to the directory containing the images.</p></li>
+<li><p><strong>labels_dir</strong> (<em>str</em>) – The path to the directory containing the labels.</p></li>
+<li><p><strong>_output_dir</strong> (<em>str</em>) – The path to the output directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.image_aug.xywh_to_xyxy">
+<span class="sig-prename descclassname"><span class="pre">data_aug.image_aug.</span></span><span class="sig-name descname"><span class="pre">xywh_to_xyxy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#data_aug.image_aug.xywh_to_xyxy" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a bounding box from xywh format to xyxy format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>float</em>) – The x coordinate of the center of the bounding box.</p></li>
+<li><p><strong>y</strong> (<em>float</em>) – The y coordinate of the center of the bounding box.</p></li>
+<li><p><strong>w</strong> (<em>float</em>) – The width of the bounding box.</p></li>
+<li><p><strong>h</strong> (<em>float</em>) – The height of the bounding box.</p></li>
+<li><p><strong>image_width</strong> (<em>float</em>) – The width of the image.</p></li>
+<li><p><strong>image_height</strong> (<em>float</em>) – The height of the image.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple containing the x1, y1, x2, and y2 coordinates of the</dt><dd><p>bounding box.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-data_aug.transfer_color_aug">
+<span id="data-aug-transfer-color-aug-module"></span><h2>data_aug.transfer_color_aug module<a class="headerlink" href="#module-data_aug.transfer_color_aug" title="Permalink to this headline"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">data_aug.transfer_color_aug.</span></span><span class="sig-name descname"><span class="pre">Transfer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">python_color_transfer.color_transfer.ColorTransfer</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">python_color_transfer.color_transfer.Regrain</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">python_color_transfer.utils.Rotations</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer.img2arr">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">img2arr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer.img2arr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer.insert">
+<span class="sig-name descname"><span class="pre">insert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer.insert" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer.lt">
+<span class="sig-name descname"><span class="pre">lt</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer.lt" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer.mstd">
+<span class="sig-name descname"><span class="pre">mstd</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer.mstd" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer.pdf">
+<span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer.pdf" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.Transfer.save">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.Transfer.save" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.opts">
+<span class="sig-prename descclassname"><span class="pre">data_aug.transfer_color_aug.</span></span><span class="sig-name descname"><span class="pre">opts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">argparse.Namespace</span></span></span><a class="headerlink" href="#data_aug.transfer_color_aug.opts" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="data_aug.transfer_color_aug.run">
+<span class="sig-prename descclassname"><span class="pre">data_aug.transfer_color_aug.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_images_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_aug.transfer_color_aug.run" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-data_aug">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-data_aug" title="Permalink to this headline"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Mohammad Alyetama.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
