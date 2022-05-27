@@ -17,17 +17,24 @@ fi
 PACKAGE_FOLDER_NAME='birdfsd_yolov5'
 AUTHOR='Mohammad Alyetama'
 
+python -m pip install -e .
+
 rm -rf docs && mkdir docs && cd docs
 
 sphinx-quickstart --no-sep --project "$PACKAGE_FOLDER_NAME" \
     --author "$AUTHOR" --release "$RELEASE" --language 'en'
 cd ..
 
+curl "https://openmoji.org/data/color/svg/1F426.svg" --output docs/_static/logo.svg
+
 sphinx-apidoc -f -o docs "$PACKAGE_FOLDER_NAME"
 cd docs
 
 rm conf.py && cp ../conf.example.py conf.py
+
 awk -i inplace 'NR==13{print "   modules.rst"}1' index.rst
 
 make html
 cd ..
+
+echo -e "\nopen docs/_build/html/index.html\n"
