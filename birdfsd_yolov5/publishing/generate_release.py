@@ -84,9 +84,12 @@ class GenerateRelease:
         logger.debug(run)
 
         for k in [('val', -3), ('train', -3), ('path', -2)]:
-            relative_path = '/'.join(
-                Path(run.config['data_dict'][k[0]]).parts[k[1]:])
-            run.config['data_dict'][k[0]] = relative_path
+            try:
+                relative_path = '/'.join(
+                    Path(run.config['data_dict'][k[0]]).parts[k[1]:])
+                run.config['data_dict'][k[0]] = relative_path
+            except KeyError:
+                pass
 
         logger.debug(run.config)
         print()
