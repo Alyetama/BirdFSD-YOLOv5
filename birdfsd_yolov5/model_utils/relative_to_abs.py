@@ -4,12 +4,15 @@
 from pathlib import Path
 
 
-def main() -> None:
-    """This function is used to replace the dataset path in the
+def relative_to_abs() -> None:
+    """Updates paths in the dataset_config.yaml file from relative to absolute.
+
+    This function is used to replace the dataset path in the
     `dataset_config.yml` file from a relative to absolute path.
 
     Returns:
         None
+
     """
     with open('dataset_config.yml') as f:
         lines = f.readlines()
@@ -24,4 +27,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    relative_to_abs()

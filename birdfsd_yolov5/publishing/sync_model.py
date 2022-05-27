@@ -67,7 +67,7 @@ class SyncModel:
         version of the model to the `model` collection in the database.
 
         Returns:
-            model (dict): The model that was added to the database.
+            dict: The model that was added to the database.
 
         """
 

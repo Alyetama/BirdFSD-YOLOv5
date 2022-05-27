@@ -95,8 +95,8 @@ class JSON2YOLO:
             height: The height of the bounding box.
 
         Returns:
-            A tuple containing the x, y, width and height of the bounding box
-            in the format used by the yolo tool.
+            tuple: A tuple containing the x, y, width and height of the 
+            bounding box in the format used by the yolov5.
 
         """
         x = (x + width / 2) / 100
@@ -192,7 +192,7 @@ class JSON2YOLO:
             task (dict): The task to be converted.
 
         Returns:
-            The label of the task.
+            list: The labels in the task.
 
         Raises:
             FailedToParseImageURL: If the image URL is not valid.
@@ -426,7 +426,7 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        utils.tasks_data(f'tasks.json')
+        utils._tasks_data(f'tasks.json')
 
         with open('classes.json', 'w') as f:
 

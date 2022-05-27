@@ -33,7 +33,7 @@ def xywh_to_xyxy(x: float, y: float, w: float, h: float, image_width: float,
 
     Returns:
         tuple: A tuple containing the x1, y1, x2, and y2 coordinates of the
-            bounding box.
+        bounding box.
 
     """
     x1 = (x - w / 2) * image_width
@@ -118,7 +118,7 @@ def aug_pipelines() -> iaa.Sequential:
 
     Returns
         iaa.Sequential: A sequence of augmentations to be applied to the
-            images.
+        images.
 
     """
     ia.seed(1)
@@ -174,7 +174,7 @@ def create_batch(images_dir: str,
         batch_size (int): The number of images to be augmented in a single
             batch.
     Returns:
-        _skipped (list): A list of images that were skipped due to errors.
+        list: A list of images that were skipped due to errors.
 
     """
     SKIPPED = []
@@ -288,22 +288,6 @@ def check_classes_preserved(classes_file: str, output_dir: str) -> None:
     print('Classes were preserved.')
 
 
-def opts() -> argparse.Namespace:
-    """Parse command line arguments.
-
-    Returns:
-        argparse.Namespace: Namespace object containing the parsed arguments.
-
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d',
-                        '--dataset-path',
-                        help='Path to the preprocessed dataset directory',
-                        type=str,
-                        required=True)
-    return parser.parse_args()
-
-
 def run_aug_pipeline(dataset_path: str, batch_size: int = 128) -> None:
     """Runs the images augmentation pipeline 
 
@@ -351,6 +335,22 @@ def run_aug_pipeline(dataset_path: str, batch_size: int = 128) -> None:
     return
 
 
+def _opts() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Returns:
+        argparse.Namespace: Namespace object containing the parsed arguments.
+
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d',
+                        '--dataset-path',
+                        help='Path to the preprocessed dataset directory',
+                        type=str,
+                        required=True)
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    args = opts()
+    args = _opts()
     run_aug_pipeline(dataset_path=args.dataset_path)

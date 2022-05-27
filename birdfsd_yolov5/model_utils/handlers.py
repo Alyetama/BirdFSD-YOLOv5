@@ -5,6 +5,7 @@ import signal
 import sys
 from glob import glob
 from pathlib import Path
+from typing import Callable
 
 import ray
 from loguru import logger
@@ -12,6 +13,7 @@ from loguru import logger
 
 def keyboard_interrupt_handler(sig: int, _: object) -> None:
     """This function handles the KeyboardInterrupt (CTRL+C) signal.
+
     It's a handler for the signal, which means it's called when the OS sends
     the signal. The signal is sent when the user presses CTRL+C.
 
@@ -21,6 +23,7 @@ def keyboard_interrupt_handler(sig: int, _: object) -> None:
 
     Returns:
         None
+
     """
     logger.warning(f'KeyboardInterrupt (id: {sig}) has been caught...')
     logger.info('Terminating the session gracefully...')
@@ -35,10 +38,11 @@ def keyboard_interrupt_handler(sig: int, _: object) -> None:
     sys.exit(1)
 
 
-def catch_keyboard_interrupt():
+def catch_keyboard_interrupt() -> Callable:
     """This function catches the keyboard interrupt handler.
 
     Returns:
-        signal.signal(signal.SIGINT, keyboard_interrupt_handler)
+        Callable: A keyboard interrupt handler callable
+
     """
     return signal.signal(signal.SIGINT, keyboard_interrupt_handler)

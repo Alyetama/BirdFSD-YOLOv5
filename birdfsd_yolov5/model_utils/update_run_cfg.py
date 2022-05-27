@@ -13,19 +13,22 @@ import torchvision
 import wandb
 
 
-def main() -> None:
-    """This function uploads the classes.txt and hist.jpg files to the wandb
-    run specified by args.run_path. It also updates the run's config with the
-    dataset name, base ML framework version, and system hardware.
+def update_run_cfg(run_path, dataset_dir, dataset_name) -> None:
+    """Adds additional meta data to a finished wandb run.
+
+    This function uploads the classes.txt and hist.jpg files to a finished wandb
+    run. It also updates the run's config with the dataset name, base ML 
+    framework version, and system hardware.
 
     Returns:
         None
+
     """
     api = wandb.Api()
-    run = api.run(args.run_path)
+    run = api.run(run_path)
 
     cwd = os.getcwd()
-    os.chdir(args.dataset_dir)
+    os.chdir(dataset_dir)
     run.upload_file('classes.txt')
     run.upload_file('hist.jpg')
     os.chdir(cwd)
@@ -61,7 +64,7 @@ def main() -> None:
         system_hardware = {'cpu_count': multiprocessing.cpu_count()}
 
     dict_to_add = {
-        'dataset_name': Path(args.dataset_name).name,
+        'dataset_name': Path(dataset_name).name,
         'base_ml_framework': version,
         'system_hardware': system_hardware
     }
@@ -73,7 +76,7 @@ def main() -> None:
     return
 
 
-if __name__ == '__main__':
+def _opts():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-p',
@@ -91,6 +94,11 @@ if __name__ == '__main__':
                         help='Name of the dataset TAR file',
                         type=str,
                         required=True)
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    main()
+
+if __name__ == '__main__':
+    args = _opts()
+    update_run_cfg(run_path=args.run_path,
+                   dataset_dir=args.dataset_dir,
+                   dataset_name=args.dataset_name)

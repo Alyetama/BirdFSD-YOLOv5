@@ -29,6 +29,7 @@ class S3:
 
         Returns:
             None
+
         """
         self.client = Minio(os.environ['S3_ENDPOINT'],
                             access_key=os.environ['S3_ACCESS_KEY'],
@@ -53,6 +54,7 @@ class S3:
 
         Returns:
             str: The URL of the uploaded file.
+
         """
         file = Path(file_path)
         if not dest:
@@ -88,6 +90,7 @@ class S3:
 
         Returns:
             str: The destination path where the object was downloaded.
+
         """
         if not dest:
             dest = object_name
@@ -103,7 +106,8 @@ class S3:
                 If None, the latest version is returned.
 
         Returns:
-            The name of the model object in the model bucket.
+            str: The name of the model object in the model bucket.
+
         """
         objects = list(self.client.list_objects('model'))
         if model_version == 'latest':
@@ -126,6 +130,7 @@ class S3:
 
         Returns:
             str: The name of the object retrieved.
+            
         """
         if not object_name:
             objs = list(self.client.list_objects('dataset'))

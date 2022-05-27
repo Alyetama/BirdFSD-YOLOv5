@@ -134,6 +134,7 @@ class Transfer(ColorTransfer, Regrain, Rotations):
 
         Returns:
             np.ndarray: Transformed image as a numpy array.
+            
         """
         return self.mean_std_transfer(self.img2arr(self.file_path),
                                       self.img2arr(self.ref_path))

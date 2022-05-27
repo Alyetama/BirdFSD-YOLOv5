@@ -19,6 +19,7 @@ def _opts() -> argparse.Namespace:
 
     Returns:
         argparse.Namespace: Namespace object containing the parsed arguments.
+
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--opts-file',
@@ -40,6 +41,7 @@ def auto_prediction_pipeline(opts_file: Optional[str] = None,
 
     Returns:
         None
+        
     """
     logs_file = utils.add_logger(__file__)
     handlers.catch_keyboard_interrupt()

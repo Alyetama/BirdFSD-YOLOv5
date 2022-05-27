@@ -41,6 +41,7 @@ class GenerateRelease:
 
         Returns:
             None
+
         """
 
         s3 = s3_helper.S3()
@@ -67,7 +68,9 @@ class GenerateRelease:
         return urls
 
     def get_assets(self, run) -> Union[tuple, None]:
-        """Downloads the best model from the run with the given ID,
+        """Accesses the run files to get relevant assets.
+
+        Downloads the best model from the run with the given ID,
         extracts the model's configuration, & classes and saves them
         to a file.
 
@@ -76,6 +79,7 @@ class GenerateRelease:
 
         Returns:
             None
+
         """
         logger.debug(run)
 
@@ -133,6 +137,7 @@ class GenerateRelease:
 
         Returns:
             str: The content of the release notes file.
+
         """
 
         _run = {
@@ -265,8 +270,9 @@ class GenerateRelease:
         return content
 
     def generate(self) -> None:
-        """This function is the main function of the program.
-        It does the following:
+        """This method generates the release.
+
+        The method does the following:
         1. Creates a directory for the release
         2. Gets the f1-score of the run
         3. Gets some data assets from the run
@@ -275,6 +281,7 @@ class GenerateRelease:
 
         Returns:
             None
+
         """
         logs_file = utils.add_logger(__file__)
 
@@ -343,11 +350,12 @@ class GenerateRelease:
         return
 
 
-def opts() -> argparse.Namespace:
+def _opts() -> argparse.Namespace:
     """Parse command line arguments.
 
     Returns:
         argparse.Namespace: Namespace object containing the parsed arguments.
+
     """
     parser = argparse.ArgumentParser(
         epilog=f'Basic usage: python {Path(__file__).name} '
@@ -381,7 +389,7 @@ def opts() -> argparse.Namespace:
 
 if __name__ == '__main__':
     load_dotenv()
-    args = opts()
+    args = _opts()
     gr = GenerateRelease(run_path=args.run_path,
                          version=args.version,
                          repo=args.repo,

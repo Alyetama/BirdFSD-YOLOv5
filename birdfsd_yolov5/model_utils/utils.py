@@ -27,6 +27,7 @@ def add_logger(current_file: str) -> str:
 
     Returns:
         str: The name of the log file.
+
     """
     Path('logs').mkdir(exist_ok=True)
     ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
@@ -46,6 +47,7 @@ def upload_logs(logs_file: str) -> None:
 
     Raises:
         S3Error: If the upload fails.
+
     """
     s3 = s3_helper.S3()
     try:
@@ -70,6 +72,7 @@ def requests_download(url: str, filename: str) -> None:
 
     Raises:
         RuntimeError: If the returned status code is not 200.
+
     """
 
     handlers.catch_keyboard_interrupt()
@@ -98,6 +101,7 @@ def api_request(url: str, method: str = 'get', data: dict = None) -> dict:
 
     Returns:
         dict: The response from the API.
+
     """
     headers = CaseInsensitiveDict()
     headers['Content-type'] = 'application/json'
@@ -118,7 +122,8 @@ def get_project_ids_str(exclude_ids: str = None) -> str:
         exclude_ids: A comma separated string of project ids to exclude.
 
     Returns:
-        A comma separated string of project ids.
+        str: A comma separated string of project ids.
+
     """
     projects = api_request(
         f'{os.environ["LS_HOST"]}/api/projects?page_size=10000')
@@ -137,11 +142,12 @@ def get_data(json_min: bool) -> list:
         json_min: Whether to download the tasks in JSON_MIN format.
 
     Returns:
-        A list of all tasks.
+        list: A list of all tasks.
+
     """
 
     @ray.remote
-    def iter_db(proj_id: str, j_min: bool):
+    def iter_db(proj_id: str, j_min: bool) -> list:
         return mongodb_helper.get_tasks_from_mongodb(proj_id,
                                                      dump=False,
                                                      json_min=j_min)
@@ -156,26 +162,18 @@ def get_data(json_min: bool) -> list:
     return sum(tasks, [])
 
 
-def tasks_data(output_path):
-    """This function takes the output path as an argument and writes the data
-    to a json file.
-
-    Args:
-        output_path (str): The path to the output file.
-
-    Returns:
-        None
-    """
+def _tasks_data(output_path: str) -> None:
     with open(output_path, 'w') as j:
         json.dump(get_data(False), j)
     return
 
 
-def get_labels_count():
-    """Returns a dictionary of labels and their frequency.
+def get_labels_count() -> dict:
+    """Creates a dictionary of labels and their frequency.
 
     Returns:
-        A dictionary of labels and their frequency.
+       dict:  A dictionary of labels and their frequency.
+        
     """
     tasks = get_data(True)
     labels = []

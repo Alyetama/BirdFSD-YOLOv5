@@ -14,21 +14,25 @@ from birdfsd_yolov5.model_utils import (mongodb_helper, s3_helper, handlers,
 
 
 class ModelVersionDoesNotExist(Exception):
-    pass
+    """Raised when the model version does not exist in the database."""
 
 
 class DownloadModelWeights:
 
-    def __init__(self, model_version, output='best.pt'):
+    def __init__(self, model_version: str, output: str = 'best.pt'):
         """Method to initialize the class.
+
         Args:
             model_version (str): The version of the model to be saved.
             output (str): The name of the file to save the model to.
+
         """
         self.model_version = model_version
         self.output = output
 
-    def get_weights(self, skip_download=False, object_name_only=False):
+    def get_weights(self,
+                    skip_download: bool = False,
+                    object_name_only: bool = False):
         """Get the weights for a given model version.
 
         Args:
@@ -42,6 +46,7 @@ class DownloadModelWeights:
             str: The path to the weights file.
             str: The download URL for the weights file.
             str: The model version.
+
         """
         handlers.catch_keyboard_interrupt()
 
@@ -80,9 +85,7 @@ class DownloadModelWeights:
         return self.output, weights_url, Path(model_object_name).stem
 
 
-if __name__ == '__main__':
-    load_dotenv()
-
+def _opts():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v',
                         '--model-version',
@@ -102,7 +105,12 @@ if __name__ == '__main__':
                         '--object-name-only',
                         action='store_true',
                         help='Return the weights objects name then exit')
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    load_dotenv()
+    args = _opts()
 
     dmw = DownloadModelWeights(model_version=args.model_version,
                                output=args.output)

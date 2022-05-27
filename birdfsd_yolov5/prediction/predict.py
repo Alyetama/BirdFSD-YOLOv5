@@ -228,7 +228,7 @@ class Predict(LoadModel, _Headers):
     def selected_tasks(tasks: list, start: int, end: int) -> list:
         """Selects label-studio tasks in a user-specified range
 
-        Returns a list of tasks from the given list of tasks,
+        Creates a list of tasks from the given list of tasks,
         whose id is in the range [start, end].
 
         Args:
@@ -325,7 +325,7 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             Optional[bool]: True if a prediction with the current model version
-                exists. Otherwise, None.
+            exists. Otherwise, None.
 
         """
         if not os.getenv('DB_CONNECTION_STRING'):
@@ -533,6 +533,7 @@ def _opts() -> argparse.Namespace:
 
     Returns:
         argparse.Namespace: Namespace object containing the parsed arguments.
+        
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-w',
