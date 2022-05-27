@@ -37,7 +37,7 @@ jobs:
         S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
         S3_REGION: ${{ secrets.S3_REGION }}
       run: |
-        python json2yolov5.py --only-tar-file --enable-s3 --filter-cls-with-instances-under 20
+        python birdfsd_yolov5/preprocessing/json2yolov5.py --only-tar-file --enable-s3 --filter-cls-with-instances-under 20
 
     - name: 'Upload Artifact'
       uses: actions/upload-artifact@v3
