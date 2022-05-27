@@ -70,7 +70,7 @@ def auto_prediction_pipeline(opts_file: Optional[str] = None,
     if not OPTS['weights'] and OPTS['model_version'] == 'latest':
         dmw = download_weights.DownloadModelWeights(OPTS['model_version'])
         skip_download = False
-        if args.show_config:
+        if args.show_opts:
             skip_download = True
         weights, weights_url, weights_model_ver = dmw.get_weights(
             skip_download=skip_download)
