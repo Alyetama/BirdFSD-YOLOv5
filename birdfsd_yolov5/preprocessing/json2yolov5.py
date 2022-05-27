@@ -83,7 +83,9 @@ class JSON2YOLO:
     @staticmethod
     def bbox_ls_to_yolo(x: float, y: float, width: float,
                         height: float) -> tuple:
-        """Converts a bounding box from the format used by the labelme tool to
+        """From label-studio's xywh to yolov5's xywh.
+
+        Converts a bounding box from the format used by the labelme tool to
         the format used by the yolo tool.
 
         Args:
@@ -95,6 +97,7 @@ class JSON2YOLO:
         Returns:
             A tuple containing the x, y, width and height of the bounding box
             in the format used by the yolo tool.
+
         """
         x = (x + width / 2) / 100
         y = (y + height / 2) / 100
@@ -107,6 +110,7 @@ class JSON2YOLO:
 
         Returns:
             list: A list of data.
+
         """
 
         @ray.remote
@@ -193,6 +197,7 @@ class JSON2YOLO:
         Raises:
             FailedToParseImageURL: If the image URL is not valid.
             TypeError: If the image URL is not valid.
+
         """
         if self.copy_data_from or self.enable_s3:
             img = task['image']
@@ -289,6 +294,7 @@ class JSON2YOLO:
 
         Returns:
             None
+
         """
         for subdir in [
                 'images/train', 'labels/train', 'images/val', 'labels/val'
@@ -325,6 +331,7 @@ class JSON2YOLO:
 
         Returns:
             None
+
         """
         matplotlib.use('Agg')
         plt.subplots(figsize=(12, 8), dpi=300)
@@ -352,7 +359,9 @@ class JSON2YOLO:
         return
 
     def run(self) -> None:
-        """This method is used to run main preprocessing pipeline and convert
+        """Runs the preprocessing pipeline.
+
+        This method is used to run main preprocessing pipeline and convert
         the data to the yolov5 format.
 
         Returns:
@@ -360,6 +369,7 @@ class JSON2YOLO:
 
         Raises:
             BucketDoesNotExist: If the dataset S3 bucket does not exist.
+
         """
 
         @ray.remote

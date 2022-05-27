@@ -5,6 +5,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -13,7 +14,7 @@ from birdfsd_yolov5.model_utils import download_weights, handlers, utils
 from birdfsd_yolov5.prediction import predict
 
 
-def opts() -> argparse.Namespace:
+def _opts() -> argparse.Namespace:
     """Parse command line arguments.
 
     Returns:
@@ -30,9 +31,12 @@ def opts() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    """A pipeline to run the prediction module. Intended to be used as
-    systemctl service or inside a GitHub action.
+def auto_prediction_pipeline(opts_file: Optional[str] = None,
+                             show_opts: bool = False) -> None:
+    """A pipeline to run the prediction module.
+
+    A prediction pipeline that is ntended to be used as systemctl service or 
+    inside a GitHub actions workflow.
 
     Returns:
         None
@@ -40,9 +44,9 @@ def main() -> None:
     logs_file = utils.add_logger(__file__)
     handlers.catch_keyboard_interrupt()
 
-    if args.opts_file:
-        logger.debug(f'Loading options from file: `{args.opts_file}`...')
-        with open(args.opts_file) as j:
+    if opts_file:
+        logger.debug(f'Loading options from file: `{opts_file}`...')
+        with open(opts_file) as j:
             OPTS = json.load(j)
     else:
         logger.debug('Using default options...')
@@ -76,7 +80,7 @@ def main() -> None:
             raise sys.exit(
                 'Need to specify model version if loaded from a file path!')
 
-    if args.show_opts:
+    if show_opts:
         print(json.dumps(OPTS, indent=4))
         sys.exit(0)
 
@@ -93,5 +97,6 @@ def main() -> None:
 
 if __name__ == '__main__':
     load_dotenv()
-    args = opts()
-    main()
+    args = _opts()
+    auto_prediction_pipeline(opts_file=args.opts_file,
+                             show_opts=args.show_opts)

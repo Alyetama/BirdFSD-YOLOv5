@@ -115,8 +115,7 @@ class Transfer(ColorTransfer, Regrain, Rotations):
         """Method proposed by Pitié, F., Kokaram, A. C., & Dahyot, R. (2007).
 
         Note:
-            Original paper: 
-                https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.458.7694  # noqa
+            Original paper: https://doi.org/10.1016/j.cviu.2006.11.011
 
         Returns:
             np.ndarray: Transformed image as a numpy array.
@@ -131,8 +130,7 @@ class Transfer(ColorTransfer, Regrain, Rotations):
         M., Gooch, B., & Shirley, P. (2001).
 
         Note:
-            Original paper: 
-                https://www.cs.tau.ac.il/~turkel/imagepapers/ColorTransfer.pdf
+            Original paper: https://doi.org/10.1109/38.946629
 
         Returns:
             np.ndarray: Transformed image as a numpy array.

@@ -24,11 +24,7 @@ from birdfsd_yolov5.model_utils import handlers, mongodb_helper, utils
 
 
 class _Headers:
-    """This class is used to make headers for requests call.
-    It is a static class.
-    It has only one method: make_headers()
-    It returns a dictionary with the headers.
-    """
+    """This class is used to make headers for requests call."""
 
     def __init__(self) -> None:
         pass
@@ -49,15 +45,7 @@ class _Headers:
 
 
 class LoadModel:
-    """This class is used to load a model from a given path.
-    The model is a YOLOv5 model.
-    The model is loaded using the torch.hub.load function.
-    The model is loaded with the following parameters:
-    - ultralytics/yolov5
-    - custom
-    - path=self.weights
-    The model is returned by the model method.
-    """
+    """This class is used to load a model from a given path."""
 
     def __init__(self, weights: str, model_version: str) -> None:
         self.weights = weights
@@ -66,8 +54,11 @@ class LoadModel:
     def model(self) -> torch.nn.Module:
         """Loads a pretrained YOLOv5 model for a given dataset.
 
+        The model is loaded using the torch.hub.load function.
+
         Returns:
             torch.nn.Module: a YOLOv5 model.
+
         """
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
@@ -137,7 +128,6 @@ class Predict(LoadModel, _Headers):
         Returns:
             str: Path to the temporary image file.
 
-        
         """
         cur_img_name = Path(img_url.split('?')[0]).name
         r = requests.get(img_url)
@@ -150,8 +140,7 @@ class Predict(LoadModel, _Headers):
 
     def yolo_to_ls(self, x: float, y: float, width: float, height: float,
                    score: float, n: int) -> tuple:
-        """Converts YOLOv5 output to a tuple of the form:
-        [x, y, width, height, score, label]
+        """Converts YOLOv5 output to a tuple of the form: (x, y, w, h, conf, n)
 
         Args:
             x (float): The x coordinate of the center of the bounding box.
@@ -163,6 +152,7 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             tuple: (x, y, width, height, score, label)
+
         """
         x = (x - width / 2) * 100
         y = (y - height / 2) * 100
@@ -183,6 +173,7 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             dict: A dictionary containing the task data.
+
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -235,7 +226,9 @@ class Predict(LoadModel, _Headers):
 
     @staticmethod
     def selected_tasks(tasks: list, start: int, end: int) -> list:
-        """Returns a list of tasks from the given list of tasks,
+        """Selects label-studio tasks in a user-specified range
+
+        Returns a list of tasks from the given list of tasks,
         whose id is in the range [start, end].
 
         Args:
@@ -245,17 +238,19 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             list: A list of tasks.
+
         """
         return [t for t in tasks if t['id'] in range(start, end + 1)]
 
     def single_task(self, task_id: int) -> list:
-        """Get a single task by id.
+        """Get a single task by its id.
 
         Args:
             task_id (int): The id of the task to get.
 
         Returns:
             list: A list containing the task data.
+
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -264,7 +259,9 @@ class Predict(LoadModel, _Headers):
     @staticmethod
     def pred_result(x: float, y: float, w: float, h: float, score: float,
                     label: str) -> dict:
-        """This function takes in the x, y, width, height, score, and label of
+        """Creates a dictionary for an individual prediction result.
+
+        This function takes in the x, y, width, height, score, and label of
         a prediction and returns a dictionary with the prediction's
         information.
 
@@ -278,6 +275,7 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             dict: A dictionary with the prediction's data.
+
         """
         return {
             "type": "rectanglelabels",
@@ -294,7 +292,9 @@ class Predict(LoadModel, _Headers):
         }
 
     def pred_post(self, results: list, scores: list, task_id: int) -> dict:
-        """This function is used to create an API POST request of a single
+        """Creates a dictionary for a prediction POST data.
+
+        This function is used to create an API POST request of a single
         prediction results.
 
         Args:
@@ -304,7 +304,8 @@ class Predict(LoadModel, _Headers):
             task_id (int): the task id.
 
         Returns:
-            dict: The prediction results.        
+            dict: The prediction results.    
+
         """
         return {
             'model_version': self.model_version,
@@ -318,12 +319,14 @@ class Predict(LoadModel, _Headers):
 
     def pred_exists(self, task: dict) -> Optional[bool]:
         """Check if a prediction already exists with the current model version.
+
         Args:
             task: A dictionary with the prediction's data.
 
         Returns:
             Optional[bool]: True if a prediction with the current model version
                 exists. Otherwise, None.
+
         """
         if not os.getenv('DB_CONNECTION_STRING'):
             logger.warning('Not connected to a MongoDB database! '
@@ -342,7 +345,9 @@ class Predict(LoadModel, _Headers):
                 return True
 
     def post_prediction(self, task: dict) -> Optional[Union[str, dict]]:
-        """This function is called by the `predict` method. It takes a task as
+        """Prepares the POST request data of the prediction results.
+
+        This function is called by the `predict` method. It takes a task as
         an argument and performs the following steps:
         
         1. It downloads the image from the task's `data` field.
@@ -368,6 +373,7 @@ class Predict(LoadModel, _Headers):
             UnidentifiedImageError: If image is not identified.
             OSError: If image is not downloaded.
             Exception: If any other exception occurs.
+
         """
         task_id = task['id']
         if not self.delete_if_no_predictions and not self.if_empty_apply_label:
@@ -438,10 +444,11 @@ class Predict(LoadModel, _Headers):
         return
 
     def apply_predictions(self) -> None:
-        """This function applies predictions to tasks.
+        """This function applies predictions to label studio tasks.
 
         Returns:
             None
+
         """
         start = time.time()
         logs_file = utils.add_logger(__file__)
@@ -521,7 +528,7 @@ class Predict(LoadModel, _Headers):
         return
 
 
-def opts() -> argparse.Namespace:
+def _opts() -> argparse.Namespace:
     """Parse command line arguments.
 
     Returns:
@@ -591,7 +598,7 @@ def opts() -> argparse.Namespace:
 
 if __name__ == '__main__':
     load_dotenv()
-    args = opts()
+    args = _opts()
 
     predict = Predict(weights=args.weights,
                       model_version=args.model_version,

@@ -45,6 +45,7 @@ class SyncModel:
 
         Raises:
             ModelVersionFormatError: If the version is not valid.
+
         """
         model_version_number = 'v' + self.model_version.split(
             self.model_name)[1].split('-v')[1]
@@ -59,12 +60,15 @@ class SyncModel:
         return model_version_number
 
     def add_new_version(self) -> dict:
-        """This function updates the database with the latest version of the
-        dataset. It first gets the labels from the database, then adds the new
+        """updates the database with the latest version.
+
+        This method updates the database with the latest version of the
+        model. It first gets the labels from the database, then adds the new
         version of the model to the `model` collection in the database.
 
         Returns:
             model (dict): The model that was added to the database.
+
         """
 
         _ = self.check_version_number_format()
@@ -121,8 +125,7 @@ class SyncModel:
         return model
 
 
-if __name__ == '__main__':
-    load_dotenv()
+def _opts():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-p',
@@ -166,7 +169,12 @@ if __name__ == '__main__':
                         'yyyy-MM-dd)',
                         type=str,
                         required=True)
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    load_dotenv()
+    args = _opts()
 
     sync_model = SyncModel(project_ids=args.project_ids,
                            model_version=args.model_version,

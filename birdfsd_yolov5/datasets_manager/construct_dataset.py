@@ -20,6 +20,7 @@ def get_all_tasks_from_mongodb():
 
     Returns:
         list: A list of all the tasks in the database.
+
     """
 
     @ray.remote
@@ -41,7 +42,9 @@ def get_all_tasks_from_mongodb():
 
 @ray.remote
 def simplify(task):
-    """This function takes a task from the original dataset and simplifies it
+    """Creayes a dict object out of the most important keys in a task.
+
+    This function takes a task from the original dataset and simplifies it
     to a format that is easier to work with.
 
     Args:
@@ -49,6 +52,7 @@ def simplify(task):
 
     Returns:
         dict: A simplified task.
+
     """
     labels = []
     label_val = task.get('label')
@@ -83,15 +87,17 @@ def simplify(task):
     return simple_task
 
 
-def main():
-    """This function is the main function of the program. It gets all the tasks
-    from mongodb, and then sends them to the ray cluster for processing. It
-    then waits for the results to come back, and saves them to a parquet file.
+def construct_dataset(tasks):
+    """Constructs a summarized dataset in Apache Parquet format.
+
+    This function gets all the tasks from mongodb, and then sends them to the 
+    ray cluster for processing. It then waits for the results to come back, 
+    and saves them to a parquet file.
 
     Returns:
         None
+
     """
-    tasks = get_all_tasks_from_mongodb()
 
     futures = [simplify.remote(task) for task in tasks]
     results = []
@@ -113,4 +119,5 @@ def main():
 
 if __name__ == '__main__':
     load_dotenv()
-    main()
+    tasks = get_all_tasks_from_mongodb()
+    construct_dataset()
