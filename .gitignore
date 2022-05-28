@@ -182,4 +182,4 @@ train_opts.json
 mongodb_backups/
 *.ckpt
 mongodb_backups/
-conf_copy.py
+slurm/train_no_gh.sh

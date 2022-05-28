@@ -242,6 +242,7 @@ class JSON2YOLO:
                 logger.error(f'{cur_img_path} is not valid (task'
                              f' id: {task["id"]})! Skipping...')
                 Path(cur_img_path).unlink()
+                return
         except FileNotFoundError:
             logger.error(
                 f'Could not validate {cur_img_path} from {task["id"]}! '
@@ -258,7 +259,10 @@ class JSON2YOLO:
                 logger.error(f'>>>>>>>>>> CORRUPTED TASK: {task}')
                 f.close()
                 Path(cur_label_path).unlink()
-                Path(cur_img_path).unlink()
+                try:
+                    Path(cur_img_path).unlink()
+                except FileNotFoundError:
+                    pass
                 return
 
             for label in labels:
