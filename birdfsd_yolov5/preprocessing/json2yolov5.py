@@ -399,6 +399,7 @@ class JSON2YOLO:
             results.append(ray.get(future))
 
         if results:
+            results = [x for x in results if x]
             results = sum(results, [])
             self.plot_results(results)
 
