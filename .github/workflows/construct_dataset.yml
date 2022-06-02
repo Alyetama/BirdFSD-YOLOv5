@@ -38,7 +38,7 @@ jobs:
         S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
         S3_REGION: ${{ secrets.S3_REGION }}
       run: |
-        python birdfsd_yolov5/model_utils/construct_dataset.py
+         python birdfsd_yolov5/datasets_manager/construct_dataset.py
 
     - name: 'Upload Artifact'
       uses: actions/upload-artifact@v3

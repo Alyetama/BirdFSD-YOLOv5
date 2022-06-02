@@ -120,4 +120,4 @@ def construct_dataset(tasks):
 if __name__ == '__main__':
     load_dotenv()
     tasks = get_all_tasks_from_mongodb()
-    construct_dataset()
+    construct_dataset(tasks)
