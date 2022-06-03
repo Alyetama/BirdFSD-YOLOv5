@@ -390,7 +390,7 @@ class JSON2YOLO:
         Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
 
         futures = []
-        for task in tasks[:100]:
+        for task in tasks:
             futures.append(iter_convert_to_yolo.remote(task))
         results = []
         for future in tqdm(futures, desc='Tasks'):
