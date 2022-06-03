@@ -1,9 +1,10 @@
 name: Sync Tasks
 
 on:
+  push:
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/60 * * * *'
 
 permissions:
   contents: read
