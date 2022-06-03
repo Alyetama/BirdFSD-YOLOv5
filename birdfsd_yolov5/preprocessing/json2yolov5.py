@@ -289,12 +289,8 @@ class JSON2YOLO:
                 f.write('\n')
         return label_names
 
-    @staticmethod
-    def split_data(_output_dir: str) -> None:
+    def split_data(self) -> None:
         """Split the data into train and validation sets.
-
-        Args:
-            _output_dir: The directory where the data is stored.
 
         Returns:
             None
@@ -303,12 +299,11 @@ class JSON2YOLO:
         for subdir in [
                 'images/train', 'labels/train', 'images/val', 'labels/val'
         ]:
-            Path(f'{_output_dir}/{subdir}').mkdir(parents=True, exist_ok=True)
+            Path(f'{self.output_dir}/{subdir}').mkdir(parents=True,
+                                                      exist_ok=True)
 
-        images = sorted(
-            glob(f'{Path(__file__).parent}/{_output_dir}/ls_images/*'))
-        labels = sorted(
-            glob(f'{Path(__file__).parent}/{_output_dir}/ls_labels/*'))
+        images = sorted(glob(f'{self.output_dir}/ls_images/*'))
+        labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
         pairs = [(x, y) for x, y in zip(images, labels)]
 
         len_ = len(images)
@@ -319,10 +314,9 @@ class JSON2YOLO:
 
         for split, split_str in zip([train, val], ['train', 'val']):
             for n, dtype in zip([0, 1], ['images', 'labels']):
+                base_subdir = f'{self.output_dir}/{dtype}/{split_str}'
                 _ = [
-                    shutil.copy2(
-                        x[n],
-                        f'{_output_dir}/{dtype}/{split_str}/{Path(x[n]).name}')
+                    shutil.copy2(x[n], f'{base_subdir}/{Path(x[n]).name}')
                     for x in split
                 ]
         return
@@ -396,7 +390,7 @@ class JSON2YOLO:
         Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
 
         futures = []
-        for task in tasks:
+        for task in tasks[:100]:
             futures.append(iter_convert_to_yolo.remote(task))
         results = []
         for future in tqdm(futures, desc='Tasks'):
@@ -413,10 +407,10 @@ class JSON2YOLO:
         assert len(glob(f'{self.output_dir}/images/*')) == len(
             glob(f'{self.output_dir}/labels/*'))
 
-        self.split_data(self.output_dir)
+        self.split_data()
 
-        shutil.rmtree(self.imgs_dir, ignore_errors=True)
-        shutil.rmtree(self.labels_dir, ignore_errors=True)
+        shutil.rmtree(f'{self.output_dir}/ls_images', ignore_errors=True)
+        shutil.rmtree(f'{self.output_dir}/ls_labels', ignore_errors=True)
 
         d = {
             'path': f'{self.output_dir}',
@@ -431,9 +425,9 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        utils._tasks_data(f'tasks.json')
+        utils._tasks_data(f'{self.output_dir}/tasks.json')
 
-        with open('classes.json', 'w') as f:
+        with open(f'{self.output_dir}/classes.json', 'w') as f:
 
             classes_json = {
                 k: v

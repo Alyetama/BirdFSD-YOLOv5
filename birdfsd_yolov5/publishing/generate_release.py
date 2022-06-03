@@ -21,14 +21,21 @@ from birdfsd_yolov5.model_utils import s3_helper, utils
 
 class GenerateRelease:
 
-    def __init__(self, run_path: str, version: str, repo: Optional[str],
-                 overwrite: bool = False, dataset_folder: str = None) -> \
-            None:
+    def __init__(self,
+                 run_path: str,
+                 version: str,
+                 train_folder: str,
+                 val_folder: str,
+                 dataset_folder: str,
+                 repo: Optional[str] = None,
+                 overwrite: bool = False) -> None:
         self.run_path = run_path
         self.version = version
         self.repo = repo
         self.overwrite = overwrite
         self.dataset_folder = dataset_folder
+        self.train_folder = train_folder
+        self.val_folder = val_folder
         self.release_folder = f'releases/{self.version}'
 
     def find_file(self, run, fname: str) -> \
@@ -114,21 +121,39 @@ class GenerateRelease:
                   'w') as j:
             json.dump(summary, j, indent=4)
 
-        if self.dataset_folder:
-            shutil.copy2(f'{self.dataset_folder}/classes.json',
-                         f'{self.release_folder}/{self.version}-classes.json')
+        shutil.copy2(f'{self.dataset_folder}/classes.json',
+                     f'{self.release_folder}/{self.version}-classes.json')
+
+        train_files = glob(f'{self.train_folder}/*')
+        train_files = [
+            x for x in train_files if Path(x).name in
+            ['results.png', 'results.csv', 'opt.yaml', 'hyp.yaml']
+        ]
+
+        for file in train_files:
+            shutil.copy2(
+                file,
+                f'{self.release_folder}/{self.version}-{Path(file).name}')
 
         with tarfile.open(f'{self.release_folder}/{self.version}-meta.tgz',
                           'w:gz') as tar:
-            tar.add(f'{self.release_folder}', arcname=self.version)
+            tar.add(f'{self.release_folder}', arcname=f'{self.version}-meta')
 
         for file in glob(f'{self.release_folder}/*'):
             if Path(file).suffix != '.tgz':
                 Path(file).unlink()
 
-        if self.dataset_folder:
-            shutil.copy2(f'{self.dataset_folder}/tasks.json',
-                         f'{self.release_folder}/{self.version}-tasks.json')
+        shutil.copy2(f'{self.dataset_folder}/tasks.json',
+                     f'{self.release_folder}/{self.version}-tasks.json')
+
+        shutil.copy2(f'{self.train_folder}/weights/best.pt',
+                     f'{self.release_folder}/{self.version}-best_weights.pt')
+
+        with tarfile.open(
+                f'{self.release_folder}/{self.version}-val_results.tgz',
+                'w:gz') as tar:
+            tar.add(f'{self.val_folder}',
+                    arcname=f'{self.version}-val_results')
         return
 
     def release_notes(self, run, f1_score: float) -> str:
@@ -142,6 +167,8 @@ class GenerateRelease:
             str: The content of the release notes file.
 
         """
+
+        s3 = s3_helper.S3()
 
         _run = {
             'Training start time':
@@ -211,12 +238,12 @@ class GenerateRelease:
                 </details>''')
                 f.write(base_ml_framework_section)
 
-            if self.dataset_folder:
+            try:
                 with open(f'{self.dataset_folder}/classes.json') as j:
                     f.write(
                         '\n<details>\n<summary>Classes</summary>\n\n```JSON\n'
                         f'{json.dumps(json.load(j), indent=4)}\n```\n')
-            else:
+            except FileNotFoundError:
                 f.write('\n<details>\n<summary>Classes</summary>\n\n```YAML'
                         '\n- ' +
                         '\n- '.join(run.config['data_dict']['names']) +
@@ -229,29 +256,31 @@ class GenerateRelease:
 
             f.write('\n</details>\n')
 
-            try:
-                urls = self.find_file(run, 'Validation')
-                f.write(
-                    '\n<details>\n<summary>Validation predictions</summary>\n')
-                for n, val_imgs_example_url in enumerate(urls):
-                    f.write('\n' + f'<img src="{val_imgs_example_url}" '
-                            f'alt="val-{n}">')
-                f.write('\n</details>\n')
+            val_files = glob(f'{self.val_folder}/val_*')
+            val_urls = []
+            for val_file in val_files:
+                val_dest = f'{Path(val_file).stem}-{self.version}.jpg'
+                val_url = s3.upload('public',
+                                    val_file,
+                                    public=True,
+                                    dest=val_dest)
+                val_urls.append((val_dest, val_url))
 
-                cm_idx = run.summary['Results']['captions'].index(
-                    'confusion_matrix.png')
-                cm_fname = run.summary['Results']['filenames'][cm_idx]
-                cm_file, cm_url = self.find_file(run, cm_fname)
+            f.write('\n<details>\n<summary>Validation predictions</summary>\n')
 
-                f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
-                        '\n' + f'<img src="{cm_url}" alt="cm"'
-                        ' width="1280" height="720">'
-                        '\n</details>\n')
+            for val_file, val_url in val_urls:
+                f.write('\n' + f'<img src="{val_url}" '
+                        f'alt="{val_file}">')
+            f.write('\n</details>\n')
 
-                shutil.rmtree(Path(cm_file.name).parents[1],
-                              ignore_errors=True)
-            except TypeError:
-                logger.error('Failed to get files from the run...')
+            cm_file = f'{self.val_folder}/confusion_matrix.png'
+            cm_dest = f'cm-{self.version}.png'
+            cm_url = s3.upload('public', cm_file, public=True, dest=cm_dest)
+
+            f.write('\n<details>\n<summary>Confusion matrix</summary>\n'
+                    '\n' + f'<img src="{cm_url}" alt="cm"'
+                    ' width="1280" height="720">'
+                    '\n</details>\n')
 
             f.write('\n**Model performance**:\n')
             val_results = {
@@ -304,37 +333,30 @@ class GenerateRelease:
         self.get_assets(run)
         _ = self.release_notes(run=run, f1_score=f1_score)
 
-        artifact = api.artifact(f'{Path(self.run_path).parent}/'
-                                f'run_{Path(self.run_path).name}_model:best')
-        _ = artifact.download('artifacts')
-        shutil.move(f'artifacts/best.pt',
-                    f'{self.release_folder}/{self.version}-best_weights.pt')
-        shutil.rmtree('artifacts')
+        dataset_file = glob(f'{self.dataset_folder}/*.tar')
+        if dataset_file:
+            shutil.copy2(dataset_file[0], f'{self.release_folder}')
+            dataset_file_name = Path(dataset_file[0]).name
+        else:
+            dataset_file_name = None
 
-        if self.dataset_folder:
-            dataset_file = glob(f'{self.dataset_folder}/*.tar')
-            if dataset_file:
-                shutil.copy2(dataset_file[0], f'{self.release_folder}')
-                dataset_file_name = Path(dataset_file[0]).name
-            else:
-                dataset_file_name = None
+        print(f'{"-" * 40}\n')
+        gpg_cmds = []
+        for file in [
+                f'{self.version}-best_weights.pt',
+                f'{self.version}-tasks.json', dataset_file_name
+        ]:
+            if file:
+                gpg_cmds.append(
+                    f'FILE="{self.release_folder}/{file}"; gpg '
+                    '--pinentry-mode loopback -c "$FILE" && rm "$FILE"')
 
-            print(f'{"-" * 40}\n')
-            gpg_cmds = []
-            for file in [
-                    f'{self.version}-best_weights.pt',
-                    f'{self.version}-tasks.json', dataset_file_name
-            ]:
-                if file:
-                    gpg_cmds.append(
-                        f'FILE="{self.release_folder}/{file}"; gpg '
-                        '--pinentry-mode loopback -c "$FILE" && rm "$FILE"')
-
-            full_gpg_cmd = ' && '.join(gpg_cmds)
-            if sys.stdout.isatty():
-                print(f'\033[31m{full_gpg_cmd}\033[39m')
-            else:
-                print(full_gpg_cmd)
+        full_gpg_cmd = ' && '.join(gpg_cmds)
+        if sys.stdout.isatty():
+            print(f'\033[35m{full_gpg_cmd}\033[39m')
+        else:
+            print(full_gpg_cmd)
+        print(f'\n{"-" * 40}')
 
         utils.upload_logs(logs_file)
 
@@ -347,9 +369,10 @@ class GenerateRelease:
                 f'{self.release_folder}/*.tgz'
 
             if sys.stdout.isatty():
-                print(f'\033[31m{gh_cli_cmd}\033[39m')
+                print(f'\033[35m{gh_cli_cmd}\033[39m')
             else:
                 print(gh_cli_cmd)
+            print(f'\n{"-" * 40}\n')
         return
 
 
@@ -373,6 +396,22 @@ def _opts() -> argparse.Namespace:
                         help='Release version (e.g., MODEL-v1.0.0-alpha.1.3)',
                         type=str,
                         required=True)
+    parser.add_argument('-t',
+                        '--train-folder',
+                        help='Path to the train folder',
+                        type=str,
+                        required=True)
+    parser.add_argument('-V',
+                        '--val-folder',
+                        help='Path to the validation folder',
+                        type=str,
+                        required=True)
+    parser.add_argument('-D',
+                        '--dataset-folder',
+                        help='Path to the artifacts folder that contains the '
+                        'dataset TAR file',
+                        type=str,
+                        required=True)
     parser.add_argument('-R',
                         '--repo',
                         help='URL to the repository (i.e., [...].git)',
@@ -381,12 +420,6 @@ def _opts() -> argparse.Namespace:
                         help='Overwrite if the release already exists on '
                         'the local disk',
                         action='store_true')
-    parser.add_argument('-D',
-                        '--dataset-folder',
-                        help='Path to the artifacts folder that contains the '
-                        'dataset TAR file',
-                        type=str)
-
     return parser.parse_args()
 
 
@@ -395,7 +428,9 @@ if __name__ == '__main__':
     args = _opts()
     gr = GenerateRelease(run_path=args.run_path,
                          version=args.version,
+                         train_folder=args.train_folder,
+                         val_folder=args.val_folder,
+                         dataset_folder=args.dataset_folder,
                          repo=args.repo,
-                         overwrite=args.overwrite,
-                         dataset_folder=args.dataset_folder)
+                         overwrite=args.overwrite)
     gr.generate()

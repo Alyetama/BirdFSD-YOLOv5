@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "birdfsd_yolov5"
+version = "0.1.0"
+description = "Build and train a custom model to identify birds visiting bird feeders "
+authors = ["Alyetama <malyetama@pm.me>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
