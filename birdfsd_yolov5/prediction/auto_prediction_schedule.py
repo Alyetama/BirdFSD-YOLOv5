@@ -54,7 +54,7 @@ def auto_prediction_pipeline(opts_file: Optional[str] = None,
         logger.debug('Using default options...')
         OPTS = {
             'weights': '',
-            'project_ids': None,  # None will return all projects
+            'project_ids': '86',  # None will return all projects
             'tasks_range': None,
             'predict_all': True,
             'one_task': None,
