@@ -48,4 +48,4 @@ jobs:
           tasks.json
           classes.json
           dataset-YOLO*.tar
-        retention-days: 90
+        retention-days: 30

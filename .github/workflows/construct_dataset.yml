@@ -46,4 +46,4 @@ jobs:
         name: artifacts
         path: |
           *.parquet
-        retention-days: 90
+        retention-days: 30
