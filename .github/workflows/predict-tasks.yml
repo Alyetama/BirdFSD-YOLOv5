@@ -1,4 +1,4 @@
-name: Predict
+name: Predict Tasks
 
 on:
   workflow_dispatch:

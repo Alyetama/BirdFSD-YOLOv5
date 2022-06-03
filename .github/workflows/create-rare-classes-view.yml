@@ -23,6 +23,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        python -m pip install -e .
     - name: Run create_rare_classes_view.py
       env:
         TOKEN: ${{ secrets.TOKEN }}
