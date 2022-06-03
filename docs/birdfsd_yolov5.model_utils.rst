@@ -60,14 +60,6 @@ birdfsd\_yolov5.model\_utils.utils module
    :undoc-members:
    :show-inheritance:
 
-birdfsd\_yolov5.model\_utils.wandb\_helper module
--------------------------------------------------
-
-.. automodule:: birdfsd_yolov5.model_utils.wandb_helper
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
