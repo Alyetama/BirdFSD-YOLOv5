@@ -183,3 +183,5 @@ mongodb_backups/
 *.ckpt
 mongodb_backups/
 slurm/train_no_gh.sh
+Dockerfile
+docker-compose.yml

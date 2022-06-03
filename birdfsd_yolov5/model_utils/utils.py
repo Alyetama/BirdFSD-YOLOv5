@@ -7,6 +7,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 import ray
@@ -91,13 +92,17 @@ def requests_download(url: str, filename: str) -> None:
     return
 
 
-def api_request(url: str, method: str = 'get', data: dict = None) -> dict:
+def api_request(url: str,
+                method: str = 'get',
+                data: dict = None,
+                return_text: bool = False) -> Union[dict, str]:
     """Makes an API request to the given url with the given method and data.
 
     Args:
         url (str): The url to make the request to.
         method (str): The HTTP method to use. Defaults to 'get'.
         data (dict): The data to send with the request. Defaults to None.
+        return_text (bool): Return the response as literal string.
 
     Returns:
         dict: The response from the API.
@@ -106,13 +111,16 @@ def api_request(url: str, method: str = 'get', data: dict = None) -> dict:
     headers = CaseInsensitiveDict()
     headers['Content-type'] = 'application/json'
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
-    if method == 'get':
-        resp = requests.get(url, headers=headers)
-    elif method == 'post':
+    if method == 'post':
         resp = requests.post(url, headers=headers, data=json.dumps(data))
     elif method == 'patch':
         resp = requests.patch(url, headers=headers, data=json.dumps(data))
-    return resp.json()  # noqa
+    else:
+        resp = requests.get(url, headers=headers)
+
+    if return_text:
+        return resp.text
+    return resp.json()
 
 
 def get_project_ids_str(exclude_ids: str = None) -> str:
@@ -127,7 +135,8 @@ def get_project_ids_str(exclude_ids: str = None) -> str:
     """
     projects = api_request(
         f'{os.environ["LS_HOST"]}/api/projects?page_size=10000')
-    project_ids = sorted([project['id'] for project in projects['results']])
+    project_ids = sorted([project['id']
+                          for project in projects['results']])  # noqa
     project_ids = [str(p) for p in project_ids]
     if exclude_ids:
         exclude_ids = [p for p in exclude_ids.split(',')]

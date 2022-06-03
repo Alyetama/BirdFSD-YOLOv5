@@ -8,11 +8,10 @@ from pathlib import Path
 
 import pandas as pd
 import ray
+from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
 from dotenv import load_dotenv
 from ray.exceptions import RayTaskError
 from tqdm import tqdm
-
-from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
 
 
 def get_all_tasks_from_mongodb():

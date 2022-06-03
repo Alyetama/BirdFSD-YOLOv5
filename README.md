@@ -21,9 +21,10 @@ cd BirdFSD-YOLOv5
 
 conda create --name yolov5 python=3.8.13 --yes
 
-python -m pip install -e .
-
 pip install -r requirements.txt
+
+poetry build
+pip install dist/*.whl
 
 git clone https://github.com/ultralytics/yolov5.git
 
