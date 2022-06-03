@@ -2,22 +2,15 @@ name: Docker Build and Push
 
 on:   
   push:
-    branches:
-      - docker-dev
-
-    # Publish `v1.2.3` tags as releases.
     tags:
       - v*
 
-  # Run tests for any PRs.
   pull_request:
 
 env:
   IMAGE_NAME: birdfsd-yolov5
 
 jobs:
-  # Push image to GitHub Packages.
-  # See also https://docs.docker.com/docker-hub/builds/
   push:
     runs-on: ubuntu-latest
     permissions:
@@ -31,7 +24,6 @@ jobs:
         run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
       - name: Log in to registry
-        # This is where you will update the PAT to GITHUB_TOKEN
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 
       - name: Push image

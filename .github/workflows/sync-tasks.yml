@@ -1,9 +1,9 @@
-name: Predict
+name: Sync Tasks
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '*/30 * * * *'
 
 permissions:
   contents: read
@@ -24,8 +24,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         python -m pip install -e .
-    - name: Run auto_prediction_schedule.py
-      env: 
+    - name: Run sync_tasks.py
+      env:
         TOKEN: ${{ secrets.TOKEN }}
         LS_HOST: ${{ secrets.LS_HOST }}
         DB_NAME: ${{ secrets.DB_NAME }}
@@ -36,4 +36,4 @@ jobs:
         S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
         S3_REGION: ${{ secrets.S3_REGION }}
       run: |
-        python birdfsd_yolov5/prediction/auto_prediction_schedule.py
+        python birdfsd_yolov5/label_studio_helpers/sync_tasks.py
