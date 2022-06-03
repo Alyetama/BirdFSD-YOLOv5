@@ -7,12 +7,11 @@ import datetime
 import json
 import re
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from pymongo.errors import DuplicateKeyError
 
-from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
+from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper
 
 
 class ModelVersionFormatError(Exception):
@@ -21,15 +20,15 @@ class ModelVersionFormatError(Exception):
 
 class SyncModel:
 
-    def __init__(self, project_ids: Optional[str], model_version: str,
-                 model_name: str, run_path: str, classes_file: str,
-                 weights_file: str, config_file: str, train_date: str) -> None:
-        self.project_ids = project_ids
+    def __init__(self, model_version: str, model_name: str, run_path: str,
+                 classes_file: str, weights_file: str, weights_enc: str,
+                 config_file: str, train_date: str) -> None:
         self.model_name = model_name
         self.model_version = model_version
         self.run_path = run_path
         self.classes_file = classes_file
         self.weights_file = weights_file
+        self.weights_enc = weights_enc
         self.config_file = config_file
         self.train_date = train_date
 
@@ -85,11 +84,6 @@ class SyncModel:
         with open(self.classes_file) as j:
             labels_freq = json.load(j)
 
-        if self.project_ids:
-            project_ids = self.project_ids
-        else:
-            project_ids = utils.get_project_ids_str()
-
         with open(self.config_file) as j:
             train_config = json.load(j)
 
@@ -99,14 +93,14 @@ class SyncModel:
             '_id': self.model_version,
             'name': self.model_version.split('-v')[0],
             'version': self.model_version.split('-v')[1],
-            'projects': project_ids,
             'labels': labels_freq,
             'added_on': datetime.datetime.today(),
             'trained_on': datetime.datetime(*train_date),
             'wandb_run_path': self.run_path,
             'number_of_classes': len(labels_freq),
             'number_of_annotations': sum(list(labels_freq.values())),
-            'train_config': train_config
+            'train_config': train_config,
+            'weights_enc': self.weights_enc
         }
 
         try:
@@ -127,12 +121,6 @@ class SyncModel:
 
 def _opts():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-p',
-        '--project-ids',
-        help='Comma-seperated project ids. If empty, it will select all '
-        'projects',
-        type=str)
     parser.add_argument('-v',
                         '--model-version',
                         help='Model version ([NAME-x.y.z])',
@@ -158,6 +146,11 @@ def _opts():
                         help='`*-best_weights.pt` file from the release',
                         type=str,
                         required=True)
+    parser.add_argument('-W',
+                        '--weights-enc',
+                        help='Encrypted weights github URL',
+                        type=str,
+                        required=True)
     parser.add_argument('-C',
                         '--config-file',
                         help='`*-config.json` file from the release',
@@ -176,12 +169,12 @@ if __name__ == '__main__':
     load_dotenv()
     args = _opts()
 
-    sync_model = SyncModel(project_ids=args.project_ids,
-                           model_version=args.model_version,
+    sync_model = SyncModel(model_version=args.model_version,
                            model_name=args.model_name,
                            run_path=args.run_path,
                            classes_file=args.classes_file,
                            weights_file=args.weights_file,
+                           weights_enc=args.weights_enc,
                            config_file=args.config_file,
                            train_date=args.train_date)
     sync_model.add_new_version()
