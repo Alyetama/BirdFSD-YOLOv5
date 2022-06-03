@@ -9,6 +9,7 @@ Subpackages
 
    birdfsd_yolov5.augmentation
    birdfsd_yolov5.datasets_manager
+   birdfsd_yolov5.label_studio_helpers
    birdfsd_yolov5.model_utils
    birdfsd_yolov5.prediction
    birdfsd_yolov5.preprocessing

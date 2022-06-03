@@ -4,7 +4,7 @@ Build and train a custom model to identify birds visiting bird feeders.
 
 📖 **[Documentation](https://birdfsd-yolov5.readthedocs.io/en/latest/)**
 
-[![Supported Python versions](https://img.shields.io/badge/Python-%3E=3.8-blue.svg)](https://www.python.org/downloads/) [![PEP8](https://img.shields.io/badge/Code%20style-PEP%208-orange.svg)](https://www.python.org/dev/peps/pep-0008/) [![Documentation Status](https://readthedocs.org/projects/birdfsd-yolov5/badge/?version=latest)](https://birdfsd-yolov5.readthedocs.io/en/latest/?badge=latest)
+[![Poetry-build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml) [![Supported Python versions](https://img.shields.io/badge/Python-%3E=3.8-blue.svg)](https://www.python.org/downloads/) [![PEP8](https://img.shields.io/badge/Code%20style-PEP%208-orange.svg)](https://www.python.org/dev/peps/pep-0008/) [![Documentation Status](https://readthedocs.org/projects/birdfsd-yolov5/badge/?version=latest)](https://birdfsd-yolov5.readthedocs.io/en/latest/?badge=latest)
 
 ## Requirements
 - 🐍 [python>=3.8](https://www.python.org/downloads/)
@@ -21,9 +21,10 @@ cd BirdFSD-YOLOv5
 
 conda create --name yolov5 python=3.8.13 --yes
 
-python -m pip install -e .
-
 pip install -r requirements.txt
+
+poetry build
+pip install dist/*.whl
 
 git clone https://github.com/ultralytics/yolov5.git
 
