@@ -20,6 +20,7 @@ pybboxes
 protobuf==3.20
 sphinx
 sphinx_rtd_theme
+poetry
 
 https://1file.top/python_color_transfer-0.1.0-py3-none-any.whl
 
