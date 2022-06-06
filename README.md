@@ -18,8 +18,7 @@ Build and train a custom model to identify birds visiting bird feeders.
 git clone https://github.com/bird-feeder/BirdFSD-YOLOv5.git
 cd BirdFSD-YOLOv5
 
-conda create --name yolov5 python=3.8.13 --yes
-
+# Recommended: create a conda/pyenv environment
 pip install -r requirements.txt
 
 poetry build
