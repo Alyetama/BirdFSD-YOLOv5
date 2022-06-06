@@ -405,7 +405,7 @@ class JSON2YOLO:
             logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
         if len(glob(f'{self.output_dir}/images/*')) != len(
-            glob(f'{self.output_dir}/labels/*')):
+                glob(f'{self.output_dir}/labels/*')):
             raise AssertionError
 
         self.split_data()
@@ -426,7 +426,7 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        utils._tasks_data(f'{self.output_dir}/tasks.json')
+        utils.tasks_data(f'{self.output_dir}/tasks.json')
 
         with open(f'{self.output_dir}/classes.json', 'w') as f:
 

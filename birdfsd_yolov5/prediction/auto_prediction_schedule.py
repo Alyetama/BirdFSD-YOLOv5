@@ -72,7 +72,7 @@ def auto_prediction_pipeline(opts_file: Optional[str] = None,
         skip_download = False
         if args.show_opts:
             skip_download = True
-        weights, weights_url, weights_model_ver = dmw.get_weights(
+        weights, _weights_url, weights_model_ver = dmw.get_weights(
             skip_download=skip_download)
         logger.info(f'Downloaded weights to {weights}')
         OPTS['weights'] = weights
