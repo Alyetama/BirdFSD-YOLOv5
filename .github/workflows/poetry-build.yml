@@ -1,4 +1,4 @@
-name: Poetry-build
+name: Poetry Build
 on:
   push:
   pull_request:
