@@ -166,7 +166,6 @@ class MigrateToS3:
         base_data = self.download_existing_project_tasks()
         # STEP 5
         self.post_existing_annotations_to_new_projects(project_ids, base_data)
-        return
 
 
 if __name__ == '__main__':

@@ -111,7 +111,6 @@ def patch(from_label, to_label):
         ray.get(future)
     # --------------------------------------------------------------
     ray.shutdown()
-    return
 
 
 if __name__ == '__main__':

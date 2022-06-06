@@ -187,7 +187,6 @@ def sync_local_storage():
     logger.debug('--------------------END--------------------')
 
     upload_logs(logs_file)
-    return
 
 
 if __name__ == '__main__':

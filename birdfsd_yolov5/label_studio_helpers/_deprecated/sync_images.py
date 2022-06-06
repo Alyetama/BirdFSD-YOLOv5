@@ -69,7 +69,6 @@ def sync_images():
         insert_image(ray.get(future))
 
     upload_logs(logs_file)
-    return
 
 
 if __name__ == '__main__':
