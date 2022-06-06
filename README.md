@@ -72,7 +72,6 @@ Use the *Colab* notebook:
 ## :bookmark: Related
 
 - [BirdFSD-YOLOv5-API](https://github.com/bird-feeder/BirdFSD-YOLOv5-API)
-- [label-studio-workers](https://github.com/bird-feeder/label-studio-workers)
 - [webapp-beta](https://github.com/bird-feeder/webapp-beta)
 
 
