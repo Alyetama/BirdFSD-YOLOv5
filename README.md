@@ -4,6 +4,7 @@ Build and train a custom model to identify birds visiting bird feeders.
 
 📖 **[Documentation](https://birdfsd-yolov5.readthedocs.io/en/latest/)**
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1a1a45e60dc74db4a47b421bc1b09d34)](https://app.codacy.com/gh/bird-feeder/BirdFSD-YOLOv5?utm_source=github.com&utm_medium=referral&utm_content=bird-feeder/BirdFSD-YOLOv5&utm_campaign=Badge_Grade_Settings)
 [![Poetry Build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml) [![Docker Build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/docker-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/docker-build.yml) [![Documentation Status](https://readthedocs.org/projects/birdfsd-yolov5/badge/?version=latest)](https://birdfsd-yolov5.readthedocs.io/en/latest/?badge=latest) [![Supported Python versions](https://img.shields.io/badge/Python-%3E=3.8-blue.svg)](https://www.python.org/downloads/) [![PEP8](https://img.shields.io/badge/Code%20style-PEP%208-orange.svg)](https://www.python.org/dev/peps/pep-0008/)
 
 ## Requirements
