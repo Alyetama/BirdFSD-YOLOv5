@@ -242,7 +242,7 @@ def split_data(images_dir: str, labels_dir: str, _output_dir: str) -> None:
 
     images = sorted(glob(f'{images_dir}/*'))
     labels = sorted(glob(f'{labels_dir}/*'))
-    pairs = [(x, y) for x, y in zip(images, labels)]
+    pairs = list(zip(images, labels))
 
     len_ = len(images)
     train_len = round(len_ * 0.8)
