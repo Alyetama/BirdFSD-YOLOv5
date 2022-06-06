@@ -70,7 +70,6 @@ def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
         bbs = BoundingBoxesOnImage(bbs, im.shape[:-1])
         im_shape = (im.shape[1], im.shape[0])
 
-        # image_w_bbs = bbs.draw_on_image(im, size=2)
         im = Image.fromarray(im)
 
         fname = f'aug-{uuid.uuid4()}'
