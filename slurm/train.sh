@@ -28,7 +28,7 @@ export WANDB_RUN_ID=$(python -c "import wandb; print(wandb.util.generate_id())")
 export WANDB_PATH_PARENT= # <<<<<<<<<<<<<<<<<<<< @required
 #-------------------------------------
 if [[ $WANDB_PATH_PARENT == '' ]]; then
-    echo 'Missing `WANDB_PATH_PARENT` value!'
+    echo 'Missing "WANDB_PATH_PARENT" value!'
     exit 1
 fi
 #-------------------------------------

@@ -9,7 +9,6 @@ Build and train a custom model to identify birds visiting bird feeders.
 ## Requirements
 - 🐍 [python>=3.8](https://www.python.org/downloads/)
 
-
 ## :rocket: Getting started
 
 - First, [fork the repository](https://github.com/bird-feeder/BirdFSD-YOLOv5/fork).
@@ -45,10 +44,10 @@ nano .env  # or with any other editor
 
 </details>
 
-
 ## :wrench: Dataset preparation
 
 - **Option 1:** Run the `JSON to YOLOv5 (data preprocessing)` workflow under github `Actions`.
+
 - **Option 2:** Run it locally with:
 
   ```shell
@@ -63,14 +62,12 @@ Use the *Colab* notebook:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bird-feeder/BirdFSD-YOLOv5/blob/main/notebooks/BirdFSD_YOLOv5_train.ipynb)
 
-
 ## :memo: Prediction
 
 - **Option 1:** Run the `Predict` workflow under github `Actions`.
 - **Option 2:** Use the *Colab* notebook:
 
   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bird-feeder/BirdFSD-YOLOv5/blob/main/notebooks/BirdFSDV1_YOLOv5_LS_Predict.ipynb)
-
 
 ## :bookmark: Related
 

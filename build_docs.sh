@@ -9,7 +9,7 @@ trap keyboard_interrupt SIGINT
 RELEASE="$1"
 
 if [[ "$RELEASE" == '' ]]; then
-    echo 'Missing required positional argument: `release number`!'
+    echo 'Missing required positional argument: "release number"!'
     echo "  For example: '0.1.0', '0.2.1', etc."
     exit 1
 fi
