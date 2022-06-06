@@ -14,9 +14,9 @@ from PIL import Image, UnidentifiedImageError
 from dotenv import load_dotenv
 from loguru import logger
 
-from birdfsd_yolov5.label_studio_helpers.add_and_sync_new_project import (
-    add_new_project, add_and_sync_data_storage)
-from birdfsd_yolov5.model_utils.handlers import catch_keyboard_interrupt
+from add_and_sync_new_project import add_new_project, \
+    add_and_sync_data_storage
+from utils import catch_keyboard_interrupt
 
 
 class MissingArgument(Exception):
@@ -24,34 +24,14 @@ class MissingArgument(Exception):
 
 
 class WatchDog:
-    """Creates new projects when a change is detected in the source folder.
 
-    This class is used to create a new folder for the images to be stored
-    in. The folder name is based on the current time and date. The folder is
-    created in the root data folder. The folder name is returned.
-    """
-
-    def __init__(self,
-                 root_data_folder: str,
-                 images_per_folder: int = 1000,
-                 debug: bool = False):
-        """
-        Args:
-            root_data_folder (str): The Root folder where the images are
-                stored.
-            images_per_folder (int): Number of Images per folder.
-            debug (bool): Debug mode.
-
-        Returns:
-            str: The name of the folder that was created.
-
-        """
+    def __init__(self, root_data_folder, images_per_folder=1000, debug=False):
         self.root_data_folder = root_data_folder
         self.images_per_folder = images_per_folder
         self.debug = debug
 
     @staticmethod
-    def _create_dummy_data() -> None:
+    def create_dummy_data():
         dummy_projects = ['project-1000', 'project-1001', 'MOVE_ME']
 
         for project in dummy_projects:
@@ -74,18 +54,6 @@ class WatchDog:
         return
 
     def validate_image_file(self, file: str) -> str:
-        """Validates an image file.
-
-        Args:
-            file (str): The path to the image file.
-
-        Returns:
-            str: The path to the image file.
-
-        Raises:
-            UnidentifiedImageError: If the image file is corrupted.
-
-        """
         if self.debug:
             return file
         try:
@@ -101,13 +69,13 @@ class WatchDog:
                     file,
                     f'{Path(self.root_data_folder).parent}/data_corrupted')
 
-    def _generate_next_folder_name(self) -> str:
+    def generate_next_folder_name(self) -> str:
         project_folders = sorted(glob(f'{self.root_data_folder}/project-*'))
         num = str(int(project_folders[-1].split('project-')[-1]) + 1).zfill(4)
         Path(f'{self.root_data_folder}/project-{num}').mkdir()
         return f'{self.root_data_folder}/project-{num}'
 
-    def _refresh_src(self) -> tuple:
+    def refresh_source(self) -> tuple:
         folders = glob(f'{self.root_data_folder}/*')
         project_folders = glob(f'{self.root_data_folder}/project-*')
         new_folders = list(set(folders).difference(project_folders))
@@ -124,11 +92,12 @@ class WatchDog:
         new_files = sum(new_files, [])
         return folders, project_folders, new_folders, new_files
 
-    def _arrange_new_data_files(self) -> None:
+    def arrange_new_data_files(self) -> None:
         Path(f'{Path(self.root_data_folder).parent}/data_corrupted').mkdir(
             exist_ok=True)
 
-        folders, project_folders, new_folders, new_files = self._refresh_src()
+        folders, project_folders, new_folders, new_files = self.refresh_source(
+        )
 
         not_filled_folders = []
         project_folders = sorted(glob(f'{self.root_data_folder}/project-*'))
@@ -143,11 +112,17 @@ class WatchDog:
             for folder, folder_size in not_filled_folders:
                 for file in new_files:
                     if self.validate_image_file(file):
-                        shutil.move(file, folder)
+                        try:
+                            shutil.move(file, folder)
+                        except shutil.Error:
+                            fp = Path(file)
+                            rand_str = str(uuid.uuid4()).split('-')[-1]
+                            dest = f'{folder}/{fp.stem}_{rand_str}{fp.suffix}'
+                            shutil.move(file, dest)
                         if len(glob(f'{folder}/*')) == 1000:
                             break
 
-        folders, project_folders, new_folders, new_files = self._refresh_src(
+        folders, project_folders, new_folders, new_files = self.refresh_source(
         )
 
         chunks = [
@@ -156,7 +131,7 @@ class WatchDog:
         ]
 
         for chunk in chunks:
-            dst = self._generate_next_folder_name()
+            dst = self.generate_next_folder_name()
             folder_name = Path(dst).name
             for file in chunk:
                 if self.validate_image_file(file):
@@ -175,16 +150,10 @@ class WatchDog:
                 shutil.rmtree(empty_folder)
 
     def watch(self):
-        """Monitor changes in the source and organize the data accordingly.
-
-        Returns:
-            None
-
-        """
         catch_keyboard_interrupt()
         if self.debug:
             self.root_data_folder = 'dummy'
-            self._create_dummy_data()
+            self.create_dummy_data()
         else:
             Path(f'{self.root_data_folder}/project-0001').mkdir(exist_ok=True)
 
@@ -196,7 +165,11 @@ class WatchDog:
             if global_state != local_state:
                 logger.debug('Detected change!')
                 global_state = copy.deepcopy(local_state)
-                self._arrange_new_data_files()
+                trigger_file = f'{self.root_data_folder}/init'
+                if Path(trigger_file).exists():
+                    logger.debug('Triggered manually...')
+                    Path(trigger_file).unlink()
+                self.arrange_new_data_files()
             time.sleep(60)
 
 

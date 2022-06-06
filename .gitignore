@@ -183,5 +183,6 @@ mongodb_backups/
 *.ckpt
 mongodb_backups/
 slurm/train_no_gh.sh
-Dockerfile
 docker-compose.yml
+birdfsd_yolov5/replicate/
+birdfsd_yolov5/_api/api_dev.py
