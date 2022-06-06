@@ -404,8 +404,9 @@ class JSON2YOLO:
         if self.tasks_not_exported:
             logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
-        assert len(glob(f'{self.output_dir}/images/*')) == len(
-            glob(f'{self.output_dir}/labels/*'))
+        if len(glob(f'{self.output_dir}/images/*')) != len(
+            glob(f'{self.output_dir}/labels/*')):
+            raise AssertionError
 
         self.split_data()
 

@@ -283,7 +283,8 @@ def check_classes_preserved(classes_file: str, output_dir: str) -> None:
             lines = f.read().splitlines()
             existing_aug_labels.append([line.split(' ')[0] for line in lines])
     existing_aug_labels = list(set(sum(existing_aug_labels, [])))
-    assert len(existing_aug_labels) == classes_len
+    if len(existing_aug_labels) != classes_len:
+        raise AssertionError
     shutil.copy2(classes_file, output_dir)
     print('Classes were preserved.')
 
