@@ -36,4 +36,6 @@ jobs:
         S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
         S3_REGION: ${{ secrets.S3_REGION }}
       run: |
+        python birdfsd_yolov5/label_studio_helpers/sync_tasks.py
         python birdfsd_yolov5/prediction/auto_prediction_schedule.py
+        python birdfsd_yolov5/label_studio_helpers/sync_tasks.py
