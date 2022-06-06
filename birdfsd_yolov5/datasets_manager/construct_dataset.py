@@ -5,6 +5,7 @@ import hashlib
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import ray
@@ -14,7 +15,7 @@ from ray.exceptions import RayTaskError
 from tqdm import tqdm
 
 
-def get_all_tasks_from_mongodb():
+def get_all_tasks_from_mongodb() -> list:
     """This function is used to get all the tasks from mongodb.
 
     Returns:
@@ -33,21 +34,21 @@ def get_all_tasks_from_mongodb():
     futures = []
     for project_id in project_ids:
         futures.append(_get_all_tasks_from_mongodb.remote(project_id))
-    tasks = []
+    local_tasks = []
     for future in tqdm(futures, desc='Projects'):
-        tasks.append(ray.get(future))
-    return sum(tasks, [])
+        local_tasks.append(ray.get(future))
+    return sum(local_tasks, [])
 
 
 @ray.remote
-def simplify(task):
+def simplify(task: dict) -> Optional[dict]:
     """Creayes a dict object out of the most important keys in a task.
 
-    This function takes a task from the original dataset and simplifies it
+    This function takes a task from the original database and simplifies it
     to a format that is easier to work with.
 
     Args:
-        task (dict): A task from the original dataset.
+        task (dict): A task from the original database.
 
     Returns:
         dict: A simplified task.
@@ -86,19 +87,22 @@ def simplify(task):
     return simple_task
 
 
-def construct_dataset(tasks):
+def construct_dataset(input_tasks: list) -> None:
     """Constructs a summarized dataset in Apache Parquet format.
 
     This function gets all the tasks from mongodb, and then sends them to the 
     ray cluster for processing. It then waits for the results to come back, 
     and saves them to a parquet file.
 
+    Args:
+        input_tasks (list): A list of all the tasks in the database.
+
     Returns:
         None
 
     """
 
-    futures = [simplify.remote(task) for task in tasks]
+    futures = [simplify.remote(task) for task in input_tasks]
     results = []
     for future in tqdm(futures):
         try:

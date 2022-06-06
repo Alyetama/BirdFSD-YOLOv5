@@ -34,7 +34,7 @@ fi
 #-------------------------------------
 mkdir -p archived
 mv dataset-YOLO "archived/dataset-YOLO_$(uuid)"
-mv dataset-YOLO*.tar dataset_config.yml *.pt yolov5/runs wandb archived
+mv ./dataset-YOLO*.tar dataset_config.yml ./*.pt yolov5/runs wandb archived
 #-------------------------------------
 python birdfsd_yolov5/preprocessing/json2yolov5.py --enable-s3 \
     --filter-cls-with-instances-under "$FILTER_CLASSES_UNDER"

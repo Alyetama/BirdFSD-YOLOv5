@@ -19,7 +19,9 @@ AUTHOR='Mohammad Alyetama'
 
 python -m pip install -e .
 
-rm -rf docs && mkdir docs && cd docs
+rm -rf docs && mkdir docs
+
+cd docs || exit
 
 sphinx-quickstart --no-sep --project "$PACKAGE_FOLDER_NAME" \
     --author "$AUTHOR" --release "$RELEASE" --language 'en'
@@ -30,7 +32,7 @@ curl "https://openmoji.org/data/color/svg/1F426.svg" \
 
 sphinx-apidoc -f -o docs "$PACKAGE_FOLDER_NAME"
 
-cd docs
+cd docs || exit
 
 rm conf.py && cp ../conf.example.py conf.py
 

@@ -7,7 +7,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import ray
@@ -71,6 +71,9 @@ def requests_download(url: str, filename: str) -> None:
         url (str): The URL of the file to download.
         filename (str): The name of the file to save the downloaded file to.
 
+    Returns:
+        None
+
     Raises:
         RuntimeError: If the returned status code is not 200.
 
@@ -94,14 +97,15 @@ def requests_download(url: str, filename: str) -> None:
 
 def api_request(url: str,
                 method: str = 'get',
-                data: dict = None,
+                data: Optional[dict] = None,
                 return_text: bool = False) -> Union[dict, str]:
     """Makes an API request to the given url with the given method and data.
 
     Args:
         url (str): The url to make the request to.
         method (str): The HTTP method to use. Defaults to 'get'.
-        data (dict): The data to send with the request. Defaults to None.
+        data (Optional[dict]): The data to send with the request. Defaults to 
+            None.
         return_text (bool): Return the response as literal string.
 
     Returns:
@@ -123,11 +127,12 @@ def api_request(url: str,
     return resp.json()
 
 
-def get_project_ids_str(exclude_ids: str = None) -> str:
+def get_project_ids_str(exclude_ids: Optional[str] = None) -> str:
     """Get a comma separated string of project ids.
 
     Args:
-        exclude_ids: A comma separated string of project ids to exclude.
+        exclude_ids (Optional[str]): A comma separated string of project ids to 
+            exclude.
 
     Returns:
         str: A comma separated string of project ids.
@@ -171,7 +176,16 @@ def get_data(json_min: bool) -> list:
     return sum(tasks, [])
 
 
-def _tasks_data(output_path: str) -> None:
+def tasks_data(output_path: Optional[str]) -> None:
+    """Get all tasks data of all projects
+
+    Args:
+        output_path (str): Path to the output JSON file.
+
+    Returns:
+        None
+
+    """
     with open(output_path, 'w') as j:
         json.dump(get_data(False), j)
     return

@@ -426,7 +426,7 @@ class JSON2YOLO:
             for k, v in d.items():
                 f.write(f'{k}: {v}\n')
 
-        utils._tasks_data(f'{self.output_dir}/tasks.json')
+        utils.tasks_data(f'{self.output_dir}/tasks.json')
 
         with open(f'{self.output_dir}/classes.json', 'w') as f:
 

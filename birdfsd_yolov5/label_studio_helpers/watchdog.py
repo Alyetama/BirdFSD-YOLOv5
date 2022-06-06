@@ -89,14 +89,13 @@ class WatchDog:
             if cur_files:
                 new_files.append(cur_files)
         new_files = sum(new_files, [])
-        return folders, project_folders, new_folders, new_files
+        return project_folders, new_folders, new_files
 
     def arrange_new_data_files(self) -> None:
         Path(f'{Path(self.root_data_folder).parent}/data_corrupted').mkdir(
             exist_ok=True)
 
-        folders, project_folders, new_folders, new_files = self.refresh_source(
-        )
+        project_folders, new_folders, new_files = self.refresh_source()
 
         not_filled_folders = []
         project_folders = sorted(glob(f'{self.root_data_folder}/project-*'))
@@ -121,8 +120,7 @@ class WatchDog:
                         if len(glob(f'{folder}/*')) == 1000:
                             break
 
-        folders, project_folders, new_folders, new_files = self.refresh_source(
-        )
+        project_folders, new_folders, new_files = self.refresh_source()
 
         chunks = [
             new_files[i:i + self.images_per_folder]
