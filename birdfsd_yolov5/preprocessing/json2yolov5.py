@@ -304,7 +304,7 @@ class JSON2YOLO:
 
         images = sorted(glob(f'{self.output_dir}/ls_images/*'))
         labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
-        pairs = [(x, y) for x, y in zip(images, labels)]
+        pairs = list(zip(images, labels))
 
         len_ = len(images)
         train_len = round(len_ * 0.8)

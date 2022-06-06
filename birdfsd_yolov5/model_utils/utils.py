@@ -139,7 +139,7 @@ def get_project_ids_str(exclude_ids: str = None) -> str:
                           for project in projects['results']])  # noqa
     project_ids = [str(p) for p in project_ids]
     if exclude_ids:
-        exclude_ids = [p for p in exclude_ids.split(',')]
+        exclude_ids = list(exclude_ids.split(','))
         project_ids = [p for p in project_ids if p not in exclude_ids]
     return ','.join(project_ids)
 
