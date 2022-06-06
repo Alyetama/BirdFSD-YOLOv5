@@ -24,7 +24,9 @@ jobs:
       - name: Build image
         run: |
           echo "Build: ${SHORT_SHA}"
-          docker build . --file Dockerfile --tag "${IMAGE_NAME}:${SHORT_SHA}" --label "runnumber=${GITHUB_RUN_ID}"
+          docker build . --file Dockerfile \
+            --tag "${IMAGE_NAME}:${SHORT_SHA}" \
+            --label "runnumber=${GITHUB_RUN_ID}"
 
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
