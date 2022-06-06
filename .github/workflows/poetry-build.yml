@@ -1,6 +1,10 @@
 name: Poetry Build
 on:
   push:
+    branches:
+      - main
+      - docker-dev
+      - build-dev
   pull_request:
 
 jobs:
