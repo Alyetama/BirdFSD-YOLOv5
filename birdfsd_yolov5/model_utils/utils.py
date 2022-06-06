@@ -104,7 +104,7 @@ def api_request(url: str,
     Args:
         url (str): The url to make the request to.
         method (str): The HTTP method to use. Defaults to 'get'.
-        data (Optional[dict]): The data to send with the request. Defaults to
+        data (Optional[dict]): The data to send with the request. Defaults to 
             None.
         return_text (bool): Return the response as literal string.
 
@@ -131,7 +131,7 @@ def get_project_ids_str(exclude_ids: Optional[str] = None) -> str:
     """Get a comma separated string of project ids.
 
     Args:
-        exclude_ids (Optional[str]): A comma separated string of project ids to
+        exclude_ids (Optional[str]): A comma separated string of project ids to 
             exclude.
 
     Returns:
