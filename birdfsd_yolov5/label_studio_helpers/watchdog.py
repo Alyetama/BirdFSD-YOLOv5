@@ -51,7 +51,6 @@ class WatchDog:
                      Path(f'fake_{str(fname).zfill(4)}.jpg')).touch()
 
         logger.debug('Created dummy data')
-        return
 
     def validate_image_file(self, file: str) -> str:
         if self.debug:

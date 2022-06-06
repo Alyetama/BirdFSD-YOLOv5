@@ -66,7 +66,6 @@ def main():
     logger.info(f'End. Took {round(time.time() - start, 2)}s')
 
     upload_logs(logs_file)
-    return
 
 
 if __name__ == '__main__':
