@@ -178,7 +178,6 @@ class Predict(LoadModel, _Headers):
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
         data = resp.json()
-        # data['data']['image'] = self.to_srv(data['data']['image'])
         return data
 
     def get_all_tasks(self, project_ids: List[str]) -> list:
