@@ -65,7 +65,9 @@ class JSON2YOLO:
                  filter_underrepresented_cls: bool = False,
                  filter_cls_with_instances_under: Optional[int] = None,
                  get_tasks_with_api: bool = False,
-                 force_update: bool = False):
+                 force_update: bool = False,
+                 background_label: str = 'no animal',
+                 skip_upload: bool = True):
         self.projects = projects
         self.output_dir = str(Path(output_dir).absolute())
         self.only_tar_file = only_tar_file
@@ -75,6 +77,7 @@ class JSON2YOLO:
         self.filter_cls_with_instances_under = filter_cls_with_instances_under
         self.get_tasks_with_api = get_tasks_with_api
         self.force_update = force_update
+        self.background_label = background_label
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -265,11 +268,18 @@ class JSON2YOLO:
                     pass
                 return
 
+            background_imgs = []
+
             for label in labels:
                 if label['rectanglelabels'][0] not in self.classes:
-                    f.close()
-                    Path(cur_label_path).unlink()
-                    Path(cur_img_path).unlink()
+                    if label['rectanglelabels'][0] == self.background_label:
+                        background_imgs.append(cur_img_path)
+                        f.close()
+                        Path(cur_label_path).unlink()
+                    else:
+                        f.close()
+                        Path(cur_label_path).unlink()
+                        Path(cur_img_path).unlink()
                     return
                 label_names.append(label['rectanglelabels'][0])
 
@@ -287,27 +297,35 @@ class JSON2YOLO:
 
                 f.write(f'{label_idx} {x} {y} {width} {height}')
                 f.write('\n')
-        return label_names
+        return label_names, background_imgs
 
-    def split_data(self) -> None:
+    def split_data(self, bg_imgs, seed=1) -> None:
         """Split the data into train and validation sets.
 
         Returns:
             None
 
         """
+        random.seed(seed)
+
         for subdir in [
                 'images/train', 'labels/train', 'images/val', 'labels/val'
         ]:
             Path(f'{self.output_dir}/{subdir}').mkdir(parents=True,
                                                       exist_ok=True)
 
-        images = sorted(glob(f'{self.output_dir}/ls_images/*'))
-        labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
-        pairs = list(zip(images, labels))
+        all_imgs = glob(f'{self.output_dir}/ls_images/*')
+        len_of_bg_imgs_to_keep = (10 * len(all_imgs)) / 100.0
+        bg_imgs = random.sample(bg_imgs, len_of_bg_imgs_to_keep)
+        bg_imgs_pairs = list(zip(bg_imgs, [None] * len(bg_imgs)))
 
-        len_ = len(images)
-        train_len = round(len_ * 0.8)
+        images = sorted([x for x in all_imgs if x not in bg_imgs])
+        labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
+        labeled_pairs = list(zip(images, labels))
+
+        pairs = bg_imgs_pairs + labeled_pairs
+
+        train_len = round(len(pairs) * 0.8)
         random.shuffle(pairs)
 
         train, val = pairs[:train_len], pairs[train_len:]
@@ -315,10 +333,10 @@ class JSON2YOLO:
         for split, split_str in zip([train, val], ['train', 'val']):
             for n, dtype in zip([0, 1], ['images', 'labels']):
                 base_subdir = f'{self.output_dir}/{dtype}/{split_str}'
-                _ = [
+                for x in split:
+                    if not x[n]:
+                        continue
                     shutil.copy2(x[n], f'{base_subdir}/{Path(x[n]).name}')
-                    for x in split
-                ]
         return
 
     def plot_results(self, results: list) -> None:
@@ -396,10 +414,10 @@ class JSON2YOLO:
         for future in tqdm(futures, desc='Tasks'):
             results.append(ray.get(future))
 
-        if results:
-            results = [x for x in results if x]
-            results = sum(results, [])
-            self.plot_results(results)
+        results = sum([x[0] for x in results if x], [])
+        bg_imgs = sum([x[1] for x in results if x], [])
+
+        self.plot_results(results)
 
         if self.tasks_not_exported:
             logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
@@ -408,7 +426,7 @@ class JSON2YOLO:
                 glob(f'{self.output_dir}/labels/*')):
             raise AssertionError
 
-        self.split_data()
+        self.split_data(bg_imgs)
 
         shutil.rmtree(f'{self.output_dir}/ls_images', ignore_errors=True)
         shutil.rmtree(f'{self.output_dir}/ls_labels', ignore_errors=True)
@@ -527,6 +545,16 @@ if __name__ == '__main__':
         help='Update the dataset even when it appears to be identical to the '
         'latest dataset',
         action="store_true")
+    parser.add_argument(
+        '--skip-upload',
+        help='Don\'t upload the dataset',
+        action="store_true")
+    parser.add_argument(
+        '-B',
+        '--background-label',
+        help='Label of background images',
+        type=str,
+        default='no animal')
     args = parser.parse_args()
 
     json2yolo = JSON2YOLO(
