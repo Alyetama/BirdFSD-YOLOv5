@@ -9,6 +9,7 @@ import os
 import random
 import shutil
 import tarfile
+import time
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
@@ -113,15 +114,14 @@ class JSON2YOLO:
         h = height / 100
         return x, y, w, h
 
-    def count_labels(self, data):
+    def count_labels(self, data: list) -> None:
         excluded_labels = self.get_excluded_labels()
         labels = []
         for entry in data:
             try:
                 labels.append([
-                                  label['rectanglelabels'][0] for label in
-                                  entry['label']
-                              ][0])
+                    label['rectanglelabels'][0] for label in entry['label']
+                ][0])
             except KeyError as e:
                 logger.warning(f'Current entry raised KeyError {e}! '
                                f'Ignoring entry: {entry}')
@@ -138,8 +138,8 @@ class JSON2YOLO:
                 min_instances = np.mean(counts)
 
         self.classes = sorted([
-            label for label, count in zip(unique, counts) if
-            label not in excluded_labels and count >= min_instances
+            label for label, count in zip(unique, counts)
+            if label not in excluded_labels and count >= min_instances
         ])
 
         logger.debug(f'Number of classes: {len(self.classes)}')
@@ -231,8 +231,7 @@ class JSON2YOLO:
                 if '?' in img:
                     img = img.split('?')[0]
                 src_img_endpoint = task['image'].split('/data')[0]
-                img = img.replace(src_img_endpoint,
-                                  self.alt_data_endpoint)
+                img = img.replace(src_img_endpoint, self.alt_data_endpoint)
             elif is_s3:
                 img = s3_helper.S3().client.presigned_get_object(
                     'data', object_name, expires=timedelta(hours=6))
@@ -268,7 +267,7 @@ class JSON2YOLO:
         return True
 
     def convert_to_yolo(
-            self, task: dict
+        self, task: dict
     ) -> Union[None, tuple[list[str], str], tuple[list[str], None]]:
         """Convert the task to YOLO format.
 
@@ -331,6 +330,15 @@ class JSON2YOLO:
             f.write(label_file_content)
         return label_names, None
 
+    def _split_loop(self, split, split_str):
+        for (image, label) in split:
+            for x in [(image, f'images/{split_str}'),
+                      (label, f'labels/{split_str}')]:
+                if not x[0]:
+                    continue
+                shutil.copy2(x[0],
+                             f'{self.output_dir}/{x[1]}/{Path(x[0]).name}')
+
     def split_data(self, bg_imgs: list) -> None:
         """Split the data into train and validation sets.
 
@@ -341,15 +349,24 @@ class JSON2YOLO:
         random.seed(self.seed)
 
         for subdir in [
-            'images/train', 'labels/train', 'images/val', 'labels/val'
+                'images/train', 'labels/train', 'images/val', 'labels/val'
         ]:
             Path(f'{self.output_dir}/{subdir}').mkdir(parents=True,
                                                       exist_ok=True)
 
         all_imgs = glob(f'{self.output_dir}/ls_images/*')
-        len_of_bg_imgs_to_keep = int((10 * len(all_imgs)) / 100.0)
-        bg_imgs = random.sample(bg_imgs, len_of_bg_imgs_to_keep)
-        bg_imgs_pairs = list(zip(bg_imgs, [None] * len(bg_imgs)))
+
+        bg_imgs_pairs = []
+        pct_to_keep = 10
+
+        len_of_bg_imgs_to_keep = int((pct_to_keep * len(all_imgs)) / 100.0)
+        try:
+            bg_imgs = random.sample(bg_imgs, len_of_bg_imgs_to_keep)
+        except ValueError:
+            print('Sample is larger than population! '
+                  'Keeping all background images...')
+            random.shuffle(bg_imgs)
+            bg_imgs_pairs = list(zip(bg_imgs, [None] * len(bg_imgs)))
 
         images = sorted([x for x in all_imgs if x not in bg_imgs])
         labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
@@ -362,13 +379,8 @@ class JSON2YOLO:
 
         train, val = pairs[:train_len], pairs[train_len:]
 
-        for split, split_str in zip([train, val], ['train', 'val']):
-            for n, dtype in zip([0, 1], ['images', 'labels']):
-                base_subdir = f'{self.output_dir}/{dtype}/{split_str}'
-                for x in split:
-                    if not x[n]:
-                        continue
-                    shutil.copy2(x[n], f'{base_subdir}/{Path(x[n]).name}')
+        self._split_loop(train, 'train')
+        self._split_loop(val, 'val')
 
         shutil.rmtree(f'{self.output_dir}/ls_images', ignore_errors=True)
         shutil.rmtree(f'{self.output_dir}/ls_labels', ignore_errors=True)
@@ -435,7 +447,7 @@ class JSON2YOLO:
                 logger.info('Uploading the dataset...')
                 s3_client.fput_object('dataset', dataset_name, dataset_name)
 
-    def create_metadata_files(self) -> None:
+    def _create_metadata_files(self) -> None:
         excluded_labels = self.get_excluded_labels()
         d = {
             'path': f'{self.output_dir}',
@@ -516,18 +528,23 @@ class JSON2YOLO:
         futures = [iter_convert_to_yolo.remote(task) for task in tasks]
         results = []
         for future in tqdm(futures, desc='Tasks'):
-            result = ray.get(future)
+            try:
+                result = ray.get(future)
+            except requests.exceptions.ChunkedEncodingError:
+                time.sleep(2)
+                result = ray.get(future)
             results.append(result)
+            time.sleep(0.01)
 
-        results = sum([x[0] for x in results if x], [])
-        bg_imgs = [x[1] for x in results if x]
+        bg_imgs = [y for y in [x[1] for x in results if x] if y]
+        results_labels = sum([x[0] for x in results if x], [])
 
         if self.tasks_not_exported:
             logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
-        self.plot_results(results)
+        self.plot_results(results_labels)
         self.split_data(bg_imgs)
-        self.create_metadata_files()
+        self._create_metadata_files()
 
         folder_name = Path(self.output_dir).name
         ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
@@ -551,19 +568,19 @@ def _opts() -> argparse.Namespace:
         '-p',
         '--projects',
         help='Comma-seperated projects ID. If empty, it will select all '
-             'projects',
+        'projects',
         type=str)
     parser.add_argument(
         '--copy-data-from',
         help='If running on the same host serving the S3 objects, you can '
-             'use this option to specify a path to copy the data from '
-             '(i.e., the local path to the S3 bucket where the data is '
-             'stored) instead of downloading it',
+        'use this option to specify a path to copy the data from '
+        '(i.e., the local path to the S3 bucket where the data is '
+        'stored) instead of downloading it',
         type=str)
     parser.add_argument('-f',
                         '--filter-rare-classes',
                         help='Only include classes with instances equal or '
-                             'above the median (default), mean, or an integer',
+                        'above the median (default), mean, or an integer',
                         default='median')
     parser.add_argument('--get-tasks-with-api',
                         help='Use label-studio API to get tasks data',
@@ -572,12 +589,12 @@ def _opts() -> argparse.Namespace:
         '-F',
         '--force-update',
         help='Update the dataset even when it appears to be identical to the '
-             'latest dataset',
+        'latest dataset',
         action='store_true')
     parser.add_argument('-u',
                         '--upload-dataset',
                         help='Upload the output dataset to the data server ('
-                             'S3 only)',
+                        'S3 only)',
                         action='store_true')
     parser.add_argument('-B',
                         '--background-label',
@@ -591,7 +608,7 @@ def _opts() -> argparse.Namespace:
     parser.add_argument('-e',
                         '--excluded-labels',
                         help='Labels to exclude from the output dataset ('
-                             'as a comma-seperated string of labels)',
+                        'as a comma-seperated string of labels)',
                         type=str)
     parser.add_argument('-s',
                         '--seed',
@@ -601,9 +618,7 @@ def _opts() -> argparse.Namespace:
     parser.add_argument('--overwrite',
                         help='Overwrite the output folder if exists',
                         action='store_true')
-    parser.add_argument('-v',
-                        '--verbose',
-                        action='store_true')
+    parser.add_argument('-v', '--verbose', action='store_true')
     return parser.parse_args()
 
 
