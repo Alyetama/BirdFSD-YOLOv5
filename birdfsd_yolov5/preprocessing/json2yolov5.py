@@ -12,7 +12,7 @@ import tarfile
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -57,27 +57,32 @@ class JSON2YOLO:
     """
 
     def __init__(self,
-                 projects: str,
                  output_dir: str = 'dataset-YOLO',
-                 only_tar_file: bool = False,
-                 enable_s3: bool = True,
-                 copy_data_from: str = None,
-                 filter_underrepresented_cls: bool = False,
-                 filter_cls_with_instances_under: Optional[int] = None,
+                 projects: Optional[str] = None,
+                 copy_data_from: Optional[str] = None,
+                 filter_rare_classes: Optional[str] = None,
                  get_tasks_with_api: bool = False,
                  force_update: bool = False,
                  background_label: str = 'no animal',
-                 skip_upload: bool = True):
+                 upload_dataset: bool = False,
+                 alt_data_endpoint: Optional[str] = None,
+                 excluded_labels: Union[list, str] = None,
+                 seed: int = 8,
+                 overwrite: bool = False,
+                 verbose: bool = False):
         self.projects = projects
         self.output_dir = str(Path(output_dir).absolute())
-        self.only_tar_file = only_tar_file
-        self.enable_s3 = enable_s3
         self.copy_data_from = copy_data_from
-        self.filter_underrepresented_cls = filter_underrepresented_cls
-        self.filter_cls_with_instances_under = filter_cls_with_instances_under
+        self.filter_rare_classes = filter_rare_classes
         self.get_tasks_with_api = get_tasks_with_api
         self.force_update = force_update
         self.background_label = background_label
+        self.upload_dataset = upload_dataset
+        self.alt_data_endpoint = alt_data_endpoint
+        self.excluded_labels = excluded_labels
+        self.seed = seed
+        self.overwrite = overwrite
+        self.verbose = verbose
         self.imgs_dir = f'{self.output_dir}/ls_images'
         self.labels_dir = f'{self.output_dir}/ls_labels'
         self.classes = None
@@ -108,7 +113,39 @@ class JSON2YOLO:
         h = height / 100
         return x, y, w, h
 
-    def get_data(self, excluded_labels) -> list:
+    def count_labels(self, data):
+        excluded_labels = self.get_excluded_labels()
+        labels = []
+        for entry in data:
+            try:
+                labels.append([
+                                  label['rectanglelabels'][0] for label in
+                                  entry['label']
+                              ][0])
+            except KeyError as e:
+                logger.warning(f'Current entry raised KeyError {e}! '
+                               f'Ignoring entry: {entry}')
+
+        unique, counts = np.unique(labels, return_counts=True)
+
+        min_instances = 1
+        if self.filter_rare_classes:
+            if self.filter_rare_classes.isdigit():
+                min_instances = int(self.filter_rare_classes)
+            elif self.filter_rare_classes.lower() == 'median':
+                min_instances = np.median(counts)
+            elif self.filter_rare_classes.lower() == 'mean':
+                min_instances = np.mean(counts)
+
+        self.classes = sorted([
+            label for label, count in zip(unique, counts) if
+            label not in excluded_labels and count >= min_instances
+        ])
+
+        logger.debug(f'Number of classes: {len(self.classes)}')
+        logger.debug(f'Classes: {self.classes}')
+
+    def get_data(self) -> list:
         """This function is used to get data from the database.
 
         Returns:
@@ -127,7 +164,7 @@ class JSON2YOLO:
             headers = CaseInsensitiveDict()
             headers['Content-type'] = 'application/json'
             headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
-            ls_host = os.environ["LS_HOST"]
+            ls_host = os.environ['LS_HOST']
             q = 'exportType=JSON&download_all_tasks=true'
             proj_tasks = []
             url = f'{ls_host}/api/projects/{proj_id}/export?{q}'
@@ -152,35 +189,7 @@ class JSON2YOLO:
             data.append(ray.get(future))
 
         data = sum(data, [])
-
-        labels = []
-        for entry in data:
-            try:
-                labels.append([
-                    label['rectanglelabels'][0] for label in entry['label']
-                ][0])
-            except KeyError as e:
-                logger.warning(f'Current entry raised KeyError {e}! '
-                               f'Ignoring entry: {entry}')
-
-        unique, counts = np.unique(labels, return_counts=True)
-
-        if (self.filter_underrepresented_cls
-                or self.filter_cls_with_instances_under):
-            if self.filter_underrepresented_cls:
-                min_instances = np.median(counts)
-            else:
-                min_instances = self.filter_cls_with_instances_under
-            self.classes = sorted([
-                label for label, count in zip(unique, counts)
-                if label not in excluded_labels and count >= min_instances
-            ])
-        else:
-            self.classes = sorted(
-                [label for label in unique if label not in excluded_labels])
-
-        logger.debug(f'Number of classes: {len(self.classes)}')
-        logger.debug(f'Classes: {self.classes}')
+        self.count_labels(data)
 
         Path(self.output_dir).mkdir(exist_ok=True)
         with open(f'{self.output_dir}/classes.txt', 'w') as f:
@@ -188,50 +197,55 @@ class JSON2YOLO:
                 f.write(f'{class_}\n')
         return data
 
-    def convert_to_yolo(self, task: dict) -> Optional[list]:
-        """Convert the task to YOLO format.
-
-        Args:
-            task (dict): The task to be converted.
-
-        Returns:
-            list: The labels in the task.
-
-        Raises:
-            FailedToParseImageURL: If the image URL is not valid.
-            TypeError: If the image URL is not valid.
-
-        """
-        if self.copy_data_from or self.enable_s3:
+    def get_assets_info(self, task: dict) -> tuple:
+        is_s3 = False
+        img = task['image']
+        if 's3://' in task['image']:
+            is_s3 = True
+        # Get name and URL of the image.
+        if self.copy_data_from or is_s3:
             img = task['image']
             if img.startswith('s3://'):
                 object_name = img.split('s3://data/')[-1]
             elif img.startswith('http'):
-                object_url = img.split('?')[0]
-                object_name = '/'.join(Path(object_url).parts[-2:])
+                img = img.split('?')[0]
+                object_name = '/'.join(Path(img).parts[-2:])
             else:
                 raise FailedToParseImageURL(img)
             cur_img_name = Path(object_name).name
         else:
-            if 's3://' in task['image'] and not self.enable_s3:
-                raise TypeError('You need to pass the flag `--enable-s3` '
-                                'for S3 objects!')
             object_name = None
             cur_img_name = Path(task['image']).name
 
+        # Define the path to which the image and label will be written.
+        if '?' in cur_img_name:
+            cur_img_name = cur_img_name.split('?')[0]
         cur_img_path = f'{self.imgs_dir}/{cur_img_name}'
         cur_label_path = f'{self.labels_dir}/{Path(cur_img_name).stem}.txt'
 
+        # Write the image to local disk.
         if self.copy_data_from:
             shutil.copy(f'{self.copy_data_from}/{object_name}', cur_img_path)
         else:
-            if self.enable_s3:
-                img_url = s3_helper.S3().client.presigned_get_object(
+            if self.alt_data_endpoint:
+                if '?' in img:
+                    img = img.split('?')[0]
+                src_img_endpoint = task['image'].split('/data')[0]
+                img = img.replace(src_img_endpoint,
+                                  self.alt_data_endpoint)
+            elif is_s3:
+                img = s3_helper.S3().client.presigned_get_object(
                     'data', object_name, expires=timedelta(hours=6))
-            else:
-                img_url = task['image']
+        return cur_img_path, cur_label_path, img
+
+    def download_image(self, task: dict, cur_img_path: str,
+                       img_url: str) -> Optional[bool]:
+        if self.verbose:
+            print(f'Downloading {img_url}...')
+
+        if not self.copy_data_from:
             r = requests.get(img_url)
-            if '<Error>' in r.text:
+            if '<Error>' in r.text or r.status_code != 200:
                 logger.error(
                     f'Could not download the image `{img_url}`! Skipping...')
                 return
@@ -251,71 +265,89 @@ class JSON2YOLO:
                 f'Could not validate {cur_img_path} from {task["id"]}! '
                 'Skipping...')
             return
+        return True
+
+    def convert_to_yolo(
+            self, task: dict
+    ) -> Union[None, tuple[list[str], str], tuple[list[str], None]]:
+        """Convert the task to YOLO format.
+
+        Args:
+            task (dict): The task to be converted.
+
+        Returns:
+            Optional[tuple[list, list]]: A tuple with a list of the labels in
+            the task and a list of background image path if the task is
+            labeled as a background image.
+
+        Raises:
+            FailedToParseImageURL: If the image URL is not valid.
+            TypeError: If the image URL is not valid.
+
+        """
+        cur_img_path, cur_label_path, img_url = self.get_assets_info(task)
+        valid_download = self.download_image(task, cur_img_path, img_url)
+        if not valid_download:
+            return
+
+        if task.get('label'):
+            labels = task['label']
+        else:
+            self.tasks_not_exported.append(task)
+            logger.error(f'>>>>>>>>>> CORRUPTED TASK: {task}')
+            try:
+                Path(cur_img_path).unlink()
+            except FileNotFoundError:
+                pass
+            return
 
         label_names = []
+        label_file_content = ''
+
+        # Iterate through annotations in a single task
+        for label in labels:
+            if label['rectanglelabels'][0] not in self.classes:
+                if label['rectanglelabels'][0] == self.background_label:
+                    return [self.background_label], cur_img_path
+                else:
+                    Path(cur_img_path).unlink()
+                    return
+
+            label_names.append(label['rectanglelabels'][0])
+            x, y, width, height = [
+                v for k, v in label.items()
+                if k in ['x', 'y', 'width', 'height']
+            ]
+            x, y, width, height = self.bbox_ls_to_yolo(x, y, width, height)
+
+            categories = list(enumerate(self.classes))
+            label_idx = [
+                k[0] for k in categories if k[1] == label['rectanglelabels'][0]
+            ][0]
+
+            label_file_content += f'{label_idx} {x} {y} {width} {height}\n'
 
         with open(cur_label_path, 'w') as f:
-            try:
-                labels = task['label']
-            except KeyError:
-                self.tasks_not_exported.append(task)
-                logger.error(f'>>>>>>>>>> CORRUPTED TASK: {task}')
-                f.close()
-                Path(cur_label_path).unlink()
-                try:
-                    Path(cur_img_path).unlink()
-                except FileNotFoundError:
-                    pass
-                return
+            f.write(label_file_content)
+        return label_names, None
 
-            background_imgs = []
-
-            for label in labels:
-                if label['rectanglelabels'][0] not in self.classes:
-                    if label['rectanglelabels'][0] == self.background_label:
-                        background_imgs.append(cur_img_path)
-                        f.close()
-                        Path(cur_label_path).unlink()
-                    else:
-                        f.close()
-                        Path(cur_label_path).unlink()
-                        Path(cur_img_path).unlink()
-                    return
-                label_names.append(label['rectanglelabels'][0])
-
-                x, y, width, height = [
-                    v for k, v in label.items()
-                    if k in ['x', 'y', 'width', 'height']
-                ]
-                x, y, width, height = self.bbox_ls_to_yolo(x, y, width, height)
-
-                categories = list(enumerate(self.classes))  # noqa
-                label_idx = [
-                    k[0] for k in categories
-                    if k[1] == label['rectanglelabels'][0]
-                ][0]
-
-                f.write(f'{label_idx} {x} {y} {width} {height}')
-                f.write('\n')
-        return label_names, background_imgs
-
-    def split_data(self, bg_imgs, seed=1) -> None:
+    def split_data(self, bg_imgs: list) -> None:
         """Split the data into train and validation sets.
 
         Returns:
             None
 
         """
-        random.seed(seed)
+        random.seed(self.seed)
 
         for subdir in [
-                'images/train', 'labels/train', 'images/val', 'labels/val'
+            'images/train', 'labels/train', 'images/val', 'labels/val'
         ]:
             Path(f'{self.output_dir}/{subdir}').mkdir(parents=True,
                                                       exist_ok=True)
 
         all_imgs = glob(f'{self.output_dir}/ls_images/*')
-        len_of_bg_imgs_to_keep = (10 * len(all_imgs)) / 100.0
+        len_of_bg_imgs_to_keep = int((10 * len(all_imgs)) / 100.0)
         bg_imgs = random.sample(bg_imgs, len_of_bg_imgs_to_keep)
         bg_imgs_pairs = list(zip(bg_imgs, [None] * len(bg_imgs)))
 
@@ -323,7 +355,7 @@ class JSON2YOLO:
         labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
         labeled_pairs = list(zip(images, labels))
 
-        pairs = bg_imgs_pairs + labeled_pairs
+        pairs = bg_imgs_pairs + labeled_pairs  # noqa
 
         train_len = round(len(pairs) * 0.8)
         random.shuffle(pairs)
@@ -337,6 +369,9 @@ class JSON2YOLO:
                     if not x[n]:
                         continue
                     shutil.copy2(x[n], f'{base_subdir}/{Path(x[n]).name}')
+
+        shutil.rmtree(f'{self.output_dir}/ls_images', ignore_errors=True)
+        shutil.rmtree(f'{self.output_dir}/ls_labels', ignore_errors=True)
         return
 
     def plot_results(self, results: list) -> None:
@@ -374,63 +409,34 @@ class JSON2YOLO:
         plt.savefig(f'{self.output_dir}/hist.jpg', bbox_inches='tight')
         return
 
-    def run(self) -> None:
-        """Runs the preprocessing pipeline.
-
-        This method is used to run main preprocessing pipeline and convert
-        the data to the yolov5 format.
-
-        Returns:
-            None
-
-        Raises:
-            BucketDoesNotExist: If the dataset S3 bucket does not exist.
-
-        """
-
-        @ray.remote
-        def iter_convert_to_yolo(t):
-            return self.convert_to_yolo(t)
-
+    def upload_dataset_file(self, dataset_name: str) -> None:
         s3_client = s3_helper.S3().client
-        handlers.catch_keyboard_interrupt()
-        random.seed(8)
 
-        excluded_labels = os.getenv('EXCLUDE_LABELS')
-        if excluded_labels:
-            excluded_labels = excluded_labels.split(',')
+        if not s3_client.bucket_exists('dataset'):
+            raise s3_helper.BucketDoesNotExist(
+                'Bucket `dataset` does not exist!')
+
+        upload_dataset = False
+        objs = list(s3_client.list_objects('dataset'))
+        if objs:
+            latest_ts = max([o.last_modified for o in objs if o.last_modified])
+            latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
+            if latest_obj.size != Path(
+                    dataset_name).stat().st_size or self.force_update:
+                upload_dataset = True
         else:
-            excluded_labels = []
+            upload_dataset = True
+        if upload_dataset:
+            if self.copy_data_from:
+                logger.debug('Copying the dataset to the bucket...')
+                ds_path = f'{Path(self.copy_data_from).parent}/dataset'
+                shutil.copy(dataset_name, f'{ds_path}/{dataset_name}')
+            else:
+                logger.info('Uploading the dataset...')
+                s3_client.fput_object('dataset', dataset_name, dataset_name)
 
-        tasks = self.get_data(excluded_labels)
-
-        Path(self.imgs_dir).mkdir(parents=True, exist_ok=True)
-        Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
-
-        futures = []
-        for task in tasks:
-            futures.append(iter_convert_to_yolo.remote(task))
-        results = []
-        for future in tqdm(futures, desc='Tasks'):
-            results.append(ray.get(future))
-
-        results = sum([x[0] for x in results if x], [])
-        bg_imgs = sum([x[1] for x in results if x], [])
-
-        self.plot_results(results)
-
-        if self.tasks_not_exported:
-            logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
-
-        if len(glob(f'{self.output_dir}/images/*')) != len(
-                glob(f'{self.output_dir}/labels/*')):
-            raise AssertionError
-
-        self.split_data(bg_imgs)
-
-        shutil.rmtree(f'{self.output_dir}/ls_images', ignore_errors=True)
-        shutil.rmtree(f'{self.output_dir}/ls_labels', ignore_errors=True)
-
+    def create_metadata_files(self) -> None:
+        excluded_labels = self.get_excluded_labels()
         d = {
             'path': f'{self.output_dir}',
             'train': 'images/train',
@@ -453,13 +459,75 @@ class JSON2YOLO:
                 for k, v in utils.get_labels_count().items()
                 if k not in excluded_labels
             }
-            if self.filter_cls_with_instances_under:
+            if self.filter_rare_classes.isdigit():
                 classes_json = {
                     k: v
                     for k, v in classes_json.items()
-                    if v > self.filter_cls_with_instances_under
+                    if v > int(self.filter_rare_classes)
                 }
             json.dump(classes_json, f, indent=4)
+
+    def get_excluded_labels(self):
+        if self.excluded_labels:
+            excluded_labels = self.excluded_labels
+        elif not self.excluded_labels and os.getenv('EXCLUDE_LABELS'):
+            excluded_labels = os.getenv('EXCLUDE_LABELS')
+        else:
+            excluded_labels = []
+        if isinstance(excluded_labels, str):
+            excluded_labels = excluded_labels.split(',')
+        return excluded_labels
+
+    def run(self) -> None:
+        """Runs the preprocessing pipeline.
+
+        This method is used to run main preprocessing pipeline and convert
+        the data to the yolov5 format.
+
+        Returns:
+            None
+
+        Raises:
+            BucketDoesNotExist: If the dataset S3 bucket does not exist.
+
+        """
+
+        @ray.remote
+        def iter_convert_to_yolo(t):
+            return self.convert_to_yolo(t)
+
+        random.seed(self.seed)
+        handlers.catch_keyboard_interrupt()
+
+        if Path(self.output_dir).exists():
+            if self.overwrite:
+                shutil.rmtree(self.output_dir, ignore_errors=True)
+            else:
+                raise FileExistsError('The output folder already exists!')
+
+        tasks = self.get_data()
+
+        Path(self.imgs_dir).mkdir(parents=True, exist_ok=True)
+        Path(self.labels_dir).mkdir(parents=True, exist_ok=True)
+
+        with open(f'{self.output_dir}/notes.json', 'w') as j:
+            json.dump({'seed': self.seed}, j, indent=4)
+
+        futures = [iter_convert_to_yolo.remote(task) for task in tasks]
+        results = []
+        for future in tqdm(futures, desc='Tasks'):
+            result = ray.get(future)
+            results.append(result)
+
+        results = sum([x[0] for x in results if x], [])
+        bg_imgs = [x[1] for x in results if x]
+
+        if self.tasks_not_exported:
+            logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
+
+        self.plot_results(results)
+        self.split_data(bg_imgs)
+        self.create_metadata_files()
 
         folder_name = Path(self.output_dir).name
         ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
@@ -468,103 +536,90 @@ class JSON2YOLO:
         with tarfile.open(dataset_name, 'w') as tar:
             tar.add(self.output_dir, folder_name)
 
-        if self.only_tar_file:
-            shutil.rmtree(self.output_dir, ignore_errors=True)
-
-        if self.enable_s3:
-            if not s3_client.bucket_exists('dataset'):
-                raise s3_helper.BucketDoesNotExist(
-                    'Bucket `dataset` does not exist!')
-
-            upload_dataset = False
-            objs = list(s3_client.list_objects('dataset'))
-            if objs:
-                latest_ts = max(
-                    [o.last_modified for o in objs if o.last_modified])
-                latest_obj = [o for o in objs
-                              if o.last_modified == latest_ts][0]
-                if latest_obj.size != Path(
-                        dataset_name).stat().st_size or self.force_update:
-                    upload_dataset = True
-            else:
-                upload_dataset = True
-            if upload_dataset:
-                if self.copy_data_from:
-                    logger.debug('Copying the dataset to the bucket...')
-                    ds_path = f'{Path(self.copy_data_from).parent}/dataset'
-                    shutil.copy(dataset_name, f'{ds_path}/{dataset_name}')
-                else:
-                    logger.info('Uploading the dataset...')
-                    s3_client.fput_object('dataset', dataset_name,
-                                          dataset_name)
-        return
+        if self.upload_dataset:
+            self.upload_dataset_file(dataset_name)
 
 
-if __name__ == '__main__':
-    load_dotenv()
-
+def _opts() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-p',
-        '--projects',
-        help='Comma-seperated projects ID. If empty, it will select all '
-        'projects',
-        type=str)
     parser.add_argument('-o',
                         '--output-dir',
                         help='Path to the output directory',
                         type=str,
                         default='dataset-YOLO')
-    parser.add_argument('--only-tar-file',
-                        help='Only output a TAR file',
-                        action="store_true")
-    parser.add_argument('--enable-s3',
-                        help='Upload the output to an S3 bucket',
-                        action="store_true")
+    parser.add_argument(
+        '-p',
+        '--projects',
+        help='Comma-seperated projects ID. If empty, it will select all '
+             'projects',
+        type=str)
     parser.add_argument(
         '--copy-data-from',
         help='If running on the same host serving the S3 objects, you can '
-        'use this option to specify a path to copy the data from '
-        '(i.e., the local path to the S3 bucket where the data is '
-        'stored) instead of downloading it',
+             'use this option to specify a path to copy the data from '
+             '(i.e., the local path to the S3 bucket where the data is '
+             'stored) instead of downloading it',
         type=str)
-    parser.add_argument('--filter-underrepresented-cls',
+    parser.add_argument('-f',
+                        '--filter-rare-classes',
                         help='Only include classes with instances equal or '
-                        'above the overall median',
-                        action="store_true")
-    parser.add_argument(
-        '--filter-cls-with-instances-under',
-        help='Remove the class from the dataset if the annotation instances '
-        'is lower than n',
-        type=int)
+                             'above the median (default), mean, or an integer',
+                        default='median')
     parser.add_argument('--get-tasks-with-api',
                         help='Use label-studio API to get tasks data',
-                        action="store_true")
+                        action='store_true')
     parser.add_argument(
+        '-F',
         '--force-update',
         help='Update the dataset even when it appears to be identical to the '
-        'latest dataset',
-        action="store_true")
-    parser.add_argument(
-        '--skip-upload',
-        help='Don\'t upload the dataset',
-        action="store_true")
-    parser.add_argument(
-        '-B',
-        '--background-label',
-        help='Label of background images',
-        type=str,
-        default='no animal')
-    args = parser.parse_args()
+             'latest dataset',
+        action='store_true')
+    parser.add_argument('-u',
+                        '--upload-dataset',
+                        help='Upload the output dataset to the data server ('
+                             'S3 only)',
+                        action='store_true')
+    parser.add_argument('-B',
+                        '--background-label',
+                        help='Label of background images',
+                        type=str,
+                        default='no animal')
+    parser.add_argument('-a',
+                        '--alt-data-endpoint',
+                        help='Alternative endpoint to use for data files',
+                        type=str)
+    parser.add_argument('-e',
+                        '--excluded-labels',
+                        help='Labels to exclude from the output dataset ('
+                             'as a comma-seperated string of labels)',
+                        type=str)
+    parser.add_argument('-s',
+                        '--seed',
+                        help='Initialize the random number generator',
+                        type=int,
+                        default=8)
+    parser.add_argument('--overwrite',
+                        help='Overwrite the output folder if exists',
+                        action='store_true')
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='store_true')
+    return parser.parse_args()
 
-    json2yolo = JSON2YOLO(
-        projects=args.projects,
-        output_dir=args.output_dir,
-        only_tar_file=args.only_tar_file,
-        enable_s3=args.enable_s3,
-        copy_data_from=args.copy_data_from,
-        filter_underrepresented_cls=args.filter_underrepresented_cls,
-        filter_cls_with_instances_under=args.filter_cls_with_instances_under,
-        get_tasks_with_api=args.get_tasks_with_api,
-        force_update=args.force_update)
+
+if __name__ == '__main__':
+    load_dotenv()
+    args = _opts()
+    json2yolo = JSON2YOLO(output_dir=args.output_dir,
+                          projects=args.projects,
+                          copy_data_from=args.copy_data_from,
+                          filter_rare_classes=args.filter_rare_classes,
+                          get_tasks_with_api=args.get_tasks_with_api,
+                          force_update=args.force_update,
+                          upload_dataset=args.upload_dataset,
+                          alt_data_endpoint=args.alt_data_endpoint,
+                          excluded_labels=args.excluded_labels,
+                          seed=args.seed,
+                          overwrite=args.overwrite,
+                          verbose=args.verbose)
     json2yolo.run()
