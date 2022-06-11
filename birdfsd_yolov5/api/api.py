@@ -158,7 +158,8 @@ if __name__ == '__main__':
     api_s3 = api_utils.create_s3_client(api_s3=True)
     db = mongodb_db()
 
-    model_version, model_name, model_weights, model = model_utils.init_model(s3)
+    model_version, model_name, model_weights, model = model_utils.init_model(
+        s3)
 
     if os.getenv('MODEL_REPO'):
         page = f'{os.getenv("MODEL_REPO")}/releases/tag/{model_version}'
