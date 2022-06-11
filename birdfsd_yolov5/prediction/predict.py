@@ -210,9 +210,7 @@ class Predict(LoadModel, _Headers):
 
         @ray.remote
         def _get_all_tasks_from_mongodb_remote(proj_id: str):
-            return mongodb_helper.get_tasks_from_mongodb(proj_id,
-                                                         dump=False,
-                                                         json_min=False)
+            return mongodb_helper.get_tasks_from_mongodb(proj_id)
 
         futures = []
         for project_id in project_ids:
