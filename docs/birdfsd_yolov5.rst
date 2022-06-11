@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   birdfsd_yolov5.api
    birdfsd_yolov5.augmentation
    birdfsd_yolov5.datasets_manager
    birdfsd_yolov5.label_studio_helpers

@@ -1,19 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module contains the API endpoints for the model.
-
-Example:
-    Running the server:
-        $ uvicorn api:app --reload
-        $ curl -X POST "http://127.0.0.1:8000/predict" -F file="@demo.png"
-
-Attributes:
-    app (FastAPI): The FastAPI object.
-    model (Model): The model object.
-    model_name (str): The name of the model.
-    model_version (str): The version of the model.
-    page (str): The URL of the model's page.
-
-"""
+"""This module contains the API endpoints for the model."""
 
 import hashlib
 import json
@@ -35,19 +21,6 @@ from birdfsd_yolov5.api import model_utils, api_utils
 from birdfsd_yolov5.model_utils.mongodb_helper import mongodb_db
 
 # ----------------------------------------------------------------------------
-
-load_dotenv()
-
-s3 = api_utils.create_s3_client()
-api_s3 = api_utils.create_s3_client(api_s3=True)
-db = mongodb_db()
-
-model_version, model_name, model_weights, model = model_utils.init_model(s3)
-
-if os.getenv('MODEL_REPO'):
-    page = f'{os.getenv("MODEL_REPO")}/releases/tag/{model_version}'
-else:
-    page = None
 
 app = FastAPI()
 
@@ -176,3 +149,18 @@ def predict_endpoint(file: UploadFile,
                                  model_name, model_version, page)
 
     return _PrettyJSONResponse(content=res)
+
+
+if __name__ == '__main__':
+    load_dotenv()
+
+    s3 = api_utils.create_s3_client()
+    api_s3 = api_utils.create_s3_client(api_s3=True)
+    db = mongodb_db()
+
+    model_version, model_name, model_weights, model = model_utils.init_model(s3)
+
+    if os.getenv('MODEL_REPO'):
+        page = f'{os.getenv("MODEL_REPO")}/releases/tag/{model_version}'
+    else:
+        page = None
