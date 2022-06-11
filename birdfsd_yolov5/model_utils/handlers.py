@@ -31,10 +31,6 @@ def keyboard_interrupt_handler(sig: int, _: object) -> None:
     minio_leftovers = glob('*.part.minio')
     for leftover in minio_leftovers:
         Path(leftover).unlink()
-    try:
-        Path('best.pt').unlink()
-    except FileNotFoundError:
-        pass
     sys.exit(1)
 
 
