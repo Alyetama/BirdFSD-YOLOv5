@@ -147,8 +147,7 @@ class WatchDog:
                         if len(glob(f'{folder}/*')) == 1000:
                             break
 
-        folders, project_folders, new_folders, new_files = self._refresh_src(
-        )
+        folders, project_folders, new_folders, new_files = self._refresh_src()
 
         chunks = [
             new_files[i:i + self.images_per_folder]

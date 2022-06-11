@@ -2,6 +2,7 @@
 """This module is used to get the latest model weights and information."""
 
 from pathlib import Path
+from typing import Tuple
 
 import torch
 from minio import Minio
@@ -11,7 +12,7 @@ from birdfsd_yolov5.model_utils.mongodb_helper import mongodb_db
 
 def get_latest_model_weights(s3_client: Minio,
                              skip_download: bool = False
-                             ) -> tuple[str, str, str]:
+                             ) -> Tuple[str, str, str]:
     """Get the latest model weights from the model collection in mongodb.
 
     Args:
@@ -41,7 +42,7 @@ def get_latest_model_weights(s3_client: Minio,
     return model_version, model_name, model_object_name
 
 
-def init_model(s3: Minio) -> tuple[str, str, str, torch.nn.Module]:
+def init_model(s3: Minio) -> Tuple[str, str, str, torch.nn.Module]:
     """This function initializes the model.
 
     Args:
