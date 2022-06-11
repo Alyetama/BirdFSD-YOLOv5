@@ -4,7 +4,7 @@ Build and train a custom model to identify birds visiting bird feeders.
 
 📖 **[Documentation](https://birdfsd-yolov5.readthedocs.io/en/latest/)**
 
-[![Poetry Build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml) [![Docker Build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/docker-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/docker-build.yml) [![Docker Hub](https://badgen.net/badge/icon/Docker%20Hub?icon=docker&label)](https://hub.docker.com/r/alyetama/birdfsd-yolov5) [![Documentation Status](https://readthedocs.org/projects/birdfsd-yolov5/badge/?version=latest)](https://birdfsd-yolov5.readthedocs.io/en/latest/?badge=latest) [![Supported Python versions](https://img.shields.io/badge/Python-%3E=3.8-blue.svg)](https://www.python.org/downloads/) [![PEP8](https://img.shields.io/badge/Code%20style-PEP%208-orange.svg)](https://www.python.org/dev/peps/pep-0008/) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8810d995e593497d9bd04afcfdc366ce)](https://www.codacy.com/gh/bird-feeder/BirdFSD-YOLOv5/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bird-feeder/BirdFSD-YOLOv5&amp;utm_campaign=Badge_Grade) [![GitLab latest release](https://badgen.net/github/release/bird-feeder/BirdFSD-YOLOv5)](https://github.com/bird-feeder/BirdFSD-YOLOv5/releases) [![GitHub License](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/blob/main/LICENSE)
+[![Poetry Build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/poetry-build.yml) [![Docker Build](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/docker-build.yml/badge.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/actions/workflows/docker-build.yml) [![Documentation Status](https://readthedocs.org/projects/birdfsd-yolov5/badge/?version=latest)](https://birdfsd-yolov5.readthedocs.io/en/latest/?badge=latest) [![Supported Python versions](https://img.shields.io/badge/Python-%3E=3.8-blue.svg)](https://www.python.org/downloads/) [![PEP8](https://img.shields.io/badge/Code%20style-PEP%208-orange.svg)](https://www.python.org/dev/peps/pep-0008/) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8810d995e593497d9bd04afcfdc366ce)](https://www.codacy.com/gh/bird-feeder/BirdFSD-YOLOv5/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bird-feeder/BirdFSD-YOLOv5&amp;utm_campaign=Badge_Grade) [![GitHub latest release](https://badgen.net/github/release/bird-feeder/BirdFSD-YOLOv5)](https://github.com/bird-feeder/BirdFSD-YOLOv5/releases) [![Docker Hub](https://badgen.net/badge/icon/Docker%20Hub?icon=docker&label)](https://hub.docker.com/r/alyetama/birdfsd-yolov5) [![GitHub License](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/bird-feeder/BirdFSD-YOLOv5/blob/main/LICENSE)
 
 ## Requirements
 - 🐍 [python>=3.8](https://www.python.org/downloads/)
@@ -34,12 +34,12 @@ nano .env  # or with any other editor
 
 - To use the GitHub Actions workflows (recommended!), you will need to add every environment variable and its value from `.env` to the `Secrets` of your fork (you can find `Secrets` under `Settings`).
 
-![secrets](https://i.imgur.com/xlVfoxX.png)
+<img src="https://i.imgur.com/xlVfoxX.png"  width="720"> 
 
 <details>
   <summary>Click here to show an example of a new secret</summary>
 
-  ![secrets_ex](https://i.imgur.com/fOKMgHy.png)
+  <img src="https://i.imgur.com/fOKMgHy.png"  width="720"> 
 
 </details>
 
