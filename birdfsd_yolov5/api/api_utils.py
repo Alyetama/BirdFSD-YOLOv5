@@ -7,7 +7,7 @@ import os
 import tempfile
 import uuid
 import zipfile
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import requests
 from PIL import Image
@@ -33,7 +33,7 @@ def create_s3_client(api_s3: bool = False) -> Minio:
                  region=os.environ[f'{prefix}S3_REGION'])
 
 
-def species_info(species_name):
+def species_info(species_name: str) -> dict:
     """Retrieves a dictionary of information about the species.
 
     This function takes a species name as input and returns a dictionary of
@@ -65,14 +65,14 @@ def species_info(species_name):
     return compact_info
 
 
-def create_cropped_images_object(pred):
+def create_cropped_images_object(pred: object) -> io.BytesIO:
     """Create a zip file object with cropped predictions.
 
     Creates a zip file object containing cropped images and a json file with
     the labels and confidences.
 
     Args:
-        pred (Prediction): A prediction object.
+        pred (object): YOLOv5 Detections object.
 
     Returns:
         obj (io.BytesIO): A zip file object containing cropped images and a
@@ -103,7 +103,7 @@ def create_cropped_images_object(pred):
 
 
 def results_dict(name: str, object_hash: str, labeled_image_url: Optional[str],
-                 predictions: dict[Union[int, str], Any], model_name: str,
+                 predictions: Dict[Union[int, str], Any], model_name: str,
                  model_version: str, page: str) -> dict:
     """Creates a dictionary with the prediction result(s) for the API call.
 

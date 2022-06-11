@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -268,14 +268,14 @@ class JSON2YOLO:
 
     def convert_to_yolo(
         self, task: dict
-    ) -> Union[None, tuple[list[str], str], tuple[list[str], None]]:
+    ) -> Union[None, Tuple[List[str], str], Tuple[List[str], None]]:
         """Convert the task to YOLO format.
 
         Args:
             task (dict): The task to be converted.
 
         Returns:
-            Optional[tuple[list, list]]: A tuple with a list of the labels in
+            Optional[Tuple[list, list]]: A tuple with a list of the labels in
             the task and a list of background image path if the task is
             labeled as a background image.
 
