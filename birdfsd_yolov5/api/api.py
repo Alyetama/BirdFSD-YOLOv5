@@ -136,8 +136,7 @@ def predict_endpoint(file: UploadFile,
 
     if download_cropped:
         obj = api_utils.create_cropped_images_object(pred)
-        return StreamingResponse(obj,
-                                 media_type='application/zip')
+        return StreamingResponse(obj, media_type='application/zip')
 
     for k in pred_results:
 
