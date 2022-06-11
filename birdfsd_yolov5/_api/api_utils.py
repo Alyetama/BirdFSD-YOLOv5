@@ -32,7 +32,8 @@ def get_latest_model_weights(s3_client, skip_download=False):
         return model_version, model_name, model_object_name
 
     _ = s3_client.fget_object('model', model_object_name, model_object_name)
-    assert Path(model_object_name).exists()
+    if not Path(model_object_name).exists():
+        raise AssertionError
     return model_version, model_name, model_object_name
 
 
