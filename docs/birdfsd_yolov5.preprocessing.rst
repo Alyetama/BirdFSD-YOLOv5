@@ -12,6 +12,14 @@ birdfsd\_yolov5.preprocessing.json2yolov5 module
    :undoc-members:
    :show-inheritance:
 
+birdfsd\_yolov5.preprocessing.split\_data module
+------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.preprocessing.split_data
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

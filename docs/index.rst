@@ -1,5 +1,5 @@
 .. birdfsd_yolov5 documentation master file, created by
-   sphinx-quickstart on Sat Jun 11 12:40:39 2022.
+   sphinx-quickstart on Mon Jun 13 16:32:55 2022.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 

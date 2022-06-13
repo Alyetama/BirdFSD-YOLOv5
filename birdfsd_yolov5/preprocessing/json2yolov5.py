@@ -29,6 +29,7 @@ from tqdm import tqdm
 
 from birdfsd_yolov5.model_utils import (handlers, mongodb_helper, s3_helper,
                                         utils)
+from birdfsd_yolov5.preprocessing.split_data import split_data
 
 
 class FailedToParseImageURL(Exception):
@@ -306,11 +307,8 @@ class JSON2YOLO:
         # Iterate through annotations in a single task
         for label in labels:
             if label['rectanglelabels'][0] not in self.classes:
-                if label['rectanglelabels'][0] == self.background_label:
-                    return [self.background_label], cur_img_path
-                else:
-                    Path(cur_img_path).unlink()
-                    return
+                Path(cur_img_path).unlink()
+                return
 
             label_names.append(label['rectanglelabels'][0])
             x, y, width, height = [
@@ -328,63 +326,7 @@ class JSON2YOLO:
 
         with open(cur_label_path, 'w') as f:
             f.write(label_file_content)
-        return label_names, None
-
-    def _split_loop(self, split, split_str):
-        for (image, label) in split:
-            for x in [(image, f'images/{split_str}'),
-                      (label, f'labels/{split_str}')]:
-                if not x[0]:
-                    continue
-                shutil.copy2(x[0],
-                             f'{self.output_dir}/{x[1]}/{Path(x[0]).name}')
-
-    def split_data(self, bg_imgs: list) -> None:
-        """Split the data into train and validation sets.
-
-        Returns:
-            None
-
-        """
-        random.seed(self.seed)
-
-        for subdir in [
-                'images/train', 'labels/train', 'images/val', 'labels/val'
-        ]:
-            Path(f'{self.output_dir}/{subdir}').mkdir(parents=True,
-                                                      exist_ok=True)
-
-        all_imgs = glob(f'{self.output_dir}/ls_images/*')
-
-        bg_imgs_pairs = []
-        pct_to_keep = 10
-
-        len_of_bg_imgs_to_keep = int((pct_to_keep * len(all_imgs)) / 100.0)
-        try:
-            bg_imgs = random.sample(bg_imgs, len_of_bg_imgs_to_keep)
-        except ValueError:
-            print('Sample is larger than population! '
-                  'Keeping all background images...')
-            random.shuffle(bg_imgs)
-            bg_imgs_pairs = list(zip(bg_imgs, [None] * len(bg_imgs)))
-
-        images = sorted([x for x in all_imgs if x not in bg_imgs])
-        labels = sorted(glob(f'{self.output_dir}/ls_labels/*'))
-        labeled_pairs = list(zip(images, labels))
-
-        pairs = bg_imgs_pairs + labeled_pairs  # noqa
-
-        train_len = round(len(pairs) * 0.8)
-        random.shuffle(pairs)
-
-        train, val = pairs[:train_len], pairs[train_len:]
-
-        self._split_loop(train, 'train')
-        self._split_loop(val, 'val')
-
-        shutil.rmtree(f'{self.output_dir}/ls_images', ignore_errors=True)
-        shutil.rmtree(f'{self.output_dir}/ls_labels', ignore_errors=True)
-        return
+        return label_names
 
     def plot_results(self, results: list) -> None:
         """Plots the results of the classification.
@@ -536,14 +478,13 @@ class JSON2YOLO:
             results.append(result)
             time.sleep(0.01)
 
-        bg_imgs = [y for y in [x[1] for x in results if x] if y]
-        results_labels = sum([x[0] for x in results if x], [])
+        results_labels = sum([x for x in results if x], [])
 
         if self.tasks_not_exported:
             logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
+        split_data(self.output_dir, seed=self.seed)
         self.plot_results(results_labels)
-        self.split_data(bg_imgs)
         self._create_metadata_files()
 
         folder_name = Path(self.output_dir).name
