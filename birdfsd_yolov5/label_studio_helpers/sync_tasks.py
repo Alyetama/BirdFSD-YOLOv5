@@ -24,8 +24,12 @@ def _insert_many_chunks(chunk: np.ndarray, col_name: str) -> None:
     col.insert_many(chunk.tolist())
 
 
-def sync_all_to_single_files() -> None:
+def sync_all_to_single_files(splits: int = 50) -> None:
     """Creates one file for all tasks and one file for all predictions.
+
+    Args:
+        splits (int): Number of chunks to split the list into before inserting
+            to MongoDB.
 
     Returns:
         None
@@ -34,7 +38,11 @@ def sync_all_to_single_files() -> None:
     logger.debug('Running `sync_all()`...')
 
     tasks = get_all_projects_tasks()
+    for task in tasks:
+        task.update({'_id': task['id']})
     preds = get_all_projects_tasks(get_predictions_instead=True)
+    for pred in preds:
+        pred.update({'_id': pred['id']})
 
     for res, res_name in zip([tasks, preds], ['tasks', 'preds']):
         logger.debug(f'Syncing all {res_name} to one collection...')
@@ -42,7 +50,7 @@ def sync_all_to_single_files() -> None:
         col_name = f'all_projects_{res_name}'
         col = db[col_name]
         col.drop()
-        chunks = np.array_split(res, 10)
+        chunks = np.array_split(res, splits)
         desc = f'{res_name.capitalize()} chunks'
 
         futures = [

@@ -13,15 +13,12 @@ import torchvision
 import wandb
 
 
-def update_run_cfg(run_path, dataset_dir, dataset_name) -> None:
+def update_run_cfg(run_path: str, dataset_dir: str, dataset_name: str) -> None:
     """Adds additional meta data to a finished wandb run.
 
-    This function uploads the classes.txt and hist.jpg files to a finished wandb
-    run. It also updates the run's config with the dataset name, base ML 
+    This function uploads the classes.txt and hist.jpg files to a finished 
+    wandb run. It also updates the run's config with the dataset name, base ML 
     framework version, and system hardware.
-
-    Returns:
-        None
 
     """
     api = wandb.Api()
@@ -73,10 +70,9 @@ def update_run_cfg(run_path, dataset_dir, dataset_name) -> None:
     print(dict_to_add)
 
     run.update()
-    return
 
 
-def _opts():
+def _opts() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-p',

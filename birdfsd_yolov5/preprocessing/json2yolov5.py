@@ -71,7 +71,9 @@ class JSON2YOLO:
                  excluded_labels: Union[list, str] = None,
                  seed: int = 8,
                  overwrite: bool = False,
-                 verbose: bool = False):
+                 verbose: bool = False,
+                 imgs_dir_name: str = 'ls_images',
+                 labels_dir_name: str = 'ls_labels'):
         self.projects = projects
         self.output_dir = str(Path(output_dir).absolute())
         self.copy_data_from = copy_data_from
@@ -85,10 +87,11 @@ class JSON2YOLO:
         self.seed = seed
         self.overwrite = overwrite
         self.verbose = verbose
-        self.imgs_dir = f'{self.output_dir}/ls_images'
-        self.labels_dir = f'{self.output_dir}/ls_labels'
+        self.imgs_dir_name = imgs_dir_name
+        self.labels_dir_name = labels_dir_name
+        self.imgs_dir = f'{self.output_dir}/{imgs_dir_name}'
+        self.labels_dir = f'{self.output_dir}/{labels_dir_name}'
         self.classes = None
-        self.tasks_not_exported = []
 
     @staticmethod
     def bbox_ls_to_yolo(x: float, y: float, width: float,
@@ -119,12 +122,14 @@ class JSON2YOLO:
         excluded_labels = self.get_excluded_labels()
         labels = []
         for entry in data:
+            if not entry.get('label'):
+                continue
             try:
                 labels.append([
                     label['rectanglelabels'][0] for label in entry['label']
                 ][0])
             except KeyError as e:
-                logger.warning(f'Current entry raised KeyError {e}! '
+                logger.warning(f'Current entry raised KeyError "{e}"! '
                                f'Ignoring entry: {entry}')
 
         unique, counts = np.unique(labels, return_counts=True)
@@ -290,11 +295,10 @@ class JSON2YOLO:
         if not valid_download:
             return
 
+
         if task.get('label'):
             labels = task['label']
         else:
-            self.tasks_not_exported.append(task)
-            logger.error(f'>>>>>>>>>> CORRUPTED TASK: {task}')
             try:
                 Path(cur_img_path).unlink()
             except FileNotFoundError:
@@ -370,16 +374,17 @@ class JSON2YOLO:
             raise s3_helper.BucketDoesNotExist(
                 'Bucket `dataset` does not exist!')
 
-        upload_dataset = False
-        objs = list(s3_client.list_objects('dataset'))
-        if objs:
-            latest_ts = max([o.last_modified for o in objs if o.last_modified])
-            latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
-            if latest_obj.size != Path(
-                    dataset_name).stat().st_size or self.force_update:
-                upload_dataset = True
-        else:
-            upload_dataset = True
+        # upload_dataset = False
+        # objs = list(s3_client.list_objects('dataset'))
+        # if objs:
+        #     latest_ts = max([o.last_modified for o in objs if o.last_modified])
+        #     latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
+        #     if latest_obj.size != Path(
+        #             dataset_name).stat().st_size or self.force_update:
+        #         upload_dataset = True
+        # else:
+        #     upload_dataset = True
+
         if upload_dataset:
             if self.copy_data_from:
                 logger.debug('Copying the dataset to the bucket...')
@@ -479,9 +484,6 @@ class JSON2YOLO:
             time.sleep(0.01)
 
         results_labels = sum([x for x in results if x], [])
-
-        if self.tasks_not_exported:
-            logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
         split_data(self.output_dir, seed=self.seed)
         self.plot_results(results_labels)
