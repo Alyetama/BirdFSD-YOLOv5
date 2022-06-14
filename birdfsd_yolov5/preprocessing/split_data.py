@@ -5,9 +5,13 @@ import random
 import shutil
 from glob import glob
 from pathlib import Path
+from typing import Callable
 
 
-def split_data(output_dir: str, seed: int = 8) -> None:
+def split_data(output_dir: str,
+               add_bg_images_callback: Callable,
+               seed: int = 8,
+               bg_pct: int = 10) -> None:
     """Split the data into train and validation sets.
         
         Args:
@@ -38,6 +42,9 @@ def split_data(output_dir: str, seed: int = 8) -> None:
 
     for subdir in ['images/train', 'labels/train', 'images/val', 'labels/val']:
         Path(f'{output_dir}/{subdir}').mkdir(parents=True, exist_ok=True)
+
+    total_images_len = len(sorted(glob(f'{output_dir}/ls_images/*')))
+    add_bg_images_callback(bg_pct)
 
     images = sorted(glob(f'{output_dir}/ls_images/*'))
     labels = sorted(glob(f'{output_dir}/ls_labels/*'))

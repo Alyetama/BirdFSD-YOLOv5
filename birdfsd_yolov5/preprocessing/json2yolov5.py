@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -32,7 +32,7 @@ from birdfsd_yolov5.model_utils import (handlers, mongodb_helper, s3_helper,
 from birdfsd_yolov5.preprocessing.split_data import split_data
 
 
-class FailedToParseImageURL(Exception):
+class _FailedToParseImageURL(Exception):
     pass
 
 
@@ -157,7 +157,6 @@ class JSON2YOLO:
         @ray.remote
         def iter_projects(proj_id):
             return mongodb_helper.get_tasks_from_mongodb(proj_id,
-                                                         dump=False,
                                                          json_min=True)
 
         @ray.remote
@@ -212,7 +211,7 @@ class JSON2YOLO:
                 img = img.split('?')[0]
                 object_name = '/'.join(Path(img).parts[-2:])
             else:
-                raise FailedToParseImageURL(img)
+                raise _FailedToParseImageURL(img)
             cur_img_name = Path(object_name).name
         else:
             object_name = None
@@ -267,21 +266,54 @@ class JSON2YOLO:
             return
         return True
 
-    def convert_to_yolo(
-        self, task: dict
-    ) -> Union[None, Tuple[List[str], str], Tuple[List[str], None]]:
+    def add_bg_images(self, pct: int = 10) -> Any:
+        """Add n percentage of background images to the dataset.
+
+        Args:
+            pct (int): Percentage of background images to keep.
+
+        """
+
+        @ray.remote
+        def _iter_download(task: dict) -> None:
+            cur_img_path, _, img_url = self.get_assets_info(task)
+            self.download_image(task, cur_img_path, img_url)
+
+        tasks = utils.get_data(json_min=True)
+
+        bg_images = []
+
+        for task in tasks:
+            if not task.get('label'):
+                continue
+            for x in task['label']:
+                for y in x['rectanglelabels']:
+                    if y == 'no animal':
+                        bg_images.append(task)
+
+        random.shuffle(bg_images)
+
+        total_images_len = len(sorted(glob(f'{self.output_dir}/ls_images/*')))
+        pct_bg_to_keep = int((pct * total_images_len) / 100)
+        bg_tasks_sample = random.sample(bg_images, pct_bg_to_keep)
+
+        futures = [_iter_download.remote(x) for x in bg_tasks_sample]
+        for x in tqdm(futures):
+            ray.get(x)
+
+    def convert_to_yolo(self, task: dict) -> Optional[List[Any]]:
         """Convert the task to YOLO format.
 
         Args:
             task (dict): The task to be converted.
 
         Returns:
-            Optional[Tuple[list, list]]: A tuple with a list of the labels in
+            Optional[List[Any]]: A tuple with a list of the labels in
             the task and a list of background image path if the task is
             labeled as a background image.
 
         Raises:
-            FailedToParseImageURL: If the image URL is not valid.
+            _FailedToParseImageURL: If the image URL is not valid.
             TypeError: If the image URL is not valid.
 
         """
@@ -483,8 +515,12 @@ class JSON2YOLO:
         if self.tasks_not_exported:
             logger.error(f'Corrupted tasks: {self.tasks_not_exported}')
 
-        split_data(self.output_dir, seed=self.seed)
+        split_data(self.output_dir,
+                   add_bg_images_callback=self.add_bg_images,
+                   seed=self.seed)
+
         self.plot_results(results_labels)
+
         self._create_metadata_files()
 
         folder_name = Path(self.output_dir).name
