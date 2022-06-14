@@ -55,3 +55,6 @@ def split_data(output_dir: str, seed: int = 8) -> None:
     for im, label in val:
         shutil.copy(im, f'{output_dir}/images/val')
         shutil.copy(label, f'{output_dir}/labels/val')
+
+    shutil.rmtree(f'{output_dir}/ls_images', ignore_errors=True)
+    shutil.rmtree(f'{output_dir}/ls_labels', ignore_errors=True)
