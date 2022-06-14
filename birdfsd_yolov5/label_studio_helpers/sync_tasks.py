@@ -225,4 +225,4 @@ if __name__ == '__main__':
     if args.force:
         logger.info('Invoked force update!')
     sync_tasks(force_update=args.force)
-    sync_all_to_single_files()
+    # sync_all_to_single_files()
