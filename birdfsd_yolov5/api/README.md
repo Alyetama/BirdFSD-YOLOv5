@@ -3,8 +3,7 @@
 - Run locally
 
 ```sh
-cd api
-uvicorn api:app --reload
+python api.py
 ```
 
 ## Example

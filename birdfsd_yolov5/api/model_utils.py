@@ -2,7 +2,7 @@
 """This module is used to get the latest model weights and information."""
 
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 from minio import Minio
@@ -42,11 +42,15 @@ def get_latest_model_weights(s3_client: Minio,
     return model_version, model_name, model_object_name
 
 
-def init_model(s3: Minio) -> Tuple[str, str, str, torch.nn.Module]:
+def init_model(
+    s3: Minio,
+    use_weights: Optional[str] = None
+) -> Tuple[str, str, str, torch.nn.Module]:
     """This function initializes the model.
 
     Args:
         s3 (Minio): Minio S3 client object.
+        use_weights (str): Use this weights file instead of the latest model.
 
     Returns:
         model_version: The model version.
@@ -55,8 +59,13 @@ def init_model(s3: Minio) -> Tuple[str, str, str, torch.nn.Module]:
         model: The model object.
 
     """
-    model_version, model_name, model_weights = get_latest_model_weights(
-        s3, skip_download=True)
+    if not use_weights:
+        model_version, model_name, model_weights = get_latest_model_weights(
+            s3, skip_download=True)
+    else:
+        model_version = Path(use_weights).stem
+        model_name = Path(use_weights).stem
+        model_weights = use_weights
 
     if not Path(model_weights).exists():
         model_version, model_name, model_weights = get_latest_model_weights(s3)
