@@ -9,7 +9,7 @@ Build and train a custom model to identify birds visiting bird feeders.
 ## Requirements
 - 🐍 [python>=3.8](https://www.python.org/downloads/)
 
-## :rocket: Getting started
+## 🚀 Getting started
 
 - First, [fork the repository](https://github.com/bird-feeder/BirdFSD-YOLOv5/fork).
 - Then, run:
@@ -30,7 +30,7 @@ mv .env.example .env
 nano .env  # or with any other editor
 ```
 
-## :card_file_box: Setup
+## 🗃️ Setup
 
 - To use the GitHub Actions workflows (recommended!), you will need to add every environment variable and its value from `.env` to the `Secrets` of your fork (you can find `Secrets` under `Settings`).
 
@@ -43,7 +43,7 @@ nano .env  # or with any other editor
 
 </details>
 
-## :wrench: Dataset preparation
+## 🔧 Dataset preparation
 
 - **Option 1:** Run the `JSON to YOLOv5 (data preprocessing)` workflow under github `Actions`.
 
@@ -55,23 +55,35 @@ nano .env  # or with any other editor
   python birdfsd_yolov5/model_utils/relative_to_abs.py
   ```
 
-## :zap: Training[^1]
+## ⚡ Training[^1]
 
 Use the *Colab* notebook: 
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bird-feeder/BirdFSD-YOLOv5/blob/main/notebooks/BirdFSD_YOLOv5_train.ipynb)
 
-## :memo: Prediction
+## 📝 Prediction
 
 - **Option 1:** Run the `Predict` workflow under github `Actions`.
 - **Option 2:** Use the *Colab* notebook:
 
   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bird-feeder/BirdFSD-YOLOv5/blob/main/notebooks/BirdFSDV1_YOLOv5_LS_Predict.ipynb)
+  
+  
+## 🐳 Using Docker
+```sh
+docker pull alyetama/birdfsd-yolov5:latest
+```
 
-## :bookmark: Related
+### Example Usage
+```sh
+docker run -it --env-file .env alyetama/birdfsd-yolov5 python birdfsd_yolov5/preprocessing/json2yolov5.py
+```
+
+
+## 🔖 Related
 
 - [BirdFSD-YOLOv5-API](https://github.com/bird-feeder/BirdFSD-YOLOv5-API)
-- [webapp-beta](https://github.com/bird-feeder/webapp-beta)
+- [BirdFSD-YOLOv5-APP](https://github.com/bird-feeder/BirdFSD-YOLOv5-App)
 
 
 [^1]: [yolov5/wiki/Train-Custom-Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data)
