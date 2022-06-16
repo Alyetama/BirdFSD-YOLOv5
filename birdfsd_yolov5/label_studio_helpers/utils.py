@@ -39,7 +39,6 @@ def update_model_version_in_all_projects(new_model_version: str) -> None:
             data=project)
         if patched_project.get('status_code'):
             logger.error(patched_project)
-    return
 
 
 def get_all_projects_tasks(dump: Optional[Union[bool, str]] = None,

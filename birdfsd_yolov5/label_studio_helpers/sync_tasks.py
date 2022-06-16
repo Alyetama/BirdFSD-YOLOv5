@@ -121,12 +121,15 @@ def sync_project(project_id: Union[int, str],
         _msg = lambda x: f'Difference in {x} number'  # noqa
         logger.debug(
             f'(project: {project_id}) Project has changed. Updating...')
-        logger.debug(f'(project: {project_id}) {_msg("tasks")}: '
-                     f'{tasks_len_ls - tasks_len_mdb}')
-        logger.debug(f'(project: {project_id}) {_msg("annotations")}: '
-                     f'{anno_len_ls - anno_len_mdb}')
-        logger.debug(f'(project: {project_id}) {_msg("predictions")}: '
-                     f'{pred_len_ls - pred_len_mdb}')
+        if not tasks_len_ls - tasks_len_md == 0:
+            logger.debug(f'(project: {project_id}) {_msg("tasks")}: '
+                         f'{abs(tasks_len_ls - tasks_len_mdb)}')
+        if not anno_len_ls - anno_len_mdb == 0:
+            logger.debug(f'(project: {project_id}) {_msg("annotations")}: '
+                         f'{abs(anno_len_ls - anno_len_mdb)}')
+        if not pred_len_ls - pred_len_mdb == 0:
+            logger.debug(f'(project: {project_id}) {_msg("predictions")}: '
+                         f'{abs(pred_len_ls - pred_len_mdb)}')
 
         if json_min:
             data = api_request(f'{ls_host}/api/projects/{project_id}/export'
@@ -148,9 +151,6 @@ def sync_project(project_id: Union[int, str],
 
         col.drop()
         col.insert_many(data)
-
-    else:
-        logger.debug(f'(project: {project_id}) No changes were detected...')
 
     if not json_min and (force_update or pred_len_ls != pred_len_mdb):
         logger.debug(f'(project: {project_id}) Syncing predictions...')

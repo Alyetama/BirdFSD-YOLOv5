@@ -103,11 +103,7 @@ class SyncModel:
             'weights_enc': self.weights_enc
         }
 
-        try:
-            db.model.insert_one(model)
-        except DuplicateKeyError:
-            db.model.delete_one({'_id': model['_id']})
-            db.model.insert_one(model)
+        db.model.insert_one(model)
 
         serializable_model = copy.deepcopy(model)
         serializable_model.update({
@@ -115,7 +111,6 @@ class SyncModel:
             'trained_on': str(model['trained_on'])
         })
         print(json.dumps(serializable_model, indent=4))
-
         return model
 
 
