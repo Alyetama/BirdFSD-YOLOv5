@@ -141,7 +141,7 @@ def get_project_ids_str(exclude_ids: Optional[str] = None) -> str:
 
     """
     projects = api_request(
-        f'{os.environ["LS_HOST"]}/api/projects?page_size=10000')
+        f'{os.environ["LS_HOST"]}/api/projects?page_size=1000')
     project_ids = sorted([project['id']
                           for project in projects['results']])  # noqa
     project_ids = [str(p) for p in project_ids]
