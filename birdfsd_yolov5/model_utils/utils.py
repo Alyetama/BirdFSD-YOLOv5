@@ -119,10 +119,12 @@ def api_request(url: str,
         resp = requests.post(url, headers=headers, data=json.dumps(data))
     elif method == 'patch':
         resp = requests.patch(url, headers=headers, data=json.dumps(data))
+    elif method == 'delete':
+        resp = requests.delete(url, headers=headers)
     else:
         resp = requests.get(url, headers=headers)
 
-    if return_text:
+    if return_text or method == 'delete':
         return resp.text
     return resp.json()
 
