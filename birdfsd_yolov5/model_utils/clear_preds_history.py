@@ -88,4 +88,6 @@ def _opts() -> argparse.Namespace:
 if __name__ == '__main__':
     load_dotenv()
     args = _opts()
-    clear_preds_history(args.project_id, args.model_version_to_keep)
+    clear_preds_history(model_version_to_keep=args.model_version_to_keep,
+                        project_id=args.project_id,
+                        all_projects=args.all_projects)
