@@ -4,6 +4,14 @@ birdfsd\_yolov5.preprocessing package
 Submodules
 ----------
 
+birdfsd\_yolov5.preprocessing.add\_bg\_images module
+----------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.preprocessing.add_bg_images
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 birdfsd\_yolov5.preprocessing.json2yolov5 module
 ------------------------------------------------
 

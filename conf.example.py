@@ -17,12 +17,12 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'birdfsd_yolov5'
+project = 'BirdFSD-YOLOv5'
 copyright = '2022, Mohammad Alyetama'
 author = 'Mohammad Alyetama'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.0'
+release = '1.1.3'
 
 # -- General configuration ---------------------------------------------------
 
@@ -39,7 +39,9 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**/*_dev.py']
+
+add_module_names = False
 
 # -- Options for HTML output -------------------------------------------------
 

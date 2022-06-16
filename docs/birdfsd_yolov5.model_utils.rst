@@ -4,6 +4,14 @@ birdfsd\_yolov5.model\_utils package
 Submodules
 ----------
 
+birdfsd\_yolov5.model\_utils.clear\_preds\_history module
+---------------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.model_utils.clear_preds_history
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 birdfsd\_yolov5.model\_utils.download\_weights module
 -----------------------------------------------------
 
@@ -56,6 +64,14 @@ birdfsd\_yolov5.model\_utils.utils module
 -----------------------------------------
 
 .. automodule:: birdfsd_yolov5.model_utils.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+birdfsd\_yolov5.model\_utils.wandb\_helpers module
+--------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.model_utils.wandb_helpers
    :members:
    :undoc-members:
    :show-inheritance:

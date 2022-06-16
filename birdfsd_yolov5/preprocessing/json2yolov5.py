@@ -40,16 +40,22 @@ class JSON2YOLO:
     """Converts the output of a Label-studio project to a YOLO dataset.
 
     The output is a folder with the following structure:
+    
+    ..  code-block::
 
-    dataset-YOLO
-    ├── classes.txt
-    ├── dataset_config.yml
-    ├── images
-    │   ├── train
-    │   └── val
-    └── labels
-    ....├── train
-    ....└── val
+        dataset-YOLO/
+        ├── bar.jpg
+        ├── classes.json
+        ├── classes.txt
+        ├── hist.jpg
+        ├── images/
+        │   ├── train/
+        │   └── val/
+        ├── labels/
+        │   ├── train/
+        │   └── val/
+        ├── notes.json
+        └── tasks.json
 
     The output will also be stored in a tarball with the same name as the
     output folder.

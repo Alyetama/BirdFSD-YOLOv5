@@ -14,6 +14,7 @@ if [[ "$RELEASE" == '' ]]; then
     exit 1
 fi
 
+PROJECT_NAME="BirdFSD-YOLOv5"
 PACKAGE_FOLDER_NAME='birdfsd_yolov5'
 AUTHOR='Mohammad Alyetama'
 
@@ -23,18 +24,19 @@ rm -rf docs && mkdir docs
 
 cd docs || exit
 
-sphinx-quickstart --no-sep --project "$PACKAGE_FOLDER_NAME" \
+sphinx-quickstart --no-sep --project "$PROJECT_NAME" \
     --author "$AUTHOR" --release "$RELEASE" --language 'en'
+
+rm conf.py && cp ../conf.example.py conf.py
 cd ..
 
 curl "https://openmoji.org/data/color/svg/1F426.svg" \
     --output docs/_static/logo.svg
 
-sphinx-apidoc -f -o docs "$PACKAGE_FOLDER_NAME"
+sphinx-apidoc -f -o docs "$PACKAGE_FOLDER_NAME" \
+    "*_dev.py"
 
 cd docs || exit
-
-rm conf.py && cp ../conf.example.py conf.py
 
 awk -i inplace 'NR==13{print "   modules.rst"}1' index.rst
 
