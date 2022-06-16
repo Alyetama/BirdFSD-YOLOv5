@@ -28,7 +28,24 @@ git clone https://github.com/ultralytics/yolov5.git
 
 mv .env.example .env
 nano .env  # or with any other editor
+# See `🌱 Environment Variables` section for details about the environment variables.
 ```
+
+## 🌱 Environment Variables
+
+
+| Name                 | Value                                                                                                                   |
+|----------------------|-------------------------------------------------------------------------------------------------------------------------|
+| TOKEN                | Label-Studio `Access Token`.                                                                                            |
+| LS_HOST              | The URL of the label-studio app (e.g., https://label-studio.example.com) – make sure you include `https://` in the URL. |
+| DB_CONNECTION_STRING | MongoDB connection string (e.g., `mongodb://mongodb0.example.com:27017`). See [this article](https://www.mongodb.com/docs/manual/reference/connection-string/) for details.                                                                                          |
+| DB_NAME              | Name of the main MongoDB database (default: `label_studio`).                                                            |
+| S3_ACCESS_KEY        | (Optional) The S3 bucket's `Access Key ID`.                                                                             |
+| S3_SECRET_KEY        | (Optional) The S3 bucket's `Secret Key`.                                                                                |
+| S3_REGION            | (Optional) The S3 bucket's region (default: `us-east-1`).                                                               |
+| S3_ENDPOINT          | (Optional) The S3 bucket's endpoint/URL server.                                                                         |
+| EXCLUDE_LABELS       | (Optional) Comma-separated list of labels to exclude from processing (example: label a,label b).                        |
+
 
 ## 🗃️ Setup
 
