@@ -121,7 +121,7 @@ def sync_project(project_id: Union[int, str],
         _msg = lambda x: f'Difference in {x} number'  # noqa
         logger.debug(
             f'(project: {project_id}) Project has changed. Updating...')
-        if not tasks_len_ls - tasks_len_md == 0:
+        if not tasks_len_ls - tasks_len_mdb == 0:
             logger.debug(f'(project: {project_id}) {_msg("tasks")}: '
                          f'{abs(tasks_len_ls - tasks_len_mdb)}')
         if not anno_len_ls - anno_len_mdb == 0:
