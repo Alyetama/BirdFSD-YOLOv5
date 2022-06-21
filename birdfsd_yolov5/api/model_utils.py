@@ -94,5 +94,4 @@ def model_info(version: str) -> dict:
     model_obj.pop('_id')
     model_obj['added_on'] = str(model_obj['added_on'])
     model_obj['trained_on'] = str(model_obj['trained_on'])
-    model_obj.pop('projects')
     return model_obj

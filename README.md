@@ -99,7 +99,6 @@ docker run -it --env-file .env alyetama/birdfsd-yolov5 python birdfsd_yolov5/pre
 
 ## 🔖 Related
 
-- [BirdFSD-YOLOv5-API](https://github.com/bird-feeder/BirdFSD-YOLOv5-API)
 - [BirdFSD-YOLOv5-APP](https://github.com/bird-feeder/BirdFSD-YOLOv5-App)
 
 
