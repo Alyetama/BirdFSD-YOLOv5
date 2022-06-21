@@ -33,7 +33,7 @@ def create_s3_client(api_s3: bool = False) -> Minio:
                  region=os.environ[f'{prefix}S3_REGION'])
 
 
-def species_info(species_name: str) -> dict:
+def species_info(species_name: str) -> Union[dict, str]:
     """Retrieves a dictionary of information about the species.
 
     This function takes a species name as input and returns a dictionary of

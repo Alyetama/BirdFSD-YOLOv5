@@ -35,7 +35,6 @@ class _Headers:
 
         Returns:
             CaseInsensitiveDict: A dictionary of headers.
-
         """
         load_dotenv()
         headers = CaseInsensitiveDict()
@@ -58,7 +57,6 @@ class LoadModel:
 
         Returns:
             torch.nn.Module: a YOLOv5 model.
-
         """
         return torch.hub.load('ultralytics/yolov5',
                               'custom',
@@ -127,7 +125,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             str: Path to the temporary image file.
-
         """
         cur_img_name = Path(img_url.split('?')[0]).name
         r = requests.get(img_url)
@@ -152,7 +149,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             tuple: (x, y, width, height, score, label)
-
         """
         x = (x - width / 2) * 100
         y = (y - height / 2) * 100
@@ -173,7 +169,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             dict: A dictionary containing the task data.
-
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{_task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -191,7 +186,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             list: A list of tasks.
-        
         """
         logger.debug('Fetching all tasks. This might take few minutes...')
         q = 'exportType=JSON&download_all_tasks=true'
@@ -206,7 +200,17 @@ class Predict(LoadModel, _Headers):
         return sum(all_tasks, [])
 
     @staticmethod
-    def _get_all_tasks_from_mongodb(project_ids: List[str]):
+    def _get_all_tasks_from_mongodb(project_ids: List[str]) -> list:
+        """Fetch all tasks from the project.
+
+        This function fetches all tasks from the project.
+
+        Args:
+            project_ids: List[str]: Comma-seperated string of project ids.
+
+        Returns:
+            list: A list of tasks.
+        """
 
         @ray.remote
         def _get_all_tasks_from_mongodb_remote(proj_id: str):
@@ -235,7 +239,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             list: A list of tasks.
-
         """
         return [t for t in tasks if t['id'] in range(start, end + 1)]
 
@@ -247,7 +250,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             list: A list containing the task data.
-
         """
         url = f'{os.environ["LS_HOST"]}/api/tasks/{task_id}'
         resp = requests.get(url, headers=self.headers)
@@ -272,7 +274,6 @@ class Predict(LoadModel, _Headers):
 
         Returns:
             dict: A dictionary with the prediction's data.
-
         """
         return {
             "type": "rectanglelabels",
@@ -301,8 +302,7 @@ class Predict(LoadModel, _Headers):
             task_id (int): the task id.
 
         Returns:
-            dict: The prediction results.    
-
+            dict: The prediction results.
         """
         return {
             'model_version': self.model_version,
@@ -323,7 +323,6 @@ class Predict(LoadModel, _Headers):
         Returns:
             Optional[bool]: True if a prediction with the current model version
             exists. Otherwise, None.
-
         """
         if not os.getenv('DB_CONNECTION_STRING'):
             logger.warning('Not connected to a MongoDB database! '
@@ -370,7 +369,6 @@ class Predict(LoadModel, _Headers):
             UnidentifiedImageError: If image is not identified.
             OSError: If image is not downloaded.
             Exception: If any other exception occurs.
-
         """
         task_id = task['id']
         if not self.delete_if_no_predictions and not self.if_empty_apply_label:
@@ -441,12 +439,7 @@ class Predict(LoadModel, _Headers):
         return
 
     def apply_predictions(self) -> None:
-        """This function applies predictions to label studio tasks.
-
-        Returns:
-            None
-
-        """
+        """This function applies predictions to label studio tasks."""
         start = time.time()
         logs_file = utils.add_logger(__file__)
         handlers.catch_keyboard_interrupt()
@@ -530,7 +523,6 @@ def _opts() -> argparse.Namespace:
 
     Returns:
         argparse.Namespace: Namespace object containing the parsed arguments.
-        
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-w',

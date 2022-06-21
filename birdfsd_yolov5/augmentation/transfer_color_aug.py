@@ -158,13 +158,9 @@ def transfer_color(img_file: str, label_file: str, ref_img: str) -> None:
     format.
 
     Args:
-        img (str): The path to the image file.
-        label (str): The path to the label file.
-        ref_img (str): The path to the reference image file.
-
-    Returns:
-        None
-
+        img_file (str): The path to the source image.
+        label_file (str): The path to the source label.
+        ref_img (str): The path to the reference image.
     """
     method = random.choice(['pdf_algo', 'mstd_algo', 'lm_algo'])
     t = Transfer()

@@ -9,7 +9,6 @@ import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pymongo.errors import DuplicateKeyError
 
 from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper
 
@@ -44,7 +43,6 @@ class SyncModel:
 
         Raises:
             ModelVersionFormatError: If the version is not valid.
-
         """
         model_version_number = 'v' + self.model_version.split(
             self.model_name)[1].split('-v')[1]
@@ -67,7 +65,6 @@ class SyncModel:
 
         Returns:
             dict: The model that was added to the database.
-
         """
 
         _ = self.check_version_number_format()

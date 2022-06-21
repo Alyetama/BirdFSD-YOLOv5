@@ -20,6 +20,7 @@ from birdfsd_yolov5.model_utils import s3_helper, utils
 
 
 class GenerateRelease:
+    """Generate a release for a model."""
 
     def __init__(self,
                  run_path: str,
@@ -29,6 +30,20 @@ class GenerateRelease:
                  dataset_folder: str,
                  repo: Optional[str] = None,
                  overwrite: bool = False) -> None:
+        """Initialize the class.
+
+        Args:
+            run_path: The path to the run to use for the release.
+            version: The version of the release.
+            train_folder: The path to the folder containing the training
+                results.
+            val_folder: The path to the folder containing the validation
+                results.
+            dataset_folder: The path to the folder containing the dataset.
+            repo: The path to the repository to use for the release.
+            overwrite: Whether to overwrite an existing release.
+        """
+
         self.run_path = run_path
         self.version = version
         self.repo = repo
@@ -45,10 +60,6 @@ class GenerateRelease:
         Args:
             run: The W&B run to use for the release.
             fname(str): A string, the name of the file to be found.
-
-        Returns:
-            None
-
         """
 
         s3 = s3_helper.S3()
@@ -83,10 +94,6 @@ class GenerateRelease:
 
         Args:
             run: The W&B run to use for the release.
-
-        Returns:
-            None
-
         """
         logger.debug(run)
 
@@ -165,7 +172,6 @@ class GenerateRelease:
 
         Returns:
             str: The content of the release notes file.
-
         """
 
         s3 = s3_helper.S3()
@@ -305,15 +311,11 @@ class GenerateRelease:
         """This method generates the release.
 
         The method does the following:
-        1. Creates a directory for the release
-        2. Gets the f1-score of the run
-        3. Gets some data assets from the run
-        4. Creates the release notes
-        5. Generates a command to create the release
-
-        Returns:
-            None
-
+        1. Creates a directory for the release.
+        2. Gets the f1-score of the run.
+        3. Gets some data assets from the run.
+        4. Creates the release notes.
+        5. Generates a command to create the release on GitHub.
         """
         logs_file = utils.add_logger(__file__)
 

@@ -12,14 +12,13 @@ def upload_artifact(run_path: str,
                     artifact_name: str = None) -> None:
     """Upload an artifact to an existing wandb run.
 
-	Args:
-		run_path (str): The wandb run path.
-		artifact_type (str): The artifact type (e.g., dataset, model, etc.).
-		file_path (str): The path to the file on the local disk.
-		artifact_name (str): A human-readable name for the artifact. If None, 
+    Args:
+        run_path (str): The wandb run path.
+        artifact_type (str): The artifact type (e.g., dataset, model, etc.).
+        file_path (str): The path to the file on the local disk.
+        artifact_name (str): A human-readable name for the artifact. If None, 
             the file's base name is used.
-
-	"""
+    """
     if not artifact_name:
         artifact_name = Path(file_path).name
 

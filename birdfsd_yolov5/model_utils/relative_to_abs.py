@@ -9,10 +9,6 @@ def relative_to_abs() -> None:
 
     This function is used to replace the dataset path in the
     `dataset_config.yml` file from a relative to absolute path.
-
-    Returns:
-        None
-
     """
     with open('dataset_config.yml') as f:
         lines = f.readlines()

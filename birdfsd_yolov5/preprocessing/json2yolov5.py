@@ -11,9 +11,8 @@ import shutil
 import tarfile
 import time
 from datetime import datetime, timedelta
-from glob import glob
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -33,7 +32,7 @@ from birdfsd_yolov5.preprocessing.split_data import split_data
 
 
 class FailedToParseImageURL(Exception):
-    pass
+    """Exception raised when image URL is not valid."""
 
 
 class JSON2YOLO:
@@ -62,6 +61,29 @@ class JSON2YOLO:
 
     The tasks that failed to export for any reason, will be logged at the 
     end of the run.
+
+    Args:
+        output_dir (str): The path to the output directory.
+        projects (str): The project to export.
+        copy_data_from (str): The path to a folder containing the dataset.
+        filter_rare_classes (str): The number of instances of a class to
+            keep. If set to 'median', the median of the class count will be
+            used. If set to 'mean', the mean of the class count will be used.
+        get_tasks_with_api (bool): If set to True, the tasks will be fetched
+            from the Label-studio API.
+        force_update (bool): If set to True, the dataset will be updated
+            even if it already exists.
+        background_label (str): The label to use for the background.
+        upload_dataset (bool): If set to True, the dataset will be uploaded
+            to the Label-studio API.
+        alt_data_endpoint (str): The URL of an alternative storage server.
+        excluded_labels (list): A list of labels to exclude from the dataset.
+        seed (int): The seed for the random number generator.
+        overwrite (bool): If set to True, the dataset will be overwritten if
+            exists.
+        verbose (bool): If set to True, more information will be logged.
+        imgs_dir_name (str): The name of the images' folder.
+        labels_dir_name (str): The name of the labels' folder.
     """
 
     def __init__(self,
@@ -162,7 +184,6 @@ class JSON2YOLO:
 
         Returns:
             list: A list of data.
-
         """
 
         @ray.remote
@@ -210,6 +231,11 @@ class JSON2YOLO:
         return data
 
     def get_assets_info(self, task: dict) -> tuple:
+        """This function is used to get assets info from a task.
+
+        Args:
+            task: A single task.
+        """
         is_s3 = False
         img = task['image']
         if 's3://' in task['image']:
@@ -251,6 +277,16 @@ class JSON2YOLO:
 
     def download_image(self, task: dict, cur_img_path: str,
                        img_url: str) -> Optional[bool]:
+        """This function is used to download the image from the URL.
+
+        Args:
+            task (dict): A dictionary containing the task data.
+            cur_img_path (str): The path to which the image will be written.
+            img_url (str): The URL of the image.
+
+        Returns:
+            Optional[bool]: True if the image was downloaded successfully,
+        """
         if self.verbose:
             print(f'Downloading {img_url}...')
 
@@ -278,9 +314,7 @@ class JSON2YOLO:
             return
         return True
 
-    def convert_to_yolo(
-        self, task: dict
-    ) -> Union[None, Tuple[List[str], str], Tuple[List[str], None]]:
+    def convert_to_yolo(self, task: dict) -> Optional[list[Any]]:
         """Convert the task to YOLO format.
 
         Args:
@@ -294,13 +328,11 @@ class JSON2YOLO:
         Raises:
             FailedToParseImageURL: If the image URL is not valid.
             TypeError: If the image URL is not valid.
-
         """
         cur_img_path, cur_label_path, img_url = self.get_assets_info(task)
         valid_download = self.download_image(task, cur_img_path, img_url)
         if not valid_download:
             return
-
 
         if task.get('label'):
             labels = task['label']
@@ -343,10 +375,6 @@ class JSON2YOLO:
 
         Args:
             results (list): The results of the classification.
-
-        Returns:
-            None
-
         """
         matplotlib.use('Agg')
         plt.subplots(figsize=(12, 8), dpi=300)
@@ -374,24 +402,18 @@ class JSON2YOLO:
         return
 
     def upload_dataset_file(self, dataset_name: str) -> None:
+        """Upload the dataset file to S3.
+
+        Args:
+            dataset_name (str): The name of the dataset.
+        """
         s3_client = s3_helper.S3().client
 
         if not s3_client.bucket_exists('dataset'):
             raise s3_helper.BucketDoesNotExist(
                 'Bucket `dataset` does not exist!')
 
-        # upload_dataset = False
-        # objs = list(s3_client.list_objects('dataset'))
-        # if objs:
-        #     latest_ts = max([o.last_modified for o in objs if o.last_modified])
-        #     latest_obj = [o for o in objs if o.last_modified == latest_ts][0]
-        #     if latest_obj.size != Path(
-        #             dataset_name).stat().st_size or self.force_update:
-        #         upload_dataset = True
-        # else:
-        #     upload_dataset = True
-
-        if upload_dataset:
+        if self.upload_dataset:
             if self.copy_data_from:
                 logger.debug('Copying the dataset to the bucket...')
                 ds_path = f'{Path(self.copy_data_from).parent}/dataset'
@@ -401,6 +423,7 @@ class JSON2YOLO:
                 s3_client.fput_object('dataset', dataset_name, dataset_name)
 
     def _create_metadata_files(self) -> None:
+        """Create the metadata files for the dataset."""
         excluded_labels = self.get_excluded_labels()
         d = {
             'path': f'{self.output_dir}',
@@ -433,6 +456,11 @@ class JSON2YOLO:
             json.dump(classes_json, f, indent=4)
 
     def get_excluded_labels(self):
+        """Get the excluded labels.
+
+        Returns:
+            list: The excluded labels.
+        """
         if self.excluded_labels:
             excluded_labels = self.excluded_labels
         elif not self.excluded_labels and os.getenv('EXCLUDE_LABELS'):
@@ -449,12 +477,9 @@ class JSON2YOLO:
         This method is used to run main preprocessing pipeline and convert
         the data to the yolov5 format.
 
-        Returns:
-            None
-
         Raises:
             BucketDoesNotExist: If the dataset S3 bucket does not exist.
-
+            FailedToParseImageURL: If the image URL is not valid.
         """
 
         @ray.remote
