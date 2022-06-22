@@ -78,12 +78,12 @@ def add_bg_images(output_dir: str = 'dataset-YOLO',
 
     train, val = bg_images[:train_len], bg_images[train_len:]
 
-    for im, label in train:
+    for im in train:
         shutil.copy(im, f'{output_dir}/images/train')
 
     print(f'Copied {len(train)} image to "{output_dir}/images/train".')
 
-    for im, label in val:
+    for im in val:
         shutil.copy(im, f'{output_dir}/images/val')
 
     print(f'Copied {len(val)} image to "{output_dir}/images/val".')

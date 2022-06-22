@@ -12,7 +12,7 @@ import tarfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -314,7 +314,7 @@ class JSON2YOLO:
             return
         return True
 
-    def convert_to_yolo(self, task: dict) -> Optional[list[Any]]:
+    def convert_to_yolo(self, task: dict) -> Optional[List[Any]]:
         """Convert the task to YOLO format.
 
         Args:
