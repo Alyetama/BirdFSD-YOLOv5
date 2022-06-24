@@ -142,12 +142,21 @@ def sync_project(project_id: Union[int, str],
             data = api_request(f'{ls_host}/api/projects/{project_id}/export'
                                '?exportType=JSON&download_all_tasks=true')
 
+        existing_ids = []
+
         for task in data:
             if json_min:
                 img = task['image']  # noqa
             else:
                 img = task['data']['image']  # noqa
             task.update({'_id': task['id'], 'data': {'image': img}})  # noqa
+            if task['id'] in existing_ids:
+                logger.error(
+                    f'Duplicate annotation in task {task["id"]}! '
+                    'Fix manually...')
+                data.remove(task)
+            else:
+                existing_ids.append(task['id'])
 
         col.drop()
         col.insert_many(data)
