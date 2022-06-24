@@ -12,7 +12,14 @@ Build and train a custom model to identify birds visiting bird feeders.
 ## 🚀 Getting started
 
 - First, [fork the repository](https://github.com/bird-feeder/BirdFSD-YOLOv5/fork).
-- Then, run:
+- Enable workflows in your fork:
+<img src="https://i.imgur.com/aF5U6J0.png"  width="720"> 
+
+- Then, click on and enable all the workflows that are highlighted wuth a red square in the image below.
+<img src="https://i.imgur.com/pj0Fe9e.png"  width="720"> 
+
+
+- On your machine, run:
 
 ```shell
 git clone https://github.com/bird-feeder/BirdFSD-YOLOv5.git
