@@ -6,6 +6,7 @@ import json
 from datetime import timedelta
 from pathlib import Path
 
+import requests
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -54,7 +55,16 @@ class DownloadModelWeights:
         s3 = s3_helper.S3()
 
         if self.model_version == 'latest':
-            latest_model_ts = max(db.model.find().distinct('added_on'))
+            try:
+                latest_model_ts = max(db.model.find().distinct('added_on'))
+            except ValueError:
+                logger.info('Could not find any saved model. Using the default pretrained model...')
+                r = requests.get(
+                    'https://github.com/microsoft/CameraTraps/releases/download/v5.0/md_v5a.0.0.pt')  # noqa
+                with open(self.output, 'wb') as f:
+                    f.write(r.content)
+                return
+
             model_document = db.model.find_one({'added_on': latest_model_ts})
         else:
             model_document = db.model.find_one({'version': self.model_version})
