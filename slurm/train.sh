@@ -34,7 +34,7 @@ _WANDB_RUN_ID=$(python -c "import wandb; print(wandb.util.generate_id())")
 export WANDB_RUN_ID="${_WANDB_RUN_ID}"
 #-------------------------------------
 mkdir -p archived
-_UUID="$(uuid)"
+_UUID="$(uuidgen)"
 for i in dataset-YOLO dataset-YOLO*.tar dataset_config.yml; do
     mv "${i}" "archived/${i}_${_UUID}" >/dev/null 2>&1
 done
