@@ -16,10 +16,10 @@ module load cuda/10.2
 conda activate yolov5
 #-------------------------------------
 if [[ "$1" == "" ]] || [[ "$2" == "" ]]; then
-    echo "Usage: $0 <WANDB_PROJECT_PATH> <DATASET_NAME>"
+    echo "Usage: $0 <WANDB_PROJECT_PATH> <DATASET_NAME> [optional arguments]"
     exit 1
 fi
-python generate_options.py "$1" "$2"
+python slurm/generate_options.py -w "$1" -d "$2" || python generate_options.py -w "$1" -d "$2"
 set -o allexport; source '.slurm_train_env'; set +o allexport
 #-------------------------------------
 rm dist/*.whl >/dev/null 2>&1
@@ -38,7 +38,7 @@ for i in dataset-YOLO dataset-YOLO*.tar dataset_config.yml; do
 done
 #-------------------------------------
 python birdfsd_yolov5/preprocessing/json2yolov5.py --enable-s3 \
-  --filter-cls-with-instances-under "$FILTER_CLASSES_UNDER"
+  --filter-cls-with-instances-under "$FILTER_CLASSES_UNDER" || exit 1
 python birdfsd_yolov5/preprocessing/add_bg_images.py
 mv dataset-YOLO/dataset_config.yml .
 python birdfsd_yolov5/model_utils/relative_to_abs.py
@@ -71,7 +71,7 @@ python yolov5/train.py \
   --patience "$PATIENCE" \
   --optimizer "$OPTIMIZER" \
   --cache "$CACHE_TO" \
-  $ADDITIONAL_OPTIONS
+  $ADDITIONAL_OPTIONS || exit 1
 #-------------------------------------
 WANDB_RUN_PATH="$WANDB_PROJECT_PATH/$WANDB_RUN_ID"
 python birdfsd_yolov5/model_utils/update_run_cfg.py \
