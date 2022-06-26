@@ -5,6 +5,7 @@
 #SBATCH --gres=gpu
 #SBATCH --constraint='gpu_32gb&gpu_v100'
 #SBATCH --mem=32gb
+#SBATCH --ntasks-per-node=48
 #SBATCH --error=%J.err
 #SBATCH --output=%J.out
 #-------------------------------------
@@ -35,7 +36,7 @@ export WANDB_RUN_ID="${_WANDB_RUN_ID}"
 mkdir -p archived
 _UUID="$(uuid)"
 for i in dataset-YOLO dataset-YOLO*.tar dataset_config.yml; do
-    mv "${i}" "archived/${i}_${_UUID}"
+    mv "${i}" "archived/${i}_${_UUID}" >/dev/null 2>&1
 done
 #-------------------------------------
 python birdfsd_yolov5/preprocessing/json2yolov5.py \
