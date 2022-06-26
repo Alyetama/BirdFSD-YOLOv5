@@ -164,7 +164,6 @@ project-*.json
 .ignore/
 saved_models/
 weights/
-yolov5/
 releases/
 Untitled.ipynb
 runs/
@@ -181,9 +180,9 @@ backup_mongodb.sh
 train_opts.json
 mongodb_backups/
 *.ckpt
-mongodb_backups/
 slurm/train_no_gh.sh
 docker-compose.yml
 dev/replicate/
 birdfsd_yolov5/api/api_dev.py
-/dev/
+dev/
+archived/

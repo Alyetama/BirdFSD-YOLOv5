@@ -15,7 +15,11 @@ module load anaconda
 module load cuda/10.2
 conda activate yolov5
 #-------------------------------------
-python generate_options.py
+if [[ "$1" == "" ]] || [[ "$2" == "" ]]; then
+    echo "Usage: $0 <WANDB_PROJECT_PATH> <DATASET_NAME>"
+    exit 1
+fi
+python generate_options.py "$1" "$2"
 set -o allexport; source '.slurm_train_env'; set +o allexport
 #-------------------------------------
 rm dist/*.whl >/dev/null 2>&1
