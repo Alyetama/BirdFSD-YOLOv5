@@ -17,11 +17,11 @@ def _update_query(table: str, field: str, is_jsonb: bool, from_string: str,
         str: The query to update the field.
 
     """
-    const = f'UPDATE {table} SET "{field}" = replace({field}'  # noqa
+    prefix = f'UPDATE {table} SET "{field}" = replace({field}'
     if is_jsonb:
-        query = f'{const}::TEXT, \'{from_string}\', \'{to_string}\')::jsonb;'
+        query = f'{prefix}::TEXT, \'{from_string}\', \'{to_string}\')::jsonb;'
     else:
-        query = f'{const}, \'{from_string}\', \'{to_string}\');'
+        query = f'{prefix}, \'{from_string}\', \'{to_string}\');'
     return query
 
 
@@ -84,4 +84,3 @@ def generate_queries(from_string: str, to_string: str) -> None:
             check_exist = f'SELECT * FROM {k} WHERE {x["field"]}::TEXT ' \
                           f'LIKE \'%{from_string}%\';'
             print(check_exist + '\n')
-    return

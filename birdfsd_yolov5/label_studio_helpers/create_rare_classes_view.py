@@ -56,7 +56,7 @@ class CreateRareClassesView:
             None
 
         """
-        headers = CaseInsensitiveDict()  # noqa
+        headers = CaseInsensitiveDict()
         headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
         headers['Content-type'] = 'application/json'
         return headers
@@ -154,7 +154,7 @@ class CreateRareClassesView:
                 'value': label
             })
 
-        view_template['data']['filters']['conjunction'] = 'or'  # noqa
+        view_template['data']['filters']['conjunction'] = 'or'  # noqa: PyTypeChecker
         view_template['data']['filters']['items'] = filtered_labels
         view_template['data']['title'] = 'rare_classes'
 

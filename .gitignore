@@ -184,5 +184,6 @@ mongodb_backups/
 mongodb_backups/
 slurm/train_no_gh.sh
 docker-compose.yml
-birdfsd_yolov5/replicate/
+dev/replicate/
 birdfsd_yolov5/api/api_dev.py
+/dev/

@@ -19,6 +19,7 @@ import requests
 import schedule
 from dotenv import load_dotenv
 from loguru import logger
+from requests.structures import CaseInsensitiveDict
 
 from birdfsd_yolov5.model_utils.handlers import catch_keyboard_interrupt
 from birdfsd_yolov5.model_utils.utils import add_logger, upload_logs
@@ -37,7 +38,7 @@ def _run(cmd):
 
 
 def make_headers():
-    headers = requests.structures.CaseInsensitiveDict()  # noqa
+    headers = CaseInsensitiveDict()
     headers['Content-type'] = 'application/json'
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
     return headers
@@ -138,7 +139,7 @@ def sync_project(project_id):
         logger.info(f'Create new local storage response: {response}')
         storage_id = response['id']
     else:
-        storage_id = x['id']  # noqa
+        storage_id = x['id']  # noqa: PyTypeChecker
 
     logger.debug('Running sync...')
     url = f'{os.environ["LS_HOST"]}/api/storages/localfiles/{storage_id}/sync'

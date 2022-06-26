@@ -39,6 +39,7 @@ def clear_preds_history(model_version_to_keep: str,
 
     version = model_version_to_keep.split('-v')[1]
 
+    # RegEx pattern source: https://semver.org
     match = re.match(
         r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$',  # noqa
         version)
@@ -51,8 +52,9 @@ def clear_preds_history(model_version_to_keep: str,
         print(f'Keeping model: {model_version_to_keep}...')
         print(f'Project id: {project_id}')
 
-        _predictions = api_request(f'{os.environ["LS_HOST"]}/api/predictions'
-                                   f'?task__project={project_id}')
+        _predictions: list = api_request(
+            f'{os.environ["LS_HOST"]}/api/predictions'
+            f'?task__project={project_id}')
 
         predictions = [
             pred['id'] for pred in _predictions
@@ -71,7 +73,7 @@ def clear_preds_history(model_version_to_keep: str,
 
 def _opts() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--project-id', help='Poject id')
+    parser.add_argument('-p', '--project-id', help='Project id')
     parser.add_argument('-a',
                         '--all-projects',
                         help='Process all project',

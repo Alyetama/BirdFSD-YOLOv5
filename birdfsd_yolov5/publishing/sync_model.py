@@ -15,6 +15,7 @@ from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper
 
 class ModelVersionFormatError(Exception):
     """Exception raised when a model version is not in the correct format."""
+    pass
 
 
 class SyncModel:
@@ -86,10 +87,20 @@ class SyncModel:
 
         train_date = [int(x) for x in self.train_date.split('-')]
 
+        if '-v' in self.model_version:
+            split_by = '-v'
+        elif '_v' in self.model_version:
+            split_by = '_v'
+        else:
+            split_by = input(
+                'Enter the split character between the model name '
+                'and its version (e.g., "MODEL-vX.Y.Z": the split character '
+                'here is "-"): ') + 'v'
+
         model = {
             '_id': self.model_version,
-            'name': self.model_version.split('-v')[0],
-            'version': self.model_version.split('-v')[1],
+            'name': self.model_version.split(split_by)[0],
+            'version': self.model_version.split(split_by)[1],
             'labels': labels_freq,
             'added_on': datetime.datetime.today(),
             'trained_on': datetime.datetime(*train_date),

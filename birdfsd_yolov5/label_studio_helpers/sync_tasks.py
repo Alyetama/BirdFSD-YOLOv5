@@ -21,7 +21,7 @@ from birdfsd_yolov5.model_utils.utils import api_request, get_project_ids_str
 def _insert_many_chunks(chunk: np.ndarray, col_name: str) -> None:
     db = mongodb_db()
     col = db[col_name]
-    col.insert_many(chunk.tolist())
+    col.insert_many(chunk.tolist())  # noqa: PyTypeChecker
 
 
 def sync_all_to_single_files(splits: int = 50) -> None:
@@ -89,6 +89,10 @@ def sync_project(project_id: Union[int, str],
         None
 
     """
+
+    def _msg(x):
+        return f'Difference in {x} number'
+
     ls_host = os.environ["LS_HOST"]
     project_data = api_request(f'{ls_host}/api/projects/{project_id}/')
 
@@ -118,7 +122,6 @@ def sync_project(project_id: Union[int, str],
 
     if force_update or ((not json_min and ls_lens != mdb_lens) or
                         (json_min and anno_len_ls != anno_len_mdb)):
-        _msg = lambda x: f'Difference in {x} number'  # noqa
         logger.debug(
             f'(project: {project_id}) Project has changed. Updating...')
         if not tasks_len_ls - tasks_len_mdb == 0:
@@ -146,17 +149,22 @@ def sync_project(project_id: Union[int, str],
 
         for task in data:
             if json_min:
-                img = task['image']  # noqa
+                img = task['image']  # noqa: PyTypeChecker
             else:
-                img = task['data']['image']  # noqa
-            task.update({'_id': task['id'], 'data': {'image': img}})  # noqa
-            if task['id'] in existing_ids:
+                img = task['data']['image']  # noqa: PyTypeChecker
+            task.update({
+                '_id': task['id'],  # noqa: PyTypeChecker
+                'data': {
+                    'image': img
+                }
+            })  # noqa: PyTypeChecker
+            if task['id'] in existing_ids:  # noqa: PyTypeChecker
                 logger.error(
-                    f'Duplicate annotation in task {task["id"]}! '
+                    f'Duplicate annotation in task {task["id"]}! '  # noqa: PyTypeChecker
                     'Fix manually...')
                 data.remove(task)
             else:
-                existing_ids.append(task['id'])
+                existing_ids.append(task['id'])  # noqa: PyTypeChecker
 
         col.drop()
         col.insert_many(data)
@@ -167,7 +175,7 @@ def sync_project(project_id: Union[int, str],
             f'{ls_host}/api/predictions?task__project={project_id}')
         if proj_preds:
             for pred in proj_preds:
-                pred.update({'_id': pred['id']})  # noqa
+                pred.update({'_id': pred['id']})  # noqa: PyTypeChecker
             col = db[f'project_{project_id}_preds']
             col.drop()
             col.insert_many(proj_preds)

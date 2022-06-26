@@ -99,27 +99,28 @@ def export_augs_as_files(image_aug: list, bbs_aug: list, output_dir: str,
 
 
 def aug_pipelines() -> iaa.Sequential:
+    # noinspection PyPep8
     """A simple and common augmentation sequence
 
-    This function returns a sequence of augmentations to be applied to the
-    images. The augmentations are:
+        This function returns a sequence of augmentations to be applied to the
+        images. The augmentations are:
 
-    1. Flipping the image horizontally with a probability of 0.5
-    2. Random cropping of the image with a probability of 0.1
-    3. Blurring the image with a probability of 0.5
-    4. Changing the contrast of the image with a probability of 1
-    5. Adding gaussian noise to the image with a probability of 0.5
-    6. Changing the brightness of the image with a probability of 0.2
-    7. Applying affine transformations to the image with a probability of 1
+        1. Flipping the image horizontally with a probability of 0.5
+        2. Random cropping of the image with a probability of 0.1
+        3. Blurring the image with a probability of 0.5
+        4. Changing the contrast of the image with a probability of 1
+        5. Adding gaussian noise to the image with a probability of 0.5
+        6. Changing the brightness of the image with a probability of 0.2
+        7. Applying affine transformations to the image with a probability of 1
 
-    Notes:
-        Ref: https://imgaug.readthedocs.io/en/latest/source/examples_basics.html
+        Notes:
+            Ref: https://imgaug.readthedocs.io/en/latest/source/examples_basics.html  # noqa
 
-    Returns
-        iaa.Sequential: A sequence of augmentations to be applied to the
-        images.
+        Returns
+            iaa.Sequential: A sequence of augmentations to be applied to the
+            images.
 
-    """
+        """
     ia.seed(1)
 
     seq = iaa.Sequential(
@@ -289,7 +290,7 @@ def check_classes_preserved(classes_file: str, output_dir: str) -> None:
 
 
 def run_aug_pipeline(dataset_path: str, batch_size: int = 128) -> None:
-    """Runs the images augmentation pipeline 
+    """Runs the images' augmentation pipeline
 
     This function takes a dataset path and augments the dataset by applying
     random transformations to the images and labels.

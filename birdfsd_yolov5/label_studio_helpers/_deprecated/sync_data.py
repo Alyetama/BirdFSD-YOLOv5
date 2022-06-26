@@ -12,7 +12,7 @@ from loguru import logger
 
 from birdfsd_yolov5.label_studio_helpers._deprecated.sync_images import (
     sync_images)
-from birdfsd_yolov5.label_studio_helpers._deprecated.sync_local_storage import (
+from birdfsd_yolov5.label_studio_helpers._deprecated.sync_local_storage import (  # noqa: E501
     sync_local_storage)
 from birdfsd_yolov5.label_studio_helpers.create_rare_classes_view import (
     CreateRareClassesView)

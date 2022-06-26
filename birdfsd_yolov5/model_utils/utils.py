@@ -98,7 +98,7 @@ def requests_download(url: str, filename: str) -> None:
 def api_request(url: str,
                 method: str = 'get',
                 data: Optional[dict] = None,
-                return_text: bool = False) -> Union[dict, str]:
+                return_text: bool = False) -> Union[dict, list, str]:
     """Makes an API request to the given url with the given method and data.
 
     Args:
@@ -109,12 +109,13 @@ def api_request(url: str,
         return_text (bool): Return the response as literal string.
 
     Returns:
-        dict: The response from the API.
+        The response from the API.
 
     """
     headers = CaseInsensitiveDict()
     headers['Content-type'] = 'application/json'
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
+    method = method.lower()
     if method == 'post':
         resp = requests.post(url, headers=headers, data=json.dumps(data))
     elif method == 'patch':
@@ -142,8 +143,8 @@ def get_project_ids_str(exclude_ids: Optional[str] = None) -> str:
     """
     projects = api_request(
         f'{os.environ["LS_HOST"]}/api/projects?page_size=1000')
-    project_ids = sorted([project['id']
-                          for project in projects['results']])  # noqa
+    projects_results: list = projects['results']
+    project_ids = sorted([project['id'] for project in projects_results])
     project_ids = [str(p) for p in project_ids]
     if exclude_ids:
         exclude_ids = list(exclude_ids.split(','))

@@ -65,7 +65,7 @@ class GenerateRelease:
         s3 = s3_helper.S3()
 
         try:
-            files = [x for x in list(run.files()) if fname in x.name]  # noqa
+            files = [x for x in list(run.files()) if fname in x.name]
         except IndexError:
             logger.error(f'Could not find `{fname}`!')
             return

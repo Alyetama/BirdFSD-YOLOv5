@@ -74,7 +74,7 @@ class Transfer(ColorTransfer, Regrain, Rotations):
             np.ndarray: The image as a numpy array.
 
         """
-        return np.asarray(Image.open(file_path), dtype=np.uint8)  # noqa
+        return np.asarray(Image.open(file_path), dtype=np.uint8)  # noqa: PyTypeChecker
 
     @staticmethod
     def save(arr: np.ndarray, output: str) -> None:

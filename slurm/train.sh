@@ -1,11 +1,10 @@
 #!/bin/bash
 #SBATCH --time=24:00:00
-#SBATCH --job-name='BirdFSD-YOLOv5-train'
-#SBATCH --partition='gpu'
+#SBATCH --job-name='train'
+#SBATCH --partition=gpu
 #SBATCH --gres=gpu
-#SBATCH --constraint=gpu_32gb&gpu_v100
+#SBATCH --constraint='gpu_32gb&gpu_v100'
 #SBATCH --mem=32gb
-#SBATCH --mail-type=ALL
 #SBATCH --error=%J.err
 #SBATCH --output=%J.out
 #-------------------------------------
@@ -13,55 +12,66 @@ nvidia-smi
 #-------------------------------------
 module unload python
 module load anaconda
-conda activate yolov5
 module load cuda/10.2
+conda activate yolov5
 #-------------------------------------
-rm -rf dist
+python generate_options.py
+set -o allexport; source '.slurm_train_env'; set +o allexport
+#-------------------------------------
+rm dist/*.whl >/dev/null 2>&1
 yes | pip uninstall birdfsd_yolov5
 poetry build
 pip install dist/*.whl
 #-------------------------------------
-FILTER_CLASSES_UNDER=20
-
 export WANDB_CACHE_DIR="$WORK/.cache"
-export WANDB_RUN_ID=$(python -c "import wandb; print(wandb.util.generate_id())")
-export WANDB_PATH_PARENT= # <<<<<<<<<<<<<<<<<<<< @required
-#-------------------------------------
-if [[ $WANDB_PATH_PARENT == '' ]]; then
-    echo 'Missing "WANDB_PATH_PARENT" value!'
-    exit 1
-fi
+_WANDB_RUN_ID=$(python -c "import wandb; print(wandb.util.generate_id())")
+export WANDB_RUN_ID="${_WANDB_RUN_ID}"
 #-------------------------------------
 mkdir -p archived
-mv dataset-YOLO "archived/dataset-YOLO_$(uuid)"
-mv ./dataset-YOLO*.tar dataset_config.yml ./*.pt yolov5/runs wandb archived
+_UUID="$(uuid)"
+for i in dataset-YOLO dataset-YOLO*.tar dataset_config.yml; do
+    mv "${i}" "archived/${i}_${_UUID}"
+done
 #-------------------------------------
 python birdfsd_yolov5/preprocessing/json2yolov5.py --enable-s3 \
-    --filter-cls-with-instances-under "$FILTER_CLASSES_UNDER"
+  --filter-cls-with-instances-under "$FILTER_CLASSES_UNDER"
+python birdfsd_yolov5/preprocessing/add_bg_images.py
 mv dataset-YOLO/dataset_config.yml .
 python birdfsd_yolov5/model_utils/relative_to_abs.py
 #-------------------------------------
-# PRETRAINED_WEIGHTS='yolov5l.pt'
-PRETRAINED_WEIGHTS=$(
-    python birdfsd_yolov5/model_utils/download_weights.py -v latest -n
-)
-echo "PRETRAINED_WEIGHTS: $PRETRAINED_WEIGHTS"
-python birdfsd_yolov5/model_utils/download_weights.py --model-version latest \
-    -o "$PRETRAINED_WEIGHTS"
+if [[ "$GET_WEIGHTS_FROM_RUN_ID" != "" ]]; then
+  WEIGHTS_PATH="${WANDB_PROJECT_PATH}/run_${GET_WEIGHTS_FROM_RUN_ID}_model:best"
+  rm best.pt
+  wandb artifact get --root . --type model "$WEIGHTS_PATH"
+  PRETRAINED_WEIGHTS="best.pt"
+else
+  PRETRAINED_WEIGHTS=$(
+    python birdfsd_yolov5/model_utils/download_weights.py \
+      -v latest --object-name-only
+  )
+  echo "PRETRAINED_WEIGHTS: $PRETRAINED_WEIGHTS"
+  python birdfsd_yolov5/model_utils/download_weights.py \
+    --model-version latest -o "$PRETRAINED_WEIGHTS"
+fi
 #-------------------------------------
-IMAGE_SIZE=640
-BATCH_SIZE=64
-EPOCHS=300
-#-------------------------------------
+# shellcheck disable=SC2086
 python yolov5/train.py \
-    --img-size $IMAGE_SIZE \
-    --batch $BATCH_SIZE \
-    --epochs $EPOCHS \
-    --data 'dataset_config.yml' \
-    --weights "$PRETRAINED_WEIGHTS" \
-    --device 0
+  --data 'dataset_config.yml' \
+  --img-size $IMAGE_SIZE \
+  --batch $BATCH_SIZE \
+  --epochs $EPOCHS \
+  --weights "$PRETRAINED_WEIGHTS" \
+  --device "$DEVICE" \
+  --upload-dataset "$DATASET_NAME" \
+  --save-period "$SAVE_PERIOD" \
+  --patience "$PATIENCE" \
+  --optimizer "$OPTIMIZER" \
+  --cache "$CACHE_TO" \
+  $ADDITIONAL_OPTIONS
 #-------------------------------------
-DATASET_NAME=$(ls dataset-YOLO-*)
+WANDB_RUN_PATH="$WANDB_PROJECT_PATH/$WANDB_RUN_ID"
 python birdfsd_yolov5/model_utils/update_run_cfg.py \
-    --run-path "$WANDB_PATH_PARENT/$WANDB_RUN_ID" \
-    --dataset-name "$DATASET_NAME"
+  --run-path "$WANDB_RUN_PATH" \
+  --dataset-name "$DATASET_NAME"
+python birdfsd_yolov5/model_utils/wandb_helpers.py \
+  --add-f1-score-by-run-path "$WANDB_RUN_PATH"

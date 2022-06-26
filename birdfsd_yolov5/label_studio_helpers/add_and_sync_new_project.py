@@ -26,7 +26,7 @@ def add_new_project(new_project_folder_name: str) -> Optional[dict]:
     """
     all_projects = api_request(
         f'{os.environ["LS_HOST"]}/api/projects')['results']
-    existing_titles = [p['title'] for p in all_projects]  # noqa
+    existing_titles = [p['title'] for p in all_projects]  # noqa: PyTypeChecker
     if new_project_folder_name in existing_titles:
         logger.debug(
             f'`{new_project_folder_name}` already exists! Skipping...')
@@ -34,7 +34,7 @@ def add_new_project(new_project_folder_name: str) -> Optional[dict]:
 
     logger.debug(f'Creating new project: `{new_project_folder_name}`')
 
-    template_id = all_projects[0]['id']  # noqa
+    template_id = all_projects[0]['id']  # noqa: PyTypeChecker
     template = api_request(
         f'{os.environ["LS_HOST"]}/api/projects/{template_id}')
 

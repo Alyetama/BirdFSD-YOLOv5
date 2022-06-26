@@ -7,14 +7,14 @@ import os
 import platform
 from pathlib import Path
 
-import pynvml as nv  # noqa
+import pynvml as nv
 import torch
 import torchvision
 import wandb
 
 
 def update_run_cfg(run_path: str, dataset_dir: str, dataset_name: str) -> None:
-    """Adds additional meta data to a finished wandb run.
+    """Adds additional metadata to a finished wandb run.
 
     This function uploads the classes.txt and hist.jpg files to a finished 
     wandb run. It also updates the run's config with the dataset name, base ML 

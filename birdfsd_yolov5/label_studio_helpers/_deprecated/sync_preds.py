@@ -39,7 +39,7 @@ def process_preds(db, project_id, tasks):
     ]
     results = [ray.get(future) for future in tqdm(futures, desc='Futures')]
     for result in results:
-        result.update({'_id': result['id']})  # noqa
+        result.update({'_id': result['id']})  # noqa: PyTypeChecker
     col = db[f'project_{project_id}_preds']
     col.drop()
     col.insert_many(results)

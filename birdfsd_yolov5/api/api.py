@@ -32,7 +32,7 @@ class _PrettyJSONResponse(Response):
     media_type = "application/json"
 
     @staticmethod
-    def render(content: Any, indent: int = 4) -> bytes:  # noqa
+    def render(content: Any, indent: int = 4) -> bytes:
         return json.dumps(content,
                           ensure_ascii=False,
                           allow_nan=False,

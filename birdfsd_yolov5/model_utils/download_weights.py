@@ -58,12 +58,16 @@ class DownloadModelWeights:
             try:
                 latest_model_ts = max(db.model.find().distinct('added_on'))
             except ValueError:
-                logger.info('Could not find any saved model. Using the default pretrained model...')
-                r = requests.get(
-                    'https://github.com/microsoft/CameraTraps/releases/download/v5.0/md_v5a.0.0.pt')  # noqa
+                default_pretrained_weights = 'md_v5a.0.0'
+                logger.info('Could not find any saved model. Using the '
+                            'default pretrained model: '
+                            f'`{default_pretrained_weights}`...')
+                weights_url = 'https://github.com/microsoft/CameraTraps/releases/download/v5.0/md_v5a.0.0.pt'  # noqa: E501
+                r = requests.get(weights_url)
                 with open(self.output, 'wb') as f:
                     f.write(r.content)
-                return
+                logger.info(f'Saved model weights to: `{self.output}`')
+                return self.output, weights_url, default_pretrained_weights
 
             model_document = db.model.find_one({'added_on': latest_model_ts})
         else:
