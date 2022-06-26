@@ -15,11 +15,11 @@ module load anaconda
 module load cuda/10.2
 conda activate yolov5
 #-------------------------------------
-if [[ "$1" == "" ]] || [[ "$2" == "" ]]; then
-    echo "Usage: $0 <WANDB_PROJECT_PATH> <DATASET_NAME> [optional arguments]"
+if [[ "$1" == "" ]]; then
+    echo "Usage: sbatch train.sh <WANDB_PROJECT_PATH> [optional arguments]"
     exit 1
 fi
-python slurm/generate_options.py -w "$1" -d "$2" || python generate_options.py -w "$1" -d "$2"
+python slurm/generate_options.py "${@}"
 set -o allexport; source '.slurm_train_env'; set +o allexport
 #-------------------------------------
 rm dist/*.whl >/dev/null 2>&1
@@ -42,6 +42,7 @@ python birdfsd_yolov5/preprocessing/json2yolov5.py --enable-s3 \
 python birdfsd_yolov5/preprocessing/add_bg_images.py
 mv dataset-YOLO/dataset_config.yml .
 python birdfsd_yolov5/model_utils/relative_to_abs.py
+DATASET_NAME=$(ls dataset-YOLO*.tar)
 #-------------------------------------
 if [[ "$GET_WEIGHTS_FROM_RUN_ID" != "" ]]; then
   WEIGHTS_PATH="${WANDB_PROJECT_PATH}/run_${GET_WEIGHTS_FROM_RUN_ID}_model:best"

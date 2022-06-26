@@ -24,11 +24,6 @@ def options_parser() -> argparse.Namespace:
                           type=str,
                           required=True,
                           help='W&B project path (i.e., ENTITY/PROJECT)')
-    required.add_argument('-d',
-                          '--dataset-name',
-                          type=str,
-                          required=True,
-                          help='Dataset name (e.g., dataset.tar)')
     options.add_argument('-g',
                          '--get-weights-from-run-id',
                          type=str,
@@ -82,6 +77,7 @@ def options_parser() -> argparse.Namespace:
     options.add_argument('-a',
                          '--additional-options',
                          type=str,
+                         default='',
                          help='Additional train options to pass to '
                          'yolov5/train.py. Must be in quotes.')
     return options.parse_args()
