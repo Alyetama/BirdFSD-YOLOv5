@@ -21,6 +21,7 @@ if [[ "$1" == "" ]]; then
 fi
 python slurm/generate_options.py "${@}"
 set -o allexport; source '.slurm_train_env'; set +o allexport
+cat '.slurm_train_env'
 #-------------------------------------
 rm dist/*.whl >/dev/null 2>&1
 yes | pip uninstall birdfsd_yolov5
@@ -37,8 +38,8 @@ for i in dataset-YOLO dataset-YOLO*.tar dataset_config.yml; do
     mv "${i}" "archived/${i}_${_UUID}"
 done
 #-------------------------------------
-python birdfsd_yolov5/preprocessing/json2yolov5.py --enable-s3 \
-  --filter-cls-with-instances-under "$FILTER_CLASSES_UNDER" || exit 1
+python birdfsd_yolov5/preprocessing/json2yolov5.py \
+  --filter-rare-classes "$FILTER_CLASSES_UNDER" || exit 1
 python birdfsd_yolov5/preprocessing/add_bg_images.py
 mv dataset-YOLO/dataset_config.yml .
 python birdfsd_yolov5/model_utils/relative_to_abs.py
@@ -46,9 +47,9 @@ DATASET_NAME=$(ls dataset-YOLO*.tar)
 #-------------------------------------
 if [[ "$GET_WEIGHTS_FROM_RUN_ID" != "" ]]; then
   WEIGHTS_PATH="${WANDB_PROJECT_PATH}/run_${GET_WEIGHTS_FROM_RUN_ID}_model:best"
-  rm best.pt
   wandb artifact get --root . --type model "$WEIGHTS_PATH"
-  PRETRAINED_WEIGHTS="best.pt"
+  mv "best.pt" "${GET_WEIGHTS_FROM_RUN_ID}.pt"
+  PRETRAINED_WEIGHTS="${GET_WEIGHTS_FROM_RUN_ID}.pt"
 else
   PRETRAINED_WEIGHTS=$(
     python birdfsd_yolov5/model_utils/download_weights.py \

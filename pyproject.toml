@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "birdfsd_yolov5"
-version = "0.1.3"
+version = "0.1.4"
 description = "Build and train a custom model to identify birds visiting bird feeders "
 authors = ["Alyetama <malyetama@pm.me>"]
 license = "MIT"
