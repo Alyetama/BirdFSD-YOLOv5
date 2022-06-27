@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+from typing import Optional
 
 import wandb
 
@@ -10,7 +11,8 @@ import wandb
 def upload_artifact(run_path: str,
                     artifact_type: str,
                     file_path: str,
-                    artifact_name: str = None) -> None:
+                    artifact_name: Optional[str] = None,
+                    aliases: Optional[list] = None) -> None:
     """Upload an artifact to an existing wandb run.
 
     Args:
@@ -28,8 +30,11 @@ def upload_artifact(run_path: str,
     with wandb.init(entity=entity, project=project, id=_id,
                     resume='allow') as run:
         artifact = wandb.Artifact(artifact_name, artifact_type)
-        artifact.add_file("dataset-YOLO-06-13-2022_19.55.50.tar")
-        run.log_artifact(artifact)
+        artifact.add_file(file_path)
+        if aliases:
+            run.log_artifact(artifact, aliases=aliases)
+        else:
+            run.log_artifact(artifact)
 
 
 def add_f1_score(run_path: str) -> None:
