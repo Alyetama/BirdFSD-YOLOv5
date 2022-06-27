@@ -342,6 +342,8 @@ class JSON2YOLO:
 
         # Iterate through annotations in a single task
         for label in labels:
+            if not label.get('rectanglelabels'):
+                continue
             if label['rectanglelabels'][0] not in self.classes:
                 Path(cur_img_path).unlink()
                 return

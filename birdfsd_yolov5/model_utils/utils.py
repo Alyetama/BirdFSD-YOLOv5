@@ -221,6 +221,12 @@ def get_labels_count() -> dict:
         if d.get('label'):
             for label in d['label']:
                 labels.append(label['rectanglelabels'])
-    unique, counts = np.unique(labels, return_counts=True)
-    labels_freq = {k: int(v) for k, v in np.asarray((unique, counts)).T}
+    if all(isinstance(x, list) for x in labels):
+        unique, counts = np.unique(sum(labels, []), return_counts=True)
+    else:
+        unique, counts = np.unique(labels, return_counts=True)
+    labels_freq = {
+        k: int(v)
+        for k, v in np.asarray((unique, counts), dtype=object).T
+    }
     return labels_freq
