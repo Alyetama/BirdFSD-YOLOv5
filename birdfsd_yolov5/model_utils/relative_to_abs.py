@@ -13,13 +13,14 @@ def relative_to_abs() -> None:
     with open('dataset_config.yml') as f:
         lines = f.readlines()
 
-    if '/' not in lines[0]:
-        lines[0] = lines[0].replace('dataset-YOLO',
-                                    f'{Path().cwd()}/dataset-YOLO')
+    existing_path = lines[0].split('path: ')[1].strip()
+    replace_with = str(Path('dataset-YOLO').absolute())
+    lines[0] = lines[0].replace(existing_path, replace_with)
 
     with open('dataset_config.yml', 'w') as f:
         f.writelines(lines)
-    print(lines)
+
+    print(''.join(lines))
 
 
 if __name__ == '__main__':
