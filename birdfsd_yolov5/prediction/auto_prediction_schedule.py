@@ -57,7 +57,8 @@ def auto_prediction_pipeline(opts_file: Optional[str] = None,
             'multithreading': True,
             'delete_if_no_predictions': False,
             'if_empty_apply_label': 'no animal',
-            'get_tasks_with_api': False
+            'get_tasks_with_api': False,
+            'verbose': True
         }
 
     logger.debug(f'OPTS: {OPTS}')

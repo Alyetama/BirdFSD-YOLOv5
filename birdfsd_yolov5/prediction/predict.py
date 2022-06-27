@@ -314,31 +314,14 @@ class Predict(LoadModel, _Headers):
             'task': task_id
         }
 
-    def pred_exists(self, task: dict) -> Optional[bool]:
-        """Check if a prediction already exists with the current model version.
-
-        Args:
-            task: A dictionary with the prediction's data.
-
-        Returns:
-            Optional[bool]: True if a prediction with the current model version
-            exists. Otherwise, None.
-        """
-        if not os.getenv('DB_CONNECTION_STRING'):
-            logger.warning('Not connected to a MongoDB database! '
-                           'Skipping `pred_exists` check...')
-            return
-        preds_col = self.db[f'project_{task["project"]}_preds']
-        for pred_id in task['predictions']:
-            pred_details = preds_col.find_one({'_id': pred_id})
-            if not pred_details:
-                continue
-            if pred_details['model_version'] == self.model_version:
-                if self.verbose:
-                    logger.debug(
-                        f'Task {task["id"]} is already predicted with model '
-                        f'`{self.model_version}`. Skipping...')
-                return True
+    def _preds_exist(self, proj: str) -> list:
+        tasks_with_no_preds = []
+        preds_col = self.db[f'project_{proj}_preds']
+        project_preds = list(preds_col.find({}))
+        for x in project_preds:
+            if self.model_version != x.get('model_version'):
+                tasks_with_no_preds.append(x.get('task'))
+        return tasks_with_no_preds
 
     def post_prediction(self, task: dict) -> Optional[Union[str, dict]]:
         """Prepares the POST request data of the prediction results.
@@ -378,8 +361,6 @@ class Predict(LoadModel, _Headers):
                          '\'--if-empty-apply-label\']')
             sys.exit(1)
         try:
-            if self.pred_exists(task):
-                return '_skipped'
             try:
                 img = self.download_image(
                     self.get_task(task_id)['data']['image'])
@@ -473,6 +454,15 @@ class Predict(LoadModel, _Headers):
             tasks_range = [int(n) for n in self.tasks_range.split(',')]
             tasks = self.selected_tasks(tasks, *tasks_range)
 
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            tasks_ids = list(
+                tqdm(executor.map(self._preds_exist, project_ids),
+                     total=len(project_ids),
+                     desc='Checking if preds exists'))
+            tasks_ids = sum(tasks_ids, [])
+
+        tasks = [task for task in tasks if task['id'] in tasks_ids]
+
         logger.info(f'Number of tasks to scan: {len(tasks)}')
 
         if self.multithreading:
@@ -502,16 +492,14 @@ class Predict(LoadModel, _Headers):
             except FileNotFoundError:
                 continue
 
-        num_preds = len([x for x in results + _results if not x])
-        num_skipped = len([x for x in results + _results if x == '_skipped'])
-        task_with_errors = [x for x in _results if isinstance(x, dict)]
+        if tasks:
+            num_preds = len([x for x in results + _results if not x])
+            task_with_errors = [x for x in _results if isinstance(x, dict)]
+            logger.info(f'Made {num_preds} prediction(s)')
 
-        logger.info(f'Made {num_preds} prediction(s)')
-        logger.info(f'Skipped {num_skipped}/{len(tasks)} task(s) that were '
-                    f'already predicted with `{self.model_version}`')
-        if task_with_errors:
-            logger.info(f'Could not process {len(task_with_errors)} task(s) '
-                        f'(see logs for details)')
+            if task_with_errors:
+                logger.info(f'Could not process {len(task_with_errors)} '
+                            f'task(s) (see logs for details)')
 
         logger.info(f'Took: {round(time.time() - start, 2)}s')
         utils.upload_logs(logs_file)

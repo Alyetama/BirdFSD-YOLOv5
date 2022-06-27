@@ -12,6 +12,7 @@ from typing import Optional, Union
 import numpy as np
 import ray
 import requests
+import sys
 from loguru import logger
 from minio.error import S3Error
 from requests.structures import CaseInsensitiveDict
@@ -30,9 +31,19 @@ def add_logger(current_file: str) -> str:
         str: The name of the log file.
 
     """
+    logger.remove()
     Path('logs').mkdir(exist_ok=True)
     ts = datetime.now().strftime('%m-%d-%Y_%H.%M.%S')
     logs_file = f'logs/{Path(current_file).stem}_{ts}.log'
+    logger.add(
+        sys.stderr,
+        format='{level.icon} <fg #3bd6c6>{time:HH:mm:ss}</fg #3bd6c6> | '
+        '<level>{level: <8}</level> | '
+        '<fg #f1fa8c>{function}</fg #f1fa8c>:'
+        '<fg #f1fa8c>{line}</fg #f1fa8c> - <lvl>{message}</lvl>',
+        level='DEBUG')
+    logger.level('WARNING', color='<yellow><bold>', icon='🚧')
+    logger.level('INFO', color='<bold>', icon='🚀')
     logger.add(logs_file)
     return logs_file
 
