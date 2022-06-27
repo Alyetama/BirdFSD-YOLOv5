@@ -69,7 +69,11 @@ class S3:
                                       file_path=file,
                                       content_type=content_type)
         if public:
-            domain = f'{scheme}://{os.environ["S3_ENDPOINT"]}'
+            if 'http' not in os.environ[
+                    "S3_ENDPOINT"] or 'https' not in os.environ["S3_ENDPOINT"]:
+                domain = f'{scheme}://{os.environ["S3_ENDPOINT"]}'
+            else:
+                domain = os.environ["S3_ENDPOINT"]
             if dest:
                 return f'{domain}/{bucket_name}/{dest}'
             else:

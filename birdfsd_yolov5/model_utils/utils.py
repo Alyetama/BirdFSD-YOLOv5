@@ -13,6 +13,7 @@ import numpy as np
 import ray
 import requests
 import sys
+from dotenv import load_dotenv
 from loguru import logger
 from minio.error import S3Error
 from requests.structures import CaseInsensitiveDict
@@ -123,6 +124,7 @@ def api_request(url: str,
         The response from the API.
 
     """
+    load_dotenv()
     headers = CaseInsensitiveDict()
     headers['Content-type'] = 'application/json'
     headers['Authorization'] = f'Token {os.environ["TOKEN"]}'
@@ -152,6 +154,7 @@ def get_project_ids_str(exclude_ids: Optional[str] = None) -> str:
         str: A comma separated string of project ids.
 
     """
+    load_dotenv()
     projects = api_request(
         f'{os.environ["LS_HOST"]}/api/projects?page_size=1000')
     projects_results: list = projects['results']

@@ -76,7 +76,6 @@ class JSON2YOLO:
         background_label (str): The label to use for the background.
         upload_dataset (bool): If set to True, the dataset will be uploaded
             to the Label-studio API.
-        alt_data_endpoint (str): The URL of an alternative storage server.
         excluded_labels (list): A list of labels to exclude from the dataset.
         seed (int): The seed for the random number generator.
         overwrite (bool): If set to True, the dataset will be overwritten if
@@ -95,7 +94,6 @@ class JSON2YOLO:
                  force_update: bool = False,
                  background_label: str = 'no animal',
                  upload_dataset: bool = False,
-                 alt_data_endpoint: Optional[str] = None,
                  excluded_labels: Union[list, str] = None,
                  seed: int = 8,
                  overwrite: bool = False,
@@ -110,7 +108,6 @@ class JSON2YOLO:
         self.force_update = force_update
         self.background_label = background_label
         self.upload_dataset = upload_dataset
-        self.alt_data_endpoint = alt_data_endpoint
         self.excluded_labels = excluded_labels
         self.seed = seed
         self.overwrite = overwrite
@@ -156,8 +153,8 @@ class JSON2YOLO:
                 labels.append([
                     label['rectanglelabels'][0] for label in entry['label']
                 ][0])
-            except KeyError as e:
-                logger.warning(f'Current entry raised KeyError "{e}"! '
+            except (KeyError, IndexError) as e:
+                logger.warning(f'Current entry raised "{e}"! '
                                f'Ignoring entry: {entry}')
 
         unique, counts = np.unique(labels, return_counts=True)
@@ -244,7 +241,7 @@ class JSON2YOLO:
         if self.copy_data_from or is_s3:
             img = task['image']
             if img.startswith('s3://'):
-                object_name = img.split('s3://data/')[-1]
+                object_name = img.split('s3://')[-1]
             elif img.startswith('http'):
                 img = img.split('?')[0]
                 object_name = '/'.join(Path(img).parts[-2:])
@@ -265,12 +262,9 @@ class JSON2YOLO:
         if self.copy_data_from:
             shutil.copy(f'{self.copy_data_from}/{object_name}', cur_img_path)
         else:
-            if self.alt_data_endpoint:
-                if '?' in img:
-                    img = img.split('?')[0]
-                src_img_endpoint = task['image'].split('/data')[0]
-                img = img.replace(src_img_endpoint, self.alt_data_endpoint)
-            elif is_s3:
+            if is_s3:
+                if 'data' in object_name:
+                    object_name = object_name.replace('data/', '')
                 img = s3_helper.S3().client.presigned_get_object(
                     'data', object_name, expires=timedelta(hours=6))
         return cur_img_path, cur_label_path, img
@@ -575,10 +569,6 @@ def _opts() -> argparse.Namespace:
                         help='Label of background images',
                         type=str,
                         default='no animal')
-    parser.add_argument('-a',
-                        '--alt-data-endpoint',
-                        help='Alternative endpoint to use for data files',
-                        type=str)
     parser.add_argument('-e',
                         '--excluded-labels',
                         help='Labels to exclude from the output dataset ('
@@ -606,7 +596,6 @@ if __name__ == '__main__':
                           get_tasks_with_api=args.get_tasks_with_api,
                           force_update=args.force_update,
                           upload_dataset=args.upload_dataset,
-                          alt_data_endpoint=args.alt_data_endpoint,
                           excluded_labels=args.excluded_labels,
                           seed=args.seed,
                           overwrite=args.overwrite,
