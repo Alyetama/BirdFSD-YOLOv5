@@ -16,6 +16,12 @@ module load anaconda
 module load cuda/10.2
 conda activate yolov5
 #-------------------------------------
+mkdir -p logs
+unlink latest.err
+ln -s "${SLURM_JOB_ID}.err" latest.err
+unlink latest.out
+ln -s "${SLURM_JOB_ID}.out" latest.out
+#-------------------------------------
 if [[ "$1" == "" ]]; then
     echo "Usage: sbatch train.sh <WANDB_PROJECT_PATH> [optional arguments]"
     exit 1
@@ -39,8 +45,9 @@ for i in dataset-YOLO dataset-YOLO*.tar dataset_config.yml; do
     mv "${i}" "archived/${i}_${_UUID}" >/dev/null 2>&1
 done
 #-------------------------------------
+python birdfsd_yolov5/label_studio_helpers/sync_tasks.py
 python birdfsd_yolov5/preprocessing/json2yolov5.py \
-  --filter-rare-classes "$FILTER_CLASSES_UNDER" || exit 1
+  --filter-rare-classes "$FILTER_CLASSES_UNDER"
 python birdfsd_yolov5/preprocessing/add_bg_images.py
 mv dataset-YOLO/dataset_config.yml .
 python birdfsd_yolov5/model_utils/relative_to_abs.py
@@ -69,12 +76,12 @@ python yolov5/train.py \
   --epochs $EPOCHS \
   --weights "$PRETRAINED_WEIGHTS" \
   --device "$DEVICE" \
-  --upload-dataset "$DATASET_NAME" \
+  --upload-dataset \
   --save-period "$SAVE_PERIOD" \
   --patience "$PATIENCE" \
   --optimizer "$OPTIMIZER" \
   --cache "$CACHE_TO" \
-  $ADDITIONAL_OPTIONS || exit 1
+  $ADDITIONAL_OPTIONS
 #-------------------------------------
 WANDB_RUN_PATH="$WANDB_PROJECT_PATH/$WANDB_RUN_ID"
 python birdfsd_yolov5/model_utils/update_run_cfg.py \
@@ -82,3 +89,5 @@ python birdfsd_yolov5/model_utils/update_run_cfg.py \
   --dataset-name "$DATASET_NAME"
 python birdfsd_yolov5/model_utils/wandb_helpers.py \
   --add-f1-score-by-run-path "$WANDB_RUN_PATH"
+#-------------------------------------
+mv "${SLURM_JOB_ID}.err" "${SLURM_JOB_ID}.out" logs >/dev/null 2>&1
