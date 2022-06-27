@@ -3,6 +3,7 @@
 
 import random
 import shutil
+import sys
 from glob import glob
 from pathlib import Path
 
@@ -30,7 +31,8 @@ def _iter_download(task: dict,
     j2y.download_image(task, cur_img_path, img_url)
 
 
-def add_bg_images(output_dir: str = 'dataset-YOLO',
+def add_bg_images(background_label: str,
+    output_dir: str = 'dataset-YOLO',
                   bg_imgs_dir_name: str = 'bg_images',
                   pct: int = 10,
                   seed: int = 8) -> None:
@@ -57,7 +59,7 @@ def add_bg_images(output_dir: str = 'dataset-YOLO',
             continue
         for x in task['label']:
             for y in x['rectanglelabels']:
-                if y == 'no animal':
+                if y == background_label:
                     bg_images.append(task)
 
     random.shuffle(bg_images)
@@ -91,4 +93,7 @@ def add_bg_images(output_dir: str = 'dataset-YOLO',
 
 if __name__ == '__main__':
     load_dotenv()
-    add_bg_images()
+    if len(sys.argv) > 1:
+        add_bg_images(sys.argv[1])
+    else:
+        add_bg_images('no animal')
