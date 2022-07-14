@@ -23,7 +23,7 @@ sphinx>=5.0.1
 sphinx_rtd_theme>=1.0.0
 tqdm>=4.62.3
 wandb>=0.12.15
-sqlalchemy>=1.4.36
+sqlalchemy>=1.4.26
 
 # API requirements
 fastapi>=0.75.2

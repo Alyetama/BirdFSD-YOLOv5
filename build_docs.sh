@@ -6,7 +6,8 @@ keyboard_interrupt() {
 
 trap keyboard_interrupt SIGINT
 
-RELEASE="$1"
+VERSION="$(poetry version)"
+RELEASE="${VERSION//birdfsd-yolov5/}"
 
 if [[ "$RELEASE" == '' ]]; then
     echo 'Missing required positional argument: "release number"!'

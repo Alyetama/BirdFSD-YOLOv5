@@ -2,17 +2,18 @@
 # coding: utf-8
 
 import hashlib
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import concurrent.futures
 import pandas as pd
 import ray
-from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
 from dotenv import load_dotenv
-from ray.exceptions import RayTaskError
+from minio.error import S3Error
 from tqdm import tqdm
+
+from birdfsd_yolov5.model_utils import mongodb_helper, s3_helper, utils
 
 
 def get_all_tasks_from_mongodb() -> list:
@@ -20,7 +21,6 @@ def get_all_tasks_from_mongodb() -> list:
 
     Returns:
         list: A list of all the tasks in the database.
-
     """
 
     @ray.remote
@@ -40,7 +40,6 @@ def get_all_tasks_from_mongodb() -> list:
     return sum(local_tasks, [])
 
 
-@ray.remote
 def simplify(task: dict) -> Optional[dict]:
     """Creayes a dict object out of the most important keys in a task.
 
@@ -52,8 +51,8 @@ def simplify(task: dict) -> Optional[dict]:
 
     Returns:
         dict: A simplified task.
-
     """
+    prefix = ''
     labels = []
     label_val = task.get('label')
     if not label_val:
@@ -75,7 +74,13 @@ def simplify(task: dict) -> Optional[dict]:
 
     object_url = task['data']['image'].split('?')[0]
     object_name = '/'.join(Path(object_url).parts[-2:])
-    img_data = s3_helper.S3().client.get_object('data', object_name).read()
+    try:
+        img_data = s3_helper.S3().client.get_object('data', prefix +
+                                                    object_name).read()
+    except S3Error:
+        prefix = 'data/'
+        img_data = s3_helper.S3().client.get_object('data', prefix +
+                                                    object_name).read()
 
     simple_task = {
         'image': {
@@ -96,21 +101,11 @@ def construct_dataset(input_tasks: list) -> None:
 
     Args:
         input_tasks (list): A list of all the tasks in the database.
-
-    Returns:
-        None
-
     """
 
-    futures = [simplify.remote(task) for task in input_tasks]
-    results = []
-    for future in tqdm(futures):
-        try:
-            results.append(ray.get(future))
-        except (ConnectionResetError, RayTaskError) as e:
-            print('ERROR:', e)
-            futures.append(future)
-            time.sleep(10)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(
+            tqdm(executor.map(simplify, input_tasks), total=len(input_tasks)))
 
     d = {str(k): v for k, v in enumerate(results) if v}
 

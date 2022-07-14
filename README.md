@@ -11,35 +11,73 @@ Build and train a custom model to identify birds visiting bird feeders.
 
 ## 🚀 Getting started
 
+### Fork and clone this repository
+
 - First, [fork the repository](https://github.com/bird-feeder/BirdFSD-YOLOv5/fork).
 - Enable workflows in your fork:
 <img src="https://i.imgur.com/aF5U6J0.png"  width="720"> 
 
-- Then, click on and enable all the workflows that are highlighted wuth a red square in the image below.
+- Then, click on and enable all the workflows that are highlighted wuth a red square in the image below:
 <img src="https://i.imgur.com/pj0Fe9e.png"  width="720"> 
 
-
-- On your machine, run:
-
+- Clone the repository:
 ```shell
 git clone https://github.com/bird-feeder/BirdFSD-YOLOv5.git
 cd BirdFSD-YOLOv5
-
-# Recommended: create a conda/pyenv environment
-pip install -r requirements.txt
-
-poetry build
-pip install dist/*.whl
-
 git clone https://github.com/ultralytics/yolov5.git
-
-mv .env.example .env
-nano .env  # or with any other editor
-# See `🌱 Environment Variables` section for details about the environment variables.
 ```
+
+### Install dependencies
+
+- If you're on an Apple silicon device (Apple M1), follow the instructions [here](<#instructions-for-apple-m1-users> "Instructions for Apple M1 users"). Otherwise, run:
+
+```sh
+pip install -r requirements.txt
+```
+
+
+#### Instructions for Apple M1 users
+
+<details>
+  <summary>Click here</summary>
+
+```sh
+# Skip this if you're not on an Apple silicon device!
+
+# If you don't have conda, install it:
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh"
+bash "Miniforge3-MacOSX-arm64.sh" -b
+rm "Miniforge3-MacOSX-arm64.sh"
+conda init zsh
+source ~/.zshrc
+conda activate
+
+# Then, run:
+yes | pip uninstall grpcio
+conda install grpcio --yes
+pip install -r requirements.txt
+```
+
+</details>
+
+
+### Build the package
+
+```sh
+poetry build
+pip install .
+```
+
 
 ## 🌱 Environment Variables
 
+- rename `.env.example` to `.env`, then edit the values based on the table below.
+
+```sh
+mv .env.example .env
+nano .env  # or with any other editor
+# See the table for details about the environment variables.
+```
 
 | Name                 | Value                                                                                                                   |
 |----------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -53,6 +91,11 @@ nano .env  # or with any other editor
 | S3_ENDPOINT          | (Optional) The S3 bucket's endpoint/URL server.                                                                         |
 | EXCLUDE_LABELS       | (Optional) Comma-separated list of labels to exclude from processing (e.g., label a,label b).                           |
 
+- When you're done editing the `.env` file, run:
+
+```sh
+python birdfsd_yolov5/model_utils/check_env_file.py --env-file .env
+```
 
 ## 🗃️ Setup
 

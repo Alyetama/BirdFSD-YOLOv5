@@ -4,6 +4,7 @@
 import io
 import json
 import os
+import re
 import tempfile
 import uuid
 import zipfile
@@ -27,7 +28,8 @@ def create_s3_client(api_s3: bool = False) -> Minio:
     prefix = ''
     if api_s3:
         prefix = 'API_'
-    return Minio(os.environ[f'{prefix}S3_ENDPOINT'],
+    s3_endpoint = re.sub(r'https?:\/\/', '', os.environ[f'{prefix}S3_ENDPOINT'])
+    return Minio(s3_endpoint,
                  access_key=os.environ[f'{prefix}S3_ACCESS_KEY'],
                  secret_key=os.environ[f'{prefix}S3_SECRET_KEY'],
                  region=os.environ[f'{prefix}S3_REGION'])

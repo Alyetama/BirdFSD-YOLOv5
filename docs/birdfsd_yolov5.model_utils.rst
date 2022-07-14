@@ -4,6 +4,14 @@ birdfsd\_yolov5.model\_utils package
 Submodules
 ----------
 
+birdfsd\_yolov5.model\_utils.check\_env\_file module
+----------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.model_utils.check_env_file
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 birdfsd\_yolov5.model\_utils.clear\_preds\_history module
 ---------------------------------------------------------
 
@@ -32,6 +40,14 @@ birdfsd\_yolov5.model\_utils.mongodb\_helper module
 ---------------------------------------------------
 
 .. automodule:: birdfsd_yolov5.model_utils.mongodb_helper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+birdfsd\_yolov5.model\_utils.postgres\_helper module
+----------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.model_utils.postgres_helper
    :members:
    :undoc-members:
    :show-inheritance:

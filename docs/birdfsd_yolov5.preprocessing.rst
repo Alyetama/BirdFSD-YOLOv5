@@ -12,6 +12,14 @@ birdfsd\_yolov5.preprocessing.add\_bg\_images module
    :undoc-members:
    :show-inheritance:
 
+birdfsd\_yolov5.preprocessing.construct\_dataset module
+-------------------------------------------------------
+
+.. automodule:: birdfsd_yolov5.preprocessing.construct_dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 birdfsd\_yolov5.preprocessing.json2yolov5 module
 ------------------------------------------------
 

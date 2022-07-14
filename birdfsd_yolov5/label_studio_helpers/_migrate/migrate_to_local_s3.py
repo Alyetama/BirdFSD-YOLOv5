@@ -5,6 +5,7 @@ import argparse
 import copy
 import json
 import os
+import re
 import random
 import shutil
 from glob import glob
@@ -25,11 +26,13 @@ class MigrateToS3:
                  s3_folder: str,
                  template_project_id: int,
                  old_project_ids: list,
-                 images_per_folder: int = 1000):
+                 images_per_folder: int = 1000,
+                 use_http: bool = False):
         self.s3_folder = s3_folder
         self.template_project_id = template_project_id
         self.old_project_ids = old_project_ids
         self.images_per_folder = images_per_folder
+        self.use_http = use_http
 
     def download_existing_project_tasks(self) -> list:
         all_existing_tasks_data = []
@@ -89,6 +92,14 @@ class MigrateToS3:
         for project_name_num, project_id in tzip(list_of_projects_to_create,
                                                  project_ids):
             project_name = f'project-{str(project_name_num).zfill(4)}'
+            if 'http' not in os.environ['S3_ENDPOINT']:
+                s3_endpoint = re.sub(r'https?:\/\/', '',
+                                     os.environ['S3_ENDPOINT'])
+                if self.use_http:
+                    os.environ['S3_ENDPOINT'] = f'http://{s3_endpoint}'
+                else:
+                    os.environ['S3_ENDPOINT'] = f'https://{s3_endpoint}'
+
             storage_dict = {
                 "type": "s3",
                 "presign": True,
@@ -191,12 +202,19 @@ if __name__ == '__main__':
                         help='Number of images per folder',
                         type=int,
                         default=1000)
+    parser.add_argument(
+        '--use-http',
+        help='Use `http://` for your S3 endpoint instead of `https://`',
+        action='store_true')
     args = parser.parse_args()
 
     old_proj_ids = args.old_project_ids.split(',')
 
-    migrate = MigrateToS3(s3_folder=args.s3_folder,
-                          template_project_id=args.template_project_id,
-                          old_project_ids=old_proj_ids,
-                          images_per_folder=args.images_per_folder)
+    migrate = MigrateToS3(
+        s3_folder=args.s3_folder,
+        template_project_id=args.template_project_id,
+        old_project_ids=old_proj_ids,
+        images_per_folder=args.images_per_folder,
+        use_http=args.use_http,
+    )
     migrate.run()

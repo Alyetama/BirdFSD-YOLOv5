@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import re
 import random
 from typing import Optional
 
@@ -70,6 +71,9 @@ def add_and_sync_data_storage(project_id: int,
         dict: The response from the sync request.
 
     """
+    if 'http' not in os.environ['S3_ENDPOINT']:
+        s3_endpoint = re.sub(r'https?:\/\/', '', os.environ['S3_ENDPOINT'])
+        os.environ['S3_ENDPOINT'] = f'{s3_endpoint_scheme}{s3_endpoint}'
     storage_dict = {
         "type": "s3",
         "presign": True,
@@ -80,7 +84,7 @@ def add_and_sync_data_storage(project_id: int,
         "aws_access_key_id": os.environ['S3_ACCESS_KEY'],
         "aws_secret_access_key": os.environ['S3_SECRET_KEY'],
         "region_name": 'us-east-1',
-        "s3_endpoint": f'{s3_endpoint_scheme}{os.environ["S3_ENDPOINT"]}',
+        "s3_endpoint": os.environ['S3_ENDPOINT'],
         "recursive_scan": True,
         "project": project_id
     }

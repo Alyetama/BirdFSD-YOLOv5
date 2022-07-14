@@ -161,6 +161,7 @@ class JSON2YOLO:
 
         min_instances = 1
         if self.filter_rare_classes:
+            logger.info(f'Filtering classes by: {self.filter_rare_classes}...')
             if self.filter_rare_classes.isdigit():
                 min_instances = int(self.filter_rare_classes)
             elif self.filter_rare_classes.lower() == 'median':
@@ -551,7 +552,7 @@ def _opts() -> argparse.Namespace:
                         '--filter-rare-classes',
                         help='Only include classes with instances equal or '
                         'above the median (default), mean, or an integer',
-                        default='median')
+                        default=None)
     parser.add_argument('--get-tasks-with-api',
                         help='Use label-studio API to get tasks data',
                         action='store_true')

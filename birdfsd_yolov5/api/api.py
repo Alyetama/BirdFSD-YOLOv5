@@ -5,6 +5,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -144,7 +145,7 @@ def predict_endpoint(file: UploadFile,
                           length=length,
                           content_type=content_type)
 
-    url = f'https://{os.environ["API_S3_ENDPOINT"]}/api/{out_file}'
+    url = f'{os.environ["API_S3_ENDPOINT"]}/api/{out_file}'
 
     res = api_utils.results_dict(file.filename, obj_hash, url, pred_results,
                                  model_name, model_version, page)
